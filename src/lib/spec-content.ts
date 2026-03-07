@@ -18,12 +18,13 @@ function slugify(text: string): string {
 }
 
 const BOX_CHARS = /[┌┐└┘├┤┬┴┼─│╔╗╚╝║═╠╣╦╩╬→←↓↑↔▶◀▼▲►◄]/;
+const ASCII_BOX = /\+[-=]{2,}\+/;
 
 function isAsciiDiagram(code: string): boolean {
   const lines = code.split("\n");
   let boxCharLines = 0;
   for (const line of lines) {
-    if (BOX_CHARS.test(line)) boxCharLines++;
+    if (BOX_CHARS.test(line) || ASCII_BOX.test(line)) boxCharLines++;
   }
   return boxCharLines >= 3;
 }

@@ -14,5 +14,8 @@
     "geist": "^1.7.0",
     "marked": "^17.0.4",
     "tailwindcss": "^4.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.5"
   }
 }

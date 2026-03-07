@@ -3,29 +3,37 @@ import Layout from "@/layouts/Layout.astro";
 import Nav from "@/components/Nav.astro";
 import Footer from "@/components/Footer.astro";
 
-const heroLinks = [
+const cards = [
   {
-    label: "Specification",
-    href: "/specification",
-  },
-  {
-    label: "Better Auth Plugin",
-    href: "https://github.com/better-auth/better-auth",
-    external: true,
-  },
-  {
-    label: "Registry",
+    title: "Registry",
+    description: "Official public registry for agent service discovery. Find and list services that support Agent Auth.",
     href: "/registry",
+    label: "Browse registry",
   },
   {
-    label: "Adapters",
+    title: "Implementations",
+    description: "Libraries, SDKs, and server implementations of Agent Auth across languages and frameworks.",
     href: "/implementations",
+    label: "View implementations",
+  },
+  {
+    title: "Examples",
+    description: "Real integration patterns — from basic registration to multi-step approval flows and capability escalation.",
+    href: "/examples",
+    label: "View examples",
+  },
+  {
+    title: "Community",
+    description: "Join the discussion — ask questions, share implementations, and help shape the protocol.",
+    href: "https://github.com/AgentAuthProtocol/agent-auth-protocol/discussions",
+    label: "Join the community",
+    external: true,
   },
 ];
 ---
 
-<Layout title="Agent Auth Protocol — AI Agent Identity & Authorization">
-  <Nav active="/" />
+<Layout title="Agent Auth Protocol — AI Agent Identity & Authorization" darkMode={true}>
+  <Nav active="/" showThemeToggle={true} />
 
   <!-- Hero -->
   <section class="relative overflow-hidden">
@@ -34,55 +42,50 @@ const heroLinks = [
       <div class="flex flex-col lg:flex-row gap-10 lg:gap-12 xl:gap-16">
         <!-- Left: copy + FAQ -->
         <div class="lg:flex-1 lg:pt-8">
-          <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-[3.25rem] font-semibold tracking-tight leading-[1.1] mb-6">
-            Agent Auth Protocol
+          <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-[3.25rem] tracking-tight leading-[1.1] mb-6">
+            <span class="font-semibold">Agent Auth</span> <span class="font-light">Protocol</span>
           </h1>
           <p class="text-base sm:text-lg text-[var(--color-muted)] leading-relaxed max-w-lg mb-8">
             An implementation-oriented protocol that gives AI agents their own identity, permissions, and lifecycle, so services can authenticate, authorize, and audit them independently.
           </p>
-          <div class="flex flex-wrap items-center gap-x-3 gap-y-2 mb-10">
-            {heroLinks.map((link, i) => (
-              <>
-                {i > 0 && <span class="text-[var(--color-border)] text-[10px] select-none">/</span>}
-                <a
-                  href={link.href}
-                  target={link.external ? "_blank" : undefined}
-                  rel={link.external ? "noopener noreferrer" : undefined}
-                  class="text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)] hover:text-[var(--color-fg)] transition-colors"
-                >
-                  {link.label}
-                </a>
-              </>
-            ))}
+          <div class="flex flex-wrap items-center gap-3 mb-4">
+            <a
+              href="/specification"
+              class="hero-btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-[13px] font-medium bg-[var(--color-fg)] text-[var(--color-bg)] hover:opacity-90 transition-opacity"
+            >
+              Specification
+              <svg class="w-3.5 h-3.5 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </a>
           </div>
-          <div class="border border-[var(--color-border)] max-w-lg">
-            <details name="faq" class="group border-b border-[var(--color-border)] last:border-b-0">
+          <div class="mb-10"></div>
+          <div class="border border-dashed border-[var(--color-border)] max-w-lg">
+            <details name="faq" class="group border-b border-dashed border-[var(--color-border)] last:border-b-0">
               <summary class="flex items-center justify-between px-4 py-3 cursor-pointer select-none">
                 <span class="text-[13px] font-medium">Why does this need to exist?</span>
                 <span class="text-[var(--color-muted)] text-xs font-[family-name:var(--font-mono)] ml-3 shrink-0 group-open:rotate-45 transition-transform">+</span>
               </summary>
-              <div class="px-4 pb-3 text-[12px] text-[var(--color-muted)] leading-[1.8]">Today, agents borrow a user's OAuth token or a shared client credential. That collapses the agent into someone else's identity — the server can't tell which agent made a request, can't scope permissions per agent, and can't revoke one without revoking all of them. Agent Auth gives each agent its own cryptographic identity, its own granted capabilities, and its own lifecycle — so services can authenticate, scope, and revoke each one independently.</div>
+              <div class="faq-content"><div><div class="px-4 pb-3 text-[12px] text-[var(--color-muted)] leading-[1.8]">Today, agents borrow a user's OAuth token or a shared client credential. That collapses the agent into someone else's identity — the server can't tell which agent made a request, can't scope permissions per agent, and can't revoke one without revoking all of them. Agent Auth gives each agent its own cryptographic identity, its own granted capabilities, and its own lifecycle — so services can authenticate, scope, and revoke each one independently.</div></div></div>
             </details>
-            <details name="faq" class="group border-b border-[var(--color-border)] last:border-b-0">
+            <details name="faq" class="group border-b border-dashed border-[var(--color-border)] last:border-b-0">
               <summary class="flex items-center justify-between px-4 py-3 cursor-pointer select-none">
                 <span class="text-[13px] font-medium">How does it work?</span>
                 <span class="text-[var(--color-muted)] text-xs font-[family-name:var(--font-mono)] ml-3 shrink-0 group-open:rotate-45 transition-transform">+</span>
               </summary>
-              <div class="px-4 pb-3 text-[12px] text-[var(--color-muted)] leading-[1.8]">An agent registers with a server and gets its own keypair and identity. The user approves what the agent can do via a device authorization flow — similar to linking a TV app. Once approved, the agent signs a short-lived JWT for every request it makes. The server verifies the signature, checks the agent's permissions, and processes the call. Every request traces back to a specific agent.</div>
+              <div class="faq-content"><div><div class="px-4 pb-3 text-[12px] text-[var(--color-muted)] leading-[1.8]">An agent registers with a server and gets its own keypair and identity. The user approves what the agent can do via a device authorization flow — similar to linking a TV app. Once approved, the agent signs a short-lived JWT for every request it makes. The server verifies the signature, checks the agent's permissions, and processes the call. Every request traces back to a specific agent.</div></div></div>
             </details>
-            <details name="faq" class="group border-b border-[var(--color-border)] last:border-b-0">
+            <details name="faq" class="group border-b border-dashed border-[var(--color-border)] last:border-b-0">
               <summary class="flex items-center justify-between px-4 py-3 cursor-pointer select-none">
                 <span class="text-[13px] font-medium">How is this different from MCP or OAuth?</span>
                 <span class="text-[var(--color-muted)] text-xs font-[family-name:var(--font-mono)] ml-3 shrink-0 group-open:rotate-45 transition-transform">+</span>
               </summary>
-              <div class="px-4 pb-3 text-[12px] text-[var(--color-muted)] leading-[1.8]">MCP defines how agents talk to tools. OAuth defines how users authorize apps. Neither models the agent itself as an identity. With MCP alone, agents use the user's tokens — there's no per-agent audit trail, scoping, or revocation. Agent Auth adds the missing layer: it treats the runtime agent as a first-class principal sitting between the user and the service. You can use all three together.</div>
+              <div class="faq-content"><div><div class="px-4 pb-3 text-[12px] text-[var(--color-muted)] leading-[1.8]">MCP defines how agents talk to tools. OAuth defines how users authorize apps. Neither models the agent itself as an identity. With MCP alone, agents use the user's tokens — there's no per-agent audit trail, scoping, or revocation. Agent Auth adds the missing layer: it treats the runtime agent as a first-class principal sitting between the user and the service. You can use all three together.</div></div></div>
             </details>
             <details name="faq" class="group">
               <summary class="flex items-center justify-between px-4 py-3 cursor-pointer select-none">
                 <span class="text-[13px] font-medium">Is this tied to Better Auth?</span>
                 <span class="text-[var(--color-muted)] text-xs font-[family-name:var(--font-mono)] ml-3 shrink-0 group-open:rotate-45 transition-transform">+</span>
               </summary>
-              <div class="px-4 pb-3 text-[12px] text-[var(--color-muted)] leading-[1.8]">Agent Auth is an open protocol — Ed25519 keypairs, device authorization, signed JWTs. Better Auth ships the reference implementation that handles everything out of the box, but the protocol is designed to be implementable in any language or framework.</div>
+              <div class="faq-content"><div><div class="px-4 pb-3 text-[12px] text-[var(--color-muted)] leading-[1.8]">Agent Auth is an open protocol — Ed25519 keypairs, device authorization, signed JWTs. Better Auth ships the reference implementation that handles everything out of the box, but the protocol is designed to be implementable in any language or framework.</div></div></div>
             </details>
           </div>
         </div>
@@ -113,6 +116,34 @@ const heroLinks = [
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Cards -->
+  <section class="relative">
+    <div class="mx-auto max-w-[1400px] px-5 sm:px-6 pb-20">
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-px bg-[var(--color-border)] border border-[var(--color-border)]">
+        {cards.map((card) => (
+          <a
+            href={card.href}
+            target={card.external ? "_blank" : undefined}
+            rel={card.external ? "noopener noreferrer" : undefined}
+            class="group bg-[var(--color-bg)] p-5 flex flex-col gap-3 hover:bg-[var(--color-surface)] transition-colors"
+          >
+            <div class="flex items-center justify-between">
+              <h3 class="text-[13px] font-semibold">{card.title}</h3>
+              <svg class="w-3 h-3 text-[var(--color-muted)] opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </div>
+            <p class="text-[12px] leading-[1.7] text-[var(--color-muted)] flex-1">{card.description}</p>
+            <span class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)] group-hover:text-[var(--color-fg)] transition-colors flex items-center gap-1.5">
+              {card.label}
+              {card.external && (
+                <svg class="w-2.5 h-2.5 opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              )}
+            </span>
+          </a>
+        ))}
       </div>
     </div>
   </section>
@@ -210,6 +241,18 @@ const heroLinks = [
   <style is:global>
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
     @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+
+    details.group .faq-content {
+      display: grid;
+      grid-template-rows: 0fr;
+      transition: grid-template-rows 0.25s ease;
+    }
+    details.group[open] .faq-content {
+      grid-template-rows: 1fr;
+    }
+    details.group .faq-content > div {
+      overflow: hidden;
+    }
 
     @keyframes agent-blink {
       0%, 42%, 46%, 100% { scale: 1 1; }
