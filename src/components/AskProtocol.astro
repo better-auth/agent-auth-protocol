@@ -1,0 +1,907 @@
+<!-- Ask trigger — iOS home indicator style -->
+<div class="fixed bottom-0 left-1/2 z-40 flex flex-col items-center" id="ask-trigger-wrap" style="translate: -50% 100%; opacity: 0; transition: translate .5s cubic-bezier(.32,.72,0,1), opacity .4s ease;">
+  <button
+    id="ask-trigger"
+    class="flex flex-col items-center gap-2.5 cursor-pointer group px-6 pt-3 pb-5 backdrop-blur-md bg-[var(--color-bg)]/80 rounded-t-lg"
+  >
+    <span class="flex items-center gap-2">
+      <svg class="w-3.5 h-3.5 text-[var(--color-muted)] group-hover:text-[var(--color-fg)] transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="4" y="4" width="16" height="16" rx="4" class="ask-agent-body"/>
+        <circle cx="9.5" cy="12" r="1.5" fill="currentColor" stroke="none" class="ask-agent-eye"/>
+        <circle cx="14.5" cy="12" r="1.5" fill="currentColor" stroke="none" class="ask-agent-eye"/>
+        <line x1="12" y1="1" x2="12" y2="4" class="ask-agent-antenna"/>
+        <circle cx="12" cy="1" r="1" fill="currentColor" stroke="none" class="ask-agent-dot"/>
+      </svg>
+      <span class="text-[10px] font-[family-name:var(--font-mono)] font-medium uppercase tracking-widest text-[color-mix(in_oklch,var(--color-fg)_55%,transparent)] group-hover:text-[var(--color-fg)] transition-colors">Learn about the protocol</span>
+    </span>
+    <span id="ask-wave" class="block w-10 h-[3px] rounded-full bg-[var(--color-fg)] opacity-80 group-hover:opacity-100 transition-opacity"></span>
+  </button>
+</div>
+
+<!-- Ask sheet (fullscreen overlay) -->
+<div id="ask-sheet" class="fixed inset-0 z-50">
+  <div id="ask-backdrop" class="absolute inset-0 bg-[var(--color-bg)]"></div>
+  <div id="ask-panel" class="absolute inset-0 flex flex-col">
+    <!-- Sheet header -->
+    <nav class="shrink-0 relative z-10 bg-[var(--color-bg)]">
+      <div class="mx-auto flex items-center h-11 px-5 sm:px-6 max-w-[1400px]">
+        <div class="flex items-center gap-2.5">
+          <span class="text-sm font-normal tracking-[0.08em] uppercase font-[family-name:var(--font-pixel)]">AGENT-AUTH</span>
+        </div>
+        <div class="ml-auto">
+          <button id="ask-close" class="inline-flex items-center gap-1.5 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)] hover:text-[var(--color-fg)] transition-colors cursor-pointer">
+            Close
+            <kbd class="text-[9px] px-1 py-0.5 border border-[var(--color-border)] text-[var(--color-muted)] leading-none">ESC</kbd>
+          </button>
+        </div>
+      </div>
+      <div class="h-px" style="background: linear-gradient(to right, transparent, var(--color-border) 15%, var(--color-border) 85%, transparent);"></div>
+    </nav>
+
+    <!-- Sheet body -->
+    <div id="ask-response-area" class="flex-1 overflow-y-auto min-h-0">
+      <div class="mx-auto max-w-[820px] w-full px-5 sm:px-8 py-8 sm:py-10">
+        <div id="ask-welcome">
+          <div class="mb-10">
+            <p class="text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-[0.2em] text-[var(--color-muted)] mb-4">Overview</p>
+            <h1 class="text-2xl sm:text-3xl font-semibold tracking-tight leading-[1.2] mb-5">What is Agent Auth Protocol?</h1>
+            <div class="ask-prose">
+              <p>Agent Auth is an open protocol that gives AI agents their own identity. Instead of borrowing a user's OAuth token or sharing a single API key, each agent gets its own cryptographic keypair, its own granted capabilities, and its own lifecycle.</p>
+              <p>The core flow is simple: a <strong>host</strong> (like Cursor, an MCP server, or a CLI tool) registers an <strong>agent</strong> with a server. The agent authenticates using Ed25519-signed JWTs. The user approves capabilities through a device authorization flow — similar to logging into a streaming app on your TV.</p>
+              <p>This means servers can see exactly which agent made a request, scope what each agent can do, and revoke one agent without affecting others. It works for both <strong>delegated</strong> agents (acting on behalf of a user) and <strong>autonomous</strong> agents (operating independently).</p>
+            </div>
+          </div>
+
+          <div class="border-t border-[var(--color-border)] pt-8">
+            <p class="text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-[0.2em] text-[var(--color-muted)] mb-4">Dive deeper</p>
+            <div class="grid sm:grid-cols-2 gap-2">
+              <button class="ask-chip text-left px-4 py-3 text-[13px] text-[var(--color-fg)] border border-[var(--color-border)] hover:bg-[var(--color-surface)] transition-colors cursor-pointer">How does agent registration work?</button>
+              <button class="ask-chip text-left px-4 py-3 text-[13px] text-[var(--color-fg)] border border-[var(--color-border)] hover:bg-[var(--color-surface)] transition-colors cursor-pointer">Explain the device authorization flow</button>
+              <button class="ask-chip text-left px-4 py-3 text-[13px] text-[var(--color-fg)] border border-[var(--color-border)] hover:bg-[var(--color-surface)] transition-colors cursor-pointer">Delegated vs autonomous agents</button>
+              <button class="ask-chip text-left px-4 py-3 text-[13px] text-[var(--color-fg)] border border-[var(--color-border)] hover:bg-[var(--color-surface)] transition-colors cursor-pointer">What are capabilities?</button>
+              <button class="ask-chip text-left px-4 py-3 text-[13px] text-[var(--color-fg)] border border-[var(--color-border)] hover:bg-[var(--color-surface)] transition-colors cursor-pointer sm:col-span-2">How do agents sign requests?</button>
+            </div>
+          </div>
+        </div>
+        <div id="ask-messages" class="hidden"></div>
+      </div>
+    </div>
+
+    <!-- Sheet input -->
+    <div class="shrink-0 relative z-10 bg-[var(--color-bg)]">
+      <div class="mx-auto max-w-[820px] w-full px-5 sm:px-8 py-4">
+        <div class="flex items-center gap-3 px-4 py-3 border border-[color-mix(in_oklch,var(--color-fg)_8%,transparent)] focus-within:border-[color-mix(in_oklch,var(--color-fg)_15%,transparent)] bg-[var(--color-surface)] transition-colors">
+          <input
+            id="ask-sheet-input"
+            type="text"
+            placeholder="Ask anything about the protocol…"
+            autocomplete="off"
+            class="flex-1 text-[14px] font-[family-name:var(--font-sans)] bg-transparent text-[var(--color-fg)] placeholder:text-[color-mix(in_oklch,var(--color-fg)_30%,transparent)] focus:outline-none min-w-0"
+          />
+          <button id="ask-send" class="shrink-0 w-7 h-7 flex items-center justify-center rounded-full bg-[color-mix(in_oklch,var(--color-fg)_8%,transparent)] text-[var(--color-muted)] hover:bg-[color-mix(in_oklch,var(--color-fg)_15%,transparent)] hover:text-[var(--color-fg)] transition-all cursor-pointer disabled:opacity-20" disabled>
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+          </button>
+        </div>
+        <p class="text-[10px] text-[var(--color-muted)] text-center mt-2">AI-generated — verify important details</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style is:global>
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+  @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+
+  @keyframes agent-blink {
+    0%, 42%, 46%, 100% { scale: 1 1; }
+    44% { scale: 1 0.1; }
+  }
+  .ask-agent-eye {
+    transform-origin: center;
+    animation: agent-blink 3s ease-in-out infinite;
+    animation-delay: 1.8s;
+  }
+  @keyframes indicator-pulse {
+    0%, 100% { opacity: 0.8; }
+    50% { opacity: 1; }
+  }
+  #ask-wave {
+    animation: indicator-pulse 2.5s ease-in-out infinite;
+    animation-delay: 2s;
+  }
+
+  #ask-sheet {
+    visibility: hidden;
+    opacity: 0;
+    transition: visibility 0s .25s, opacity .25s ease;
+  }
+  #ask-sheet.open {
+    visibility: visible;
+    opacity: 1;
+    transition-delay: 0s;
+  }
+
+  .ask-prose {
+    font-family: var(--font-serif);
+    font-size: 15px;
+    line-height: 1.95;
+    color: color-mix(in oklch, var(--color-fg) 78%, transparent);
+  }
+  .ask-prose > p:first-child {
+    font-size: 17px;
+    line-height: 1.85;
+    color: color-mix(in oklch, var(--color-fg) 88%, transparent);
+  }
+  .ask-prose p { margin-bottom: 1rem; }
+  .ask-prose p:last-child { margin-bottom: 0; }
+  .ask-prose strong { font-weight: 600; color: color-mix(in oklch, var(--color-fg) 90%, transparent); }
+  .ask-prose a { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: color-mix(in oklch, var(--color-fg) 20%, transparent); }
+  .ask-prose a:hover { text-decoration-color: color-mix(in oklch, var(--color-fg) 55%, transparent); }
+  .ask-prose code:not(pre code) {
+    font-family: var(--font-mono);
+    font-size: 0.82em;
+    padding: 0.15em 0.4em;
+    background: color-mix(in oklch, var(--color-fg) 5%, transparent);
+    border: 1px solid var(--color-border);
+    color: color-mix(in oklch, var(--color-fg) 85%, transparent);
+  }
+  .ask-prose pre {
+    margin: 1.35rem 0;
+    padding: 1.1rem 1.25rem;
+    background: color-mix(in oklch, var(--color-fg) 3%, var(--color-bg));
+    border: 1px solid color-mix(in oklch, var(--color-fg) 8%, transparent);
+    border-radius: 10px;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: color-mix(in oklch, var(--color-fg) 70%, transparent);
+    box-shadow: inset 0 1px 0 color-mix(in oklch, var(--color-fg) 3%, transparent);
+  }
+  .ask-prose pre code { padding: 0; background: none; border: none; font-size: inherit; color: inherit; text-shadow: none; }
+  .ask-prose pre code .token.comment,
+  .ask-prose pre code .token.prolog,
+  .ask-prose pre code .token.doctype { color: var(--color-muted); }
+  .ask-prose pre code .token.punctuation { color: color-mix(in oklch, var(--color-fg) 50%, transparent); }
+  .ask-prose pre code .token.property,
+  .ask-prose pre code .token.tag,
+  .ask-prose pre code .token.boolean,
+  .ask-prose pre code .token.number,
+  .ask-prose pre code .token.constant { color: #b5695a; }
+  .ask-prose pre code .token.string,
+  .ask-prose pre code .token.char,
+  .ask-prose pre code .token.attr-value { color: #698a5b; }
+  .ask-prose pre code .token.keyword,
+  .ask-prose pre code .token.selector { color: #7c6ba5; }
+  .ask-prose pre code .token.function { color: #5a8a8a; }
+  .ask-prose pre code .token.operator { color: color-mix(in oklch, var(--color-fg) 60%, transparent); }
+  .ask-prose ul, .ask-prose ol {
+    padding-left: 1.5rem;
+    margin-bottom: 1rem;
+  }
+  .ask-prose ul { list-style: disc; }
+  .ask-prose ol { list-style: decimal; }
+  .ask-prose li { margin-bottom: 0.4rem; }
+  .ask-prose li > p { margin-bottom: 0.35rem; }
+  .ask-prose h2 {
+    font-family: var(--font-sans);
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin-top: 2.1rem;
+    margin-bottom: 0.8rem;
+    color: var(--color-fg);
+    letter-spacing: -0.01em;
+  }
+  .ask-prose h3 {
+    font-family: var(--font-sans);
+    font-size: 0.98rem;
+    font-weight: 600;
+    margin-top: 1.6rem;
+    margin-bottom: 0.55rem;
+    color: var(--color-fg);
+  }
+  .ask-prose blockquote { border-left: 2px solid var(--color-border); padding-left: 1rem; margin: 1rem 0; color: var(--color-muted); font-style: italic; }
+  .ask-prose hr { border: none; border-top: 1px solid var(--color-border); margin: 2rem 0; }
+  .ask-prose table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 1rem 0; border: 1px solid var(--color-border); }
+  .ask-prose th { text-align: left; padding: 0.5rem 0.75rem; font-family: var(--font-mono); font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-muted); background: var(--color-surface); border-bottom: 1px solid var(--color-border); }
+  .ask-prose td { padding: 0.5rem 0.75rem; border-bottom: 1px solid color-mix(in oklch, var(--color-fg) 5%, transparent); }
+  .ask-stream-body {
+    font-family: var(--font-serif);
+    font-size: 15px;
+    line-height: 1.95;
+    color: color-mix(in oklch, var(--color-fg) 78%, transparent);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  #ask-messages .ask-msg-user {
+    margin-bottom: 1.5rem;
+  }
+  #ask-messages .ask-msg-user .ask-msg-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--color-muted);
+    margin-bottom: 0.5rem;
+  }
+  #ask-messages .ask-msg-user .ask-msg-text {
+    font-family: var(--font-sans);
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--color-fg);
+    background: color-mix(in oklch, var(--color-fg) 6%, transparent);
+    padding: 0.85rem 1.1rem;
+    border: 1px solid var(--color-border);
+  }
+
+  #ask-messages .ask-msg-ai {
+    padding-bottom: 2rem;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid color-mix(in oklch, var(--color-fg) 8%, transparent);
+  }
+  #ask-messages .ask-msg-ai .ask-msg-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--color-muted);
+    margin-bottom: 0.75rem;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 5px;
+  }
+  #ask-messages .ask-msg-ai .ask-msg-body {
+    padding: 1.2rem 1.3rem;
+    border: 1px solid color-mix(in oklch, var(--color-fg) 8%, transparent);
+    border-radius: 14px;
+    background: linear-gradient(
+      to bottom,
+      color-mix(in oklch, var(--color-fg) 2%, var(--color-bg)),
+      color-mix(in oklch, var(--color-fg) 1%, var(--color-bg))
+    );
+    box-shadow: 0 1px 0 color-mix(in oklch, var(--color-fg) 4%, transparent);
+  }
+  #ask-messages .ask-msg-ai:last-child { margin-bottom: 0; border-bottom: none; }
+
+  @keyframes thinking-dot {
+    0%, 80%, 100% { opacity: 0.2; }
+    40% { opacity: 1; }
+  }
+  .ask-thinking {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+    padding: 4px 0;
+  }
+  .ask-thinking span {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--color-muted);
+    animation: thinking-dot 1.4s ease-in-out infinite;
+  }
+  .ask-thinking span:nth-child(2) { animation-delay: 0.2s; }
+  .ask-thinking span:nth-child(3) { animation-delay: 0.4s; }
+
+</style>
+
+<script is:inline>
+(function() {
+  var $ = function(id) { return document.getElementById(id); };
+  var stepsEl = $("demo-steps");
+  var scrollEl = $("demo-scroll");
+  var promptEl = $("demo-prompt");
+  var cursorEl = $("demo-cursor");
+  var footerEl = $("demo-footer");
+  var replayBtn = $("demo-replay-btn");
+
+  var isRunning = false;
+  var currentFlow = "balance";
+
+  var balanceFlow = {
+    prompt: "Show me my balance",
+    steps: [
+      { phase: "connect",  text: "Connecting to auth.bank.com…" },
+      { phase: "protocol", text: "Discovering server configuration", detail: "GET /.well-known/agent-configuration" },
+      { phase: "protocol", text: "Registering agent identity", detail: "agent_id: agt_k7x9m2" },
+      { phase: "waiting",  text: "Waiting for user approval…", detail: "Opening browser for authorization" },
+      { phase: "device",   approvalCard: true, agent: "Bank Balance Checker", host: "MacBook Pro", permissions: ["List your bank accounts", "View account balances"] },
+      { phase: "polling",  text: "Agent polling for approval…", detail: "Waiting for browser response", spinner: true },
+      { phase: "approved", text: "User approved — capabilities granted" },
+      { phase: "sign",     text: "Signing request", detail: "EdDSA JWT • sub: agt_k7x9m2 • exp: 60s" },
+      { phase: "verify",   text: "Bank verified agent identity", detail: "Signature valid • Agent active" },
+      { phase: "result",   text: "Balance retrieved", result: true },
+    ],
+    result: {
+      label: "Checking •••• 1842",
+      value: "$4,280.13",
+      meta: "agent: agt_k7x9m2",
+    },
+  };
+
+  var transferFlow = {
+    prompt: "Transfer $250 from checking to savings",
+    steps: [
+      { phase: "protocol", text: "Agent needs additional permission", detail: "Requesting transfer access" },
+      { phase: "waiting",  text: "Waiting for user approval…", detail: "Opening browser for authorization" },
+      { phase: "device",   approvalCard: true, agent: "Bank Balance Checker", host: "MacBook Pro", permissions: ["Transfer funds between your accounts"] },
+      { phase: "polling",  text: "Agent polling for approval…", detail: "Waiting for browser response", spinner: true },
+      { phase: "approved", text: "User approved — transfer capability granted" },
+      { phase: "sign",     text: "Signing transfer request", detail: "EdDSA JWT • sub: agt_k7x9m2 • exp: 60s" },
+      { phase: "verify",   text: "Bank verified and executed transfer", detail: "Signature valid • Transfer processed" },
+      { phase: "result",   text: "Transfer complete", result: true },
+    ],
+    result: {
+      label: "Transfer confirmed",
+      value: "$250.00",
+      meta: "checking •••• 1842 → savings •••• 7391",
+    },
+  };
+
+  var phaseStyles = {
+    connect:  { color: "var(--color-muted)", icon: "◦" },
+    protocol: { color: "var(--color-muted)", icon: "›" },
+    waiting:  { color: "#d97706",            icon: "…" },
+    polling:  { color: "#d97706",            icon: "◌" },
+    device:   { color: "#d97706",            icon: "!" },
+    approval: { color: "#d97706",            icon: "!" },
+    approved: { color: "#16a34a",            icon: "✓" },
+    sign:     { color: "var(--color-fg)",    icon: "⚿" },
+    verify:   { color: "#16a34a",            icon: "✓" },
+    result:   { color: "#16a34a",            icon: "✓" },
+  };
+
+  function sleep(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }
+
+  function scrollToBottom() {
+    scrollEl.scrollTop = scrollEl.scrollHeight;
+  }
+
+  async function typeText(el, text) {
+    el.textContent = "";
+    for (var i = 0; i < text.length; i++) {
+      el.textContent += text[i];
+      await sleep(28 + Math.random() * 22);
+    }
+  }
+
+  function addStep(step, animate) {
+    var row = document.createElement("div");
+    row.style.cssText = "display:flex;gap:8px;align-items:flex-start;padding:6px 0;";
+    if (animate) { row.style.opacity = "0"; row.style.transform = "translateY(4px)"; }
+
+    var style = phaseStyles[step.phase] || phaseStyles.protocol;
+
+    var iconEl = document.createElement("span");
+    iconEl.style.cssText = "flex-shrink:0;width:14px;font-family:var(--font-mono);font-size:11px;text-align:center;margin-top:1px;color:" + style.color + ";";
+    if (step.spinner) {
+      iconEl.innerHTML = '<span style="display:inline-block;animation:spin 1s linear infinite;">◌</span>';
+    } else {
+      iconEl.textContent = style.icon;
+    }
+
+    var bodyEl = document.createElement("div");
+    bodyEl.style.cssText = "flex:1;min-width:0;";
+
+    var labelEl = document.createElement("div");
+    labelEl.style.cssText = "font-size:12px;line-height:1.5;";
+    labelEl.textContent = step.text;
+    bodyEl.appendChild(labelEl);
+
+    if (step.detail) {
+      var detailEl = document.createElement("div");
+      detailEl.style.cssText = "font-family:var(--font-mono);font-size:10px;color:var(--color-muted);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;";
+      detailEl.textContent = step.detail;
+      bodyEl.appendChild(detailEl);
+    }
+
+    row.appendChild(iconEl);
+    row.appendChild(bodyEl);
+    stepsEl.appendChild(row);
+    scrollToBottom();
+
+    if (animate) {
+      requestAnimationFrame(function() { requestAnimationFrame(function() {
+        row.style.transition = "opacity .25s ease,transform .25s ease";
+        row.style.opacity = "1";
+        row.style.transform = "translateY(0)";
+      }); });
+    }
+
+    return row;
+  }
+
+  function addApprovalCard(step) {
+    return new Promise(function(resolve) {
+      var card = document.createElement("div");
+      card.style.cssText = "margin:6px 0;border:1px solid var(--color-border);border-radius:6px;background:var(--color-bg);opacity:0;transform:translateY(4px);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);";
+
+      var tabBar = '<div style="display:flex;align-items:center;background:var(--color-surface);border-bottom:1px solid var(--color-border);padding:0 8px;">' +
+        '<div style="display:flex;align-items:center;gap:5px;padding:5px 10px;border-bottom:2px solid var(--color-fg);margin-bottom:-1px;">' +
+          '<svg style="width:9px;height:9px;color:var(--color-muted);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>' +
+          '<span style="font-size:9px;">Authorize Agent</span>' +
+        '</div>' +
+      '</div>';
+
+      var urlBar = '<div style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-bottom:1px solid var(--color-border);">' +
+        '<svg style="width:9px;height:9px;color:#16a34a;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>' +
+        '<span style="font-family:var(--font-mono);font-size:9px;color:var(--color-muted);">auth.bank.com/device</span>' +
+      '</div>';
+
+      var page = '<div style="padding:12px 14px;">' +
+        '<div style="font-size:12px;font-weight:600;margin-bottom:1px;">' + step.agent + '</div>' +
+        '<div style="font-size:10px;color:var(--color-muted);margin-bottom:10px;">via ' + step.host + '</div>' +
+        '<div style="font-size:10px;color:var(--color-muted);margin-bottom:6px;">This agent wants to:</div>';
+
+      for (var i = 0; i < step.permissions.length; i++) {
+        page += '<div style="display:flex;align-items:center;gap:6px;padding:4px 0;">' +
+          '<span style="color:var(--color-muted);font-size:10px;flex-shrink:0;">•</span>' +
+          '<span style="font-size:11px;">' + step.permissions[i] + '</span></div>';
+      }
+
+      page += '<div style="display:flex;gap:8px;margin-top:10px;">' +
+        '<button class="demo-approve-btn" style="flex:1;padding:6px 0;font-size:11px;font-weight:500;background:var(--color-fg);color:var(--color-bg);border:none;cursor:pointer;transition:all 0.2s;border-radius:3px;">Approve</button>' +
+        '<button style="padding:6px 14px;font-size:11px;background:transparent;color:var(--color-muted);border:1px solid var(--color-border);cursor:default;border-radius:3px;">Deny</button>' +
+      '</div></div>';
+
+      card.innerHTML = tabBar + urlBar + page;
+      stepsEl.appendChild(card);
+      scrollToBottom();
+
+      requestAnimationFrame(function() { requestAnimationFrame(function() {
+        card.style.transition = "opacity .3s ease,transform .3s ease";
+        card.style.opacity = "1";
+        card.style.transform = "translateY(0)";
+      }); });
+
+      setTimeout(function() {
+        var btn = card.querySelector(".demo-approve-btn");
+        if (btn) {
+          btn.textContent = "Approved ✓";
+          btn.style.background = "#16a34a";
+          btn.style.color = "#fff";
+
+          setTimeout(function() {
+            card.style.transition = "opacity .3s ease,transform .2s ease";
+            card.style.opacity = "0.4";
+            card.style.transform = "scale(0.98)";
+            setTimeout(function() { resolve(); }, 400);
+          }, 600);
+        }
+      }, 2000);
+    });
+  }
+
+  function addResult(result) {
+    var wrap = document.createElement("div");
+    wrap.style.cssText = "margin-top:6px;padding:10px 12px;border:1px solid var(--color-border);background:var(--color-surface);opacity:0;transform:translateY(4px);";
+
+    wrap.innerHTML =
+      '<div style="font-size:11px;color:var(--color-muted);font-family:var(--font-mono);">' + result.label + '</div>' +
+      '<div style="font-size:20px;font-weight:600;margin-top:2px;">' + result.value + '</div>' +
+      '<div style="font-size:10px;color:var(--color-muted);font-family:var(--font-mono);margin-top:4px;">' + result.meta + '</div>';
+
+    stepsEl.appendChild(wrap);
+    scrollToBottom();
+
+    requestAnimationFrame(function() { requestAnimationFrame(function() {
+      wrap.style.transition = "opacity .3s ease,transform .3s ease";
+      wrap.style.opacity = "1";
+      wrap.style.transform = "translateY(0)";
+    }); });
+  }
+
+  function addUserMessage(text) {
+    return new Promise(async function(resolve) {
+      var row = document.createElement("div");
+      row.style.cssText = "display:flex;gap:8px;align-items:flex-start;padding:8px 0;margin-top:4px;border-top:1px solid var(--color-border);opacity:0;transform:translateY(4px);";
+      var icon = document.createElement("span");
+      icon.style.cssText = "flex-shrink:0;color:var(--color-muted);font-size:13px;margin-top:-1px;";
+      icon.textContent = "›";
+      var body = document.createElement("span");
+      body.style.cssText = "font-size:12px;line-height:1.5;";
+      row.appendChild(icon);
+      row.appendChild(body);
+      stepsEl.appendChild(row);
+      scrollToBottom();
+
+      requestAnimationFrame(function() { requestAnimationFrame(function() {
+        row.style.transition = "opacity .2s ease,transform .2s ease";
+        row.style.opacity = "1";
+        row.style.transform = "translateY(0)";
+      }); });
+
+      await sleep(200);
+      for (var i = 0; i < text.length; i++) {
+        body.textContent += text[i];
+        scrollToBottom();
+        await sleep(28 + Math.random() * 22);
+      }
+      resolve();
+    });
+  }
+
+  async function runSteps(steps, result) {
+    for (var i = 0; i < steps.length; i++) {
+      var step = steps[i];
+
+      if (step.approvalCard) {
+        await sleep(300);
+        await addApprovalCard(step);
+        continue;
+      }
+
+      var delay = step.phase === "connect" ? 300 :
+                  step.phase === "waiting" ? 600 :
+                  step.phase === "polling" ? 400 :
+                  step.phase === "approved" ? 800 :
+                  step.phase === "result" ? 400 : 500;
+      await sleep(delay);
+      addStep(step, true);
+
+      if (step.result) {
+        await sleep(350);
+        addResult(result);
+      }
+    }
+  }
+
+  async function runFullDemo() {
+    if (isRunning) return;
+    isRunning = true;
+    footerEl.style.visibility = "hidden";
+    stepsEl.innerHTML = "";
+    cursorEl.style.display = "inline-block";
+
+    await typeText(promptEl, balanceFlow.prompt);
+    cursorEl.style.display = "none";
+    await sleep(400);
+
+    await runSteps(balanceFlow.steps, balanceFlow.result);
+
+    await sleep(1500);
+
+    await addUserMessage(transferFlow.prompt);
+    await sleep(400);
+
+    await runSteps(transferFlow.steps, transferFlow.result);
+
+    await sleep(400);
+    footerEl.style.visibility = "visible";
+    isRunning = false;
+  }
+
+  replayBtn.addEventListener("click", function() {
+    runFullDemo();
+  });
+
+  setTimeout(function() {
+    runFullDemo();
+  }, 800);
+})();
+</script>
+
+<script is:inline>
+(function() {
+  var triggerWrap = document.getElementById("ask-trigger-wrap");
+  var trigger = document.getElementById("ask-trigger");
+  var wave = document.getElementById("ask-wave");
+  var sheet = document.getElementById("ask-sheet");
+  var closeBtn = document.getElementById("ask-close");
+  var backdrop = document.getElementById("ask-backdrop");
+  var sheetInput = document.getElementById("ask-sheet-input");
+  var sendBtn = document.getElementById("ask-send");
+  var welcome = document.getElementById("ask-welcome");
+  var messages = document.getElementById("ask-messages");
+  var responseArea = document.getElementById("ask-response-area");
+
+  var isStreaming = false;
+
+  // Intro: slide up to peek from bottom + wave
+  setTimeout(function() {
+    triggerWrap.style.translate = "-50% 30%";
+    triggerWrap.style.opacity = "1";
+    setTimeout(function() {
+      wave.classList.add("waving");
+    }, 400);
+  }, 600);
+
+  function openSheet(query) {
+    sheet.classList.add("open");
+    triggerWrap.style.translate = "-50% 100%";
+    triggerWrap.style.opacity = "0";
+    document.body.style.overflow = "hidden";
+
+    setTimeout(function() {
+      if (query) {
+        sendMessage(query);
+      } else {
+        sheetInput.focus();
+      }
+    }, 380);
+  }
+
+  function closeSheet() {
+    if (isStreaming) return;
+    sheet.classList.remove("open");
+    triggerWrap.style.translate = "-50% 30%";
+    triggerWrap.style.opacity = "1";
+    document.body.style.overflow = "";
+  }
+
+  trigger.addEventListener("click", function() {
+    openSheet();
+  });
+
+  closeBtn.addEventListener("click", closeSheet);
+  backdrop.addEventListener("click", closeSheet);
+
+  document.addEventListener("keydown", function(e) {
+    if (e.key === "Escape" && sheet.classList.contains("open")) {
+      closeSheet();
+    }
+  });
+
+  document.querySelectorAll(".ask-chip").forEach(function(chip) {
+    chip.addEventListener("click", function() {
+      openSheet(chip.textContent.trim());
+    });
+  });
+
+  sheetInput.addEventListener("input", function() {
+    sendBtn.disabled = !sheetInput.value.trim();
+  });
+
+  sheetInput.addEventListener("keydown", function(e) {
+    if (e.key === "Enter" && sheetInput.value.trim() && !isStreaming) {
+      e.preventDefault();
+      sendMessage(sheetInput.value.trim());
+      sheetInput.value = "";
+      sendBtn.disabled = true;
+    }
+  });
+
+  sendBtn.addEventListener("click", function() {
+    if (sheetInput.value.trim() && !isStreaming) {
+      sendMessage(sheetInput.value.trim());
+      sheetInput.value = "";
+      sendBtn.disabled = true;
+    }
+  });
+
+  // Load marked + Prism
+  var markedLoaded = null;
+  function loadMarked() {
+    if (markedLoaded) return markedLoaded;
+    markedLoaded = import("https://esm.sh/marked@17").then(function(m) {
+      return m.marked;
+    });
+    return markedLoaded;
+  }
+  loadMarked();
+
+  var prismLoaded = null;
+  function loadPrism() {
+    if (prismLoaded) return prismLoaded;
+    prismLoaded = new Promise(function(resolve) {
+      if (window.Prism) { resolve(window.Prism); return; }
+      var s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/prismjs@1/prism.min.js";
+      s.onload = function() {
+        var langs = [
+          "https://cdn.jsdelivr.net/npm/prismjs@1/components/prism-json.min.js",
+          "https://cdn.jsdelivr.net/npm/prismjs@1/components/prism-bash.min.js",
+          "https://cdn.jsdelivr.net/npm/prismjs@1/components/prism-typescript.min.js",
+          "https://cdn.jsdelivr.net/npm/prismjs@1/components/prism-python.min.js",
+        ];
+        var loaded = 0;
+        langs.forEach(function(url) {
+          var ls = document.createElement("script");
+          ls.src = url;
+          ls.onload = ls.onerror = function() {
+            loaded++;
+            if (loaded >= langs.length) resolve(window.Prism);
+          };
+          document.head.appendChild(ls);
+        });
+      };
+      document.head.appendChild(s);
+    });
+    return prismLoaded;
+  }
+  loadPrism();
+
+  async function renderMarkdown(text) {
+    var marked = await loadMarked();
+    return marked.parse(text);
+  }
+
+  function highlightCode(el) {
+    loadPrism().then(function(Prism) {
+      el.querySelectorAll("pre code").forEach(function(block) {
+        if (!block.className) block.className = "language-text";
+        Prism.highlightElement(block);
+      });
+    });
+  }
+
+  // Smart scroll: only auto-scroll if user is near the bottom
+  function isNearBottom() {
+    var threshold = 80;
+    return responseArea.scrollHeight - responseArea.scrollTop - responseArea.clientHeight < threshold;
+  }
+
+  function scrollIfNeeded() {
+    if (isNearBottom()) {
+      responseArea.scrollTo({ top: responseArea.scrollHeight, behavior: "smooth" });
+    }
+  }
+
+  async function sendMessage(text) {
+    isStreaming = true;
+    sheetInput.disabled = true;
+    sendBtn.disabled = true;
+
+    welcome.classList.add("hidden");
+    messages.classList.remove("hidden");
+
+    var userMsg = document.createElement("div");
+    userMsg.className = "ask-msg-user";
+    userMsg.innerHTML = '<div class="ask-msg-label">You</div><div class="ask-msg-text"></div>';
+    userMsg.querySelector(".ask-msg-text").textContent = text;
+    messages.appendChild(userMsg);
+
+    var aiMsg = document.createElement("div");
+    aiMsg.className = "ask-msg-ai";
+    aiMsg.innerHTML = '<div class="ask-msg-label"><svg style="width:12px;height:12px;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4"/><circle cx="9.5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="14.5" cy="12" r="1.5" fill="currentColor" stroke="none"/><line x1="12" y1="1" x2="12" y2="4"/><circle cx="12" cy="1" r="1" fill="currentColor" stroke="none"/></svg><span>Agent Auth</span></div><div class="ask-msg-body ask-prose"><div class="ask-thinking"><span></span><span></span><span></span></div></div>';
+    messages.appendChild(aiMsg);
+    responseArea.scrollTo({ top: responseArea.scrollHeight, behavior: "smooth" });
+
+    var aiBody = aiMsg.querySelector(".ask-msg-body");
+    var fullText = "";
+    var visibleText = "";
+    var streamDone = false;
+    var typingFrame = null;
+    var lastTypingTs = 0;
+    var CHARS_PER_SECOND = 140;
+    var renderQueued = false;
+    var renderPending = false;
+    var renderInFlight = false;
+    var finalRenderStarted = false;
+
+    function startTypingLoop() {
+      if (typingFrame || finalRenderStarted) return;
+      typingFrame = requestAnimationFrame(tickTyping);
+    }
+
+    function tickTyping(ts) {
+      typingFrame = null;
+      if (finalRenderStarted) return;
+
+      if (!lastTypingTs) lastTypingTs = ts;
+      var elapsed = ts - lastTypingTs;
+      var charsToAdd = Math.max(1, Math.floor((elapsed / 1000) * CHARS_PER_SECOND));
+
+      if (visibleText.length < fullText.length) {
+        visibleText = fullText.slice(0, Math.min(fullText.length, visibleText.length + charsToAdd));
+        lastTypingTs = ts;
+        queueStreamRender();
+      } else {
+        lastTypingTs = ts;
+      }
+
+      if (!streamDone || visibleText.length < fullText.length) {
+        typingFrame = requestAnimationFrame(tickTyping);
+      }
+    }
+
+    function queueStreamRender() {
+      if (finalRenderStarted) return;
+      if (renderInFlight) {
+        renderPending = true;
+        return;
+      }
+      if (renderQueued) return;
+      renderQueued = true;
+      requestAnimationFrame(async function() {
+        renderQueued = false;
+        if (finalRenderStarted || renderInFlight) return;
+        renderInFlight = true;
+        try {
+          var html = await renderMarkdown(visibleText);
+          if (!finalRenderStarted) {
+            aiBody.innerHTML = html;
+            scrollIfNeeded();
+          }
+        } finally {
+          renderInFlight = false;
+          if (!finalRenderStarted && renderPending) {
+            renderPending = false;
+            queueStreamRender();
+          }
+        }
+      });
+    }
+
+    try {
+      var res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text }),
+      });
+
+      if (!res.ok) {
+        var err = await res.json().catch(function() { return {}; });
+        aiBody.innerHTML = '<p style="color:var(--color-muted);">Sorry, something went wrong. ' + (err.error || "Please try again.") + '</p>';
+        isStreaming = false;
+        sheetInput.disabled = false;
+        sheetInput.focus();
+        return;
+      }
+
+      aiBody.innerHTML = "";
+
+      var reader = res.body.getReader();
+      var decoder = new TextDecoder();
+      var buffer = "";
+
+      while (true) {
+        var result = await reader.read();
+        if (result.done) break;
+        buffer += decoder.decode(result.value, { stream: true });
+        var lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (var i = 0; i < lines.length; i++) {
+          var line = lines[i].trim();
+          if (!line.startsWith("data: ")) continue;
+          var data = line.slice(6);
+          if (data === "[DONE]") continue;
+          try {
+            var parsed = JSON.parse(data);
+            if (parsed.content) {
+              fullText += parsed.content;
+              startTypingLoop();
+            }
+          } catch(e) {}
+        }
+      }
+      streamDone = true;
+    } catch(e) {
+      if (!fullText) {
+        aiBody.innerHTML = '<p style="color:var(--color-muted);">Could not reach the server. Please try again.</p>';
+        isStreaming = false;
+        sheetInput.disabled = false;
+        sheetInput.focus();
+        return;
+      }
+    }
+
+    while (visibleText.length < fullText.length || typingFrame || renderQueued || renderInFlight) {
+      await new Promise(function(resolve) { setTimeout(resolve, 16); });
+    }
+
+    finalRenderStarted = true;
+    var html = await renderMarkdown(fullText);
+    aiBody.innerHTML = html;
+    aiBody.style.opacity = "0";
+    aiBody.style.transform = "translateY(8px)";
+    highlightCode(aiBody);
+
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        aiBody.style.transition = "opacity 0.4s ease, transform 0.4s ease";
+        aiBody.style.opacity = "1";
+        aiBody.style.transform = "translateY(0)";
+      });
+    });
+
+    responseArea.scrollTo({ top: responseArea.scrollHeight, behavior: "smooth" });
+    isStreaming = false;
+    sheetInput.disabled = false;
+    sheetInput.focus();
+  }
+})();
+</script>

@@ -1,0 +1,2817 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="description" content="An implementation-oriented protocol that gives AI agents their own identity, permissions, and lifecycle, so services can authenticate, authorize, and audit them independently."><title>Specification — Agent Auth Protocol</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..900&family=Geist+Mono:wght@300..700&family=Lora:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet"><link rel="stylesheet" href="/_astro/examples.Bv_6Jmah.css"></head> <body class="min-h-screen flex flex-col spec-page-body">  <nav class="sticky top-0 z-50 bg-[var(--color-bg)]/95 backdrop-blur-sm"> <div class="mx-auto flex items-center h-11 px-5 sm:px-6 max-w-[1400px]"> <a href="/" class="shrink-0 text-xs font-semibold tracking-[0.15em] uppercase font-[family-name:var(--font-mono)]">
+AGENT-AUTH.
+</a> <div class="ml-auto flex items-center overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"> <a href="/specification" class="inline-flex items-center gap-1 shrink-0 px-3 sm:px-4 py-2.5 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider whitespace-nowrap transition-colors text-[var(--color-fg)]"> Specification  </a><a href="/implementations" class="inline-flex items-center gap-1 shrink-0 px-3 sm:px-4 py-2.5 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider whitespace-nowrap transition-colors text-[var(--color-muted)] hover:text-[var(--color-fg)]"> Implementations  </a><a href="/examples" class="inline-flex items-center gap-1 shrink-0 px-3 sm:px-4 py-2.5 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider whitespace-nowrap transition-colors text-[var(--color-muted)] hover:text-[var(--color-fg)]"> Examples  </a><a href="https://arm.directory" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 shrink-0 px-3 sm:px-4 py-2.5 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider whitespace-nowrap transition-colors text-[var(--color-muted)] hover:text-[var(--color-fg)]"> Registry <svg class="h-2.5 w-2.5 opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg> </a><a href="https://github.com/AgenAuthProtocol/agent-auth-protocol" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 shrink-0 px-3 sm:px-4 py-2.5 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider whitespace-nowrap transition-colors text-[var(--color-muted)] hover:text-[var(--color-fg)]"> GitHub <svg class="h-2.5 w-2.5 opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg> </a> <div class="shrink-0 pl-1"> <button id="theme-toggle" class="inline-flex items-center justify-center h-7 w-7 text-[var(--color-muted)] hover:text-[var(--color-fg)] transition-colors cursor-pointer" aria-label="Toggle theme"> <svg class="h-4 w-4 block dark:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg> <svg class="h-4 w-4 hidden dark:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg> </button> </div> </div> </div> </nav> <script>
+  document.getElementById("theme-toggle")?.addEventListener("click", () => {
+    const isDark = document.documentElement.classList.toggle("dark");
+    localStorage.setItem("theme", isDark ? "dark" : "light");
+  });
+</script> <div class="spec-shell"> <!-- Spec content --> <div class="spec-reader-content" id="spec-scroll-container"> <article class="spec-content-area"> <div class="spec-version-strip"> <span class="spec-version-badge">v1.0-draft</span> <span class="spec-version-sep">/</span> <span>Working Draft</span> <span class="spec-version-sep">/</span> <span>6 March 2026</span> </div> <div class="spec-content"><h1 id="agent-auth-protocol" class="spec-h1">Agent Auth Protocol</h1>
+<p><strong>Version:</strong> 1.0 (Draft**)**</p>
+<p>This document is an implementation-oriented working draft. It is designed to be adoptable by products and platforms today, especially services that already expose MCP tools, OpenAPI operations, or HTTP APIs. The goal is practical agent authentication and authorization.</p>
+<h2 id="1.-introduction" class="spec-h2">1. Introduction</h2>
+<h3 id="1.1-problem-statement" class="spec-h3">1.1 Problem Statement</h3>
+<p>AI agents are becoming long-lived actors: copilots, background workers, scheduled automations, and multi-step systems that call external services without constant human supervision. To operate safely, a service needs to recognize the agent itself as a principal, whether the agent is acting on behalf of a user (<code>delegated</code>) or operating on its own (<code>autonomous</code>).</p>
+<p>Today, most agent integrations reuse a user&#39;s OAuth token or a shared client credential. That collapses the runtime agent into someone else&#39;s identity and creates three problems:</p>
+<ol>
+<li><strong>No visibility.</strong> The server can&#39;t tell which agent made a request. There&#39;s no audit trail per agent — every call looks like it came from the same OAuth client.</li>
+<li><strong>No scoping.</strong> Every agent gets the user&#39;s full permissions or the client&#39;s permissions. You can&#39;t give one agent read-only access and another full access.</li>
+<li><strong>No isolation.</strong> You can&#39;t revoke one agent without revoking all of them. One compromised agent means rotating credentials for everything.</li>
+</ol>
+<p>This gap is especially acute for autonomous agents. They may discover capabilities, request access, run on schedules, escalate permissions mid-task, or later connect to a user account. Existing user-and-app auth models do not cleanly represent that lifecycle, because they model the human user and the application, but not the runtime agent in between.</p>
+<h3 id="1.2-solution" class="spec-h3">1.2 Solution</h3>
+<p>Agent Auth makes the runtime agent a first-class principal. Instead of borrowing a user&#39;s session or a shared application token, each agent gets its own identity, its own granted capabilities, and its own lifecycle. That gives the server something existing auth models are missing: a durable way to reason about which specific agent is acting, what it is allowed to do, and how to suspend, expire, or revoke it without affecting everything else.</p>
+<p>The mechanism is simple: each agent has its own cryptographic identity (Ed25519 keypair), and the client also has its own registered host identity. The host creates and manages agents; the agent authenticates its requests with short-lived signed JWTs. This lets the server attribute every call to a concrete chain of trust: which host created the agent, whether it was <code>delegated</code> or <code>autonomous</code>, which capabilities were granted, and which capability was invoked.</p>
+<p>In other words, the protocol separates identity (who is this agent?), authorization (what can it do?), and execution (how does it call the service?) so services can safely support both user-linked agents and autonomous agents with the same model.</p>
+<p>Agent Auth is intentionally practical and product-shaped. It is closer in spirit to MCP than to OAuth core: it specifies the pieces an implementation needs to interoperate today, including capability discovery, registration, approval flows, execution handoff, and lifecycle management. It is not trying to be the smallest possible greenfield standards primitive.</p>
+<p>The protocol defines two layers:</p>
+<ul>
+<li><strong>Server API</strong> — how a service registers agents, manages capabilities, and verifies identity</li>
+<li><strong>Client interface</strong> — standardized tools that agents call to discover services, register, and execute capabilities. The client has its own registered identity (host keypair) on each server.</li>
+</ul>
+<p>The protocol separates identity (who is this agent?) from authorization (what can it do?) from execution (how does it call capabilities?).</p>
+<h3 id="1.3-conformance" class="spec-h3">1.3 Conformance</h3>
+<p>The key words &quot;MUST&quot;, &quot;MUST NOT&quot;, &quot;REQUIRED&quot;, &quot;SHALL&quot;, &quot;SHALL NOT&quot;, &quot;SHOULD&quot;, &quot;SHOULD NOT&quot;, &quot;RECOMMENDED&quot;, &quot;NOT RECOMMENDED&quot;, &quot;MAY&quot;, and &quot;OPTIONAL&quot; in this document are to be interpreted as described in BCP 14 <a href="https://datatracker.ietf.org/doc/html/rfc2119">RFC 2119</a> <a href="https://datatracker.ietf.org/doc/html/rfc8174">RFC 8174</a> when, and only when, they appear in capitalized form, as shown here.</p>
+<h3 id="1.4-terminology" class="spec-h3">1.4 Terminology</h3>
+<ul>
+<li><strong>Principal</strong> — An identity the server can authenticate, authorize, audit, and revoke independently. In this protocol, both hosts and agents are principals.</li>
+<li><strong>Agent</strong> — The runtime AI actor that needs to call services. Each agent has its own server-side <code>agent_id</code>, its own keypair, its own granted capabilities, and its own lifecycle.</li>
+<li><strong>Client</strong> — The tool layer the agent calls (MCP tools, CLI, SDK, IDE integration). It manages host and agent keys, talks to servers, and signs JWTs. A client is a running process.</li>
+<li><strong>Server</strong> — The service&#39;s authorization server. It manages discovery, host and agent registrations, approvals, capability grants, and JWT verification. Also called the auth server.</li>
+<li><strong>Host</strong> — The client&#39;s stable identity on a server: a keypair plus associated metadata. A host represents a device, application, or environment that creates agents (e.g. &quot;ChatGPT,&quot; &quot;MacBook Pro,&quot; &quot;Claude Code&quot;). It is not a running process. A host MAY exist without any linked user and MAY be linked to at most one user via <code>user_id</code>. An unlinked host MAY provision autonomous agents. A linked host represents a specific user&#39;s device or application on that server.</li>
+<li><strong>Capability</strong> — A server-offered action or function, described by an <code>id</code>, <code>title</code>, <code>description</code>, and <code>invoke</code> descriptor.</li>
+<li><strong>Agent Capability Grant</strong> — A stored grant of one capability to one agent. Agent capability grants carry per-capability state and metadata such as <code>status</code>, <code>granted_by</code>, and <code>expires_at</code>. See §7.3.</li>
+<li><strong>Registration</strong> — The process by which a host creates or re-establishes an agent identity on a server. A successful registration results in an <code>agent_id</code>, a mode, and an initial permission set.</li>
+<li><strong>Approval</strong> — User consent for registration, trust establishment, account linking, or capability escalation. Approval is required when server policy does not allow the request to be auto-approved.</li>
+<li><strong>Mode</strong> — How an agent was registered: <code>&quot;delegated&quot;</code> (acting on behalf of a user) or <code>&quot;autonomous&quot;</code> (operating without a user in the loop). Mode is immutable after creation.</li>
+<li><strong>Linked host</strong> — A host with a <code>user_id</code> set. A linked host MAY auto-approve delegated agents within its default capability set. Linking happens via server-side mechanisms or delegated registration approval (§3.3).</li>
+<li><strong>Host JWT</strong> — A JWT signed with the host&#39;s private key. Used for host-authenticated requests such as registration, discovery with identity, status checks, and management operations.</li>
+<li><strong>Agent JWT</strong> — A short-lived JWT signed with the agent&#39;s private key. Used to authenticate capability execution and other agent-authenticated requests.</li>
+<li><strong>JWK / JWKS</strong> — Standard JSON formats for public keys and key sets (<a href="https://datatracker.ietf.org/doc/html/rfc7517">RFC 7517</a>). Keys may be sent inline as JWKs or published at a JWKS URL for lookup and rotation.</li>
+<li><strong>Issuer</strong> — The base URL that identifies the server&#39;s authorization authority. All protocol endpoints are relative to the issuer, and JWT <code>aud</code> claims are checked against it.</li>
+<li><strong>Provider</strong> — The service being connected to, identified in discovery by <code>provider_name</code>. A generic client may talk to multiple providers.</li>
+<li><strong>Grant status</strong> — The per-capability authorization view returned by <code>/agent/capabilities</code> when called with an agent JWT, derived from whether the agent has been granted that capability.</li>
+</ul>
+<h3 id="1.5-architecture" class="spec-h3">1.5 Architecture</h3>
+<p>The protocol defines three runtime participants and two identity types:</p>
+<table>
+<thead>
+<tr>
+<th>Kind</th>
+<th>Name</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Participant</td>
+<td><strong>Agent</strong></td>
+<td>The AI that needs to act. Has an agent ID and calls client tools.</td>
+</tr>
+<tr>
+<td>Participant</td>
+<td><strong>Client</strong></td>
+<td>The tool layer the agent calls (MCP tools, CLI, SDK). Communicates with servers, manages keys, and signs requests.</td>
+</tr>
+<tr>
+<td>Participant</td>
+<td><strong>Server</strong></td>
+<td>The service&#39;s authorization server. Manages registrations, capabilities, approvals, and verification.</td>
+</tr>
+<tr>
+<td>Identity type</td>
+<td><strong>Host</strong></td>
+<td>A stable identity a client uses to create and manage agents on a server. The server associates default capabilities, trust, and optionally a <code>user_id</code> with it.</td>
+</tr>
+<tr>
+<td>Identity type</td>
+<td><strong>Agent</strong></td>
+<td>A per-agent identity used for authenticated capability execution after registration.</td>
+</tr>
+</tbody></table>
+<p>The host is an identity record and credential set, not a running process. A client uses a host identity when registering agents, checking status, or performing host-authenticated operations.</p>
+<p>In practice, a host is usually backed by a keypair whose private key is available to the client. The client uses that key to sign host-authenticated JWTs. The server stores or resolves only the corresponding public key.</p>
+<p>On each server, the host&#39;s public key identifies the host. The server MAY associate default capabilities and a <code>user_id</code> with that host. When a client signs a registration request with the host&#39;s private key, the server recognizes the host and can auto-approve delegated agents within that host&#39;s default capability set when the host is already linked to a user.</p>
+<p>Public keys for both hosts and agents can be provided to servers in two ways:</p>
+<ul>
+<li><strong>Inline (JWK)</strong> — sent directly during registration. Simplest case.</li>
+<li><strong>JWKS URL</strong> — published at a URL the server can fetch. The URL MAY be served by the client itself, or by a service acting on the client&#39;s behalf (for example a broker or identity service). This is useful for key rotation and for avoiding manual public-key distribution across multiple verifier services. The private keys still live with the client or the service that controls that identity.</li>
+</ul>
+<h3 id="1.6-protocol-flow" class="spec-h3">1.6 Protocol Flow</h3>
+<div class="spec-code"><pre><code class="hljs">     +-------+          +--------+            +---------------+
+     |       |-(A)-----&gt;|        |-(B)-------&gt;|               |
+     | Agent | connect  | Client | register   | Authorization |
+     |       |          |        | (Host JWT  |    Server     |
+     |       |&lt;-(E)-----|        |  + agent   |               |
+     +-------+ agent_id +--------+  pub key)  +-------+-------+
+               + grants           |&lt;-(C)------|
+                                  | agent_id  |
+                                  | + grants  |
+                                  |           +---------------+
+                                  |
+                                  |  [If Pending]
+                                  |
+                                  |            +---------------+
+                                  |   (D)      |   Resource    |
+                                  +-----------&gt;|     Owner     |
+                                  |&lt;-----------| Approval      |
+                                  |            |    (User)     |
+                                  |            +---------------+
+                                  |
+     +-------+          +--------+
+     |       |-(F)-----&gt;|        |
+     | Agent | sign_jwt | Client |
+     |       |&lt;-(G)-----|        |
+     +-------+ JWT      +--------+
+
+     +-------+                                +---------------+
+     |       |-(H)--- Signed Agent JWT ------&gt;|   Resource    |
+     | Agent |                                |    Server     |
+     |       |&lt;-(K)-- Protected Resource -----|               |
+     +-------+                                +------+--------+
+                                                     |
+                                                (I) introspect
+                                                  (agent JWT)
+                                                     |
+                                              +------+--------+
+                                              | Authorization |
+                                         (J)  |    Server     |
+                                              | active/grants |
+                                              +---------------+
+
+              Figure 1: Agent Auth Abstract Protocol Flow</code></pre></div>
+<ul>
+<li><strong>(A)</strong> Agent requests connection via client tools (<code>connect_agent</code> with requested capabilities, reason, and mode).</li>
+<li><strong>(B)</strong> Client registers agent with the authorization server, presenting a host JWT containing the agent&#39;s public key and requested capabilities.</li>
+<li><strong>(C)</strong> Authorization server returns agent ID and capability grants — either active (auto-approved) or pending (approval required).</li>
+<li><strong>(D)</strong> If pending, the resource owner (user) approves via device authorization (<a href="https://datatracker.ietf.org/doc/html/rfc8628">RFC 8628</a>) or CIBA. The client facilitates the approval flow and polls for completion.</li>
+<li><strong>(E)</strong> Client returns agent ID and granted capabilities to the agent.</li>
+<li><strong>(F)</strong> Agent requests a signed JWT from the client (<code>sign_jwt</code>).</li>
+<li><strong>(G)</strong> Client signs a short-lived agent JWT (§4.3) with the agent&#39;s private key and returns it.</li>
+<li><strong>(H)</strong> Agent presents the signed JWT to the resource server.</li>
+<li><strong>(I)</strong> Resource server calls the authorization server&#39;s introspect endpoint (§5.10) with the agent JWT.</li>
+<li><strong>(J)</strong> Authorization server validates the JWT and returns the agent&#39;s status and granted capabilities.</li>
+<li><strong>(K)</strong> Resource server checks the introspection response and returns the protected resource.</li>
+</ul>
+<p>Resource servers that are co-located with the authorization server MAY verify the JWT directly instead of calling introspect (steps I–J).</p>
+<p><strong>Notes:</strong></p>
+<ul>
+<li><strong>Discovery is a pre-step for generic clients.</strong> Multi-provider clients MAY call <code>list_providers</code> (§6.1) and <code>discover</code> (§6.2) before step (A). Single-service clients skip discovery.</li>
+<li><strong>Agents invoke capabilities using their own tools.</strong> The protocol does not define a built-in execute tool. The agent reads the capability&#39;s <code>invoke</code> descriptor and uses whatever tools it has available (HTTP clients, browser tools, code execution) to make the call with the signed JWT.</li>
+<li><strong>Capability escalation.</strong> An active agent that needs additional capabilities calls <code>request_capability</code> (§6.6), which may trigger another approval flow (D) for the new capabilities.</li>
+</ul>
+<p>Detailed use case flows with sequence diagrams are in Appendix A.</p>
+<h2 id="2.-agent" class="spec-h2">2. Agent</h2>
+<h3 id="2.1-what-is-an-agent" class="spec-h3">2.1 What is an Agent</h3>
+<p>An agent is a runtime AI actor that needs to call external services. Each agent has its own server-side <code>agent_id</code>, its own keypair, its own granted capabilities, and its own lifecycle. Agents are created through hosts (§3) and authenticate with short-lived signed JWTs (§4.3).</p>
+<h3 id="2.2-modes" class="spec-h3">2.2 Modes</h3>
+<p>An agent operates in one of two modes, which determines its relationship to a user. The mode is chosen at registration and cannot be changed after creation.</p>
+<p><strong>Delegated mode</strong> (<code>&quot;delegated&quot;</code>, default) — the agent acts on behalf of a specific user. The user sees what the agent is requesting and decides what to allow. This is the common case: a user&#39;s copilot, assistant, or tool-calling agent.</p>
+<p><strong>Autonomous mode</strong> (<code>&quot;autonomous&quot;</code>) — the agent operates without a user in the loop. Capabilities are granted by server policy or administrator approval, not by an end user. Use cases include background workers, scheduled automations, service-to-service agents, and agents that bootstrap before any user interaction. If the agent is later claimed by a user, it transitions to <code>&quot;claimed&quot;</code> state (§3.4).</p>
+<p>How each mode affects registration and host linking is covered in §3 (Hosts) and §6.3 (Registration). Servers advertise which modes they support via discovery (§5.1) and MUST reject registration requests with an unsupported mode.</p>
+<h3 id="2.3-states" class="spec-h3">2.3 States</h3>
+<p>Every agent is in exactly one state at any time. Only <code>active</code> agents can authenticate and make requests.</p>
+<table>
+<thead>
+<tr>
+<th>State</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>pending</code></td>
+<td>Awaiting user approval. Cannot authenticate.</td>
+</tr>
+<tr>
+<td><code>active</code></td>
+<td>Operational. Each request extends the TTL.</td>
+</tr>
+<tr>
+<td><code>expired</code></td>
+<td>Session TTL or max lifetime elapsed. Re-approval required to reactivate.</td>
+</tr>
+<tr>
+<td><code>revoked</code></td>
+<td>Permanent. Cannot be reactivated.</td>
+</tr>
+<tr>
+<td><code>rejected</code></td>
+<td>User denied the registration.</td>
+</tr>
+<tr>
+<td><code>claimed</code></td>
+<td>Autonomous agent claimed when its host acquired a <code>user_id</code> (§3.4). Capabilities revoked, agent archived. Activity history attributed to the user. Terminal state.</td>
+</tr>
+</tbody></table>
+<h3 id="2.4-lifetime-clocks" class="spec-h3">2.4 Lifetime Clocks</h3>
+<p>Three independent clocks govern agent lifetimes. The durations are server policy — the server MAY vary them per agent based on mode, host, capabilities, or any other criteria. The agent only sees the computed <code>expires_at</code> in responses.</p>
+<table>
+<thead>
+<tr>
+<th>Clock</th>
+<th>Measured From</th>
+<th>Resets On Reactivation</th>
+<th>Effect When Elapsed</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Session TTL</td>
+<td>last request</td>
+<td>Yes</td>
+<td>→ expired (idle timeout)</td>
+</tr>
+<tr>
+<td>Max lifetime</td>
+<td>last activation</td>
+<td>Yes</td>
+<td>→ expired (caps active sessions)</td>
+</tr>
+<tr>
+<td>Absolute lifetime</td>
+<td>agent creation</td>
+<td>Never</td>
+<td>→ revoked (permanent death)</td>
+</tr>
+</tbody></table>
+<ul>
+<li><strong>Session TTL</strong> protects against abandoned agents. If the agent stops making requests, it expires.</li>
+<li><strong>Max lifetime</strong> caps continuous use. Even if the agent is active, after this duration it must be re-authorized. This prevents compromised agents from running indefinitely.</li>
+<li><strong>Absolute lifetime</strong> is a hard cap from creation. Once elapsed, the agent is permanently revoked — it cannot be reactivated. A new agent must be created.</li>
+</ul>
+<h3 id="2.5-reactivation" class="spec-h3">2.5 Reactivation</h3>
+<p>An expired agent can be reactivated, but reactivation is a security checkpoint. The agent returns to its baseline capabilities — any previously escalated capabilities are lost and must be re-requested. This ensures that after a period of inactivity or prolonged use, the agent does not silently retain elevated access.</p>
+<p>The session TTL and max lifetime clocks reset on reactivation. The absolute lifetime clock does NOT reset — if the agent&#39;s absolute lifetime has elapsed, reactivation MUST fail with <code>absolute_lifetime_exceeded</code>.</p>
+<p>The full reactivation mechanics — how the host determines what gets auto-approved vs. what requires user approval — are covered in §5.3.</p>
+<h3 id="2.6-revocation" class="spec-h3">2.6 Revocation</h3>
+<p>An agent can be revoked by:</p>
+<ul>
+<li><strong>Itself</strong> — the agent requests its own revocation through the client</li>
+<li><strong>Its host</strong> — the host that created the agent</li>
+<li><strong>The owning user</strong> — through the server&#39;s management UI or API</li>
+<li><strong>An admin</strong> — as defined by the server</li>
+</ul>
+<p>Revocation is permanent — a revoked agent cannot be reactivated. The specific endpoints and mechanisms are defined in §5.6 and §6.7. Host revocation and its effect on agents is covered in §3.</p>
+<h2 id="3.-host" class="spec-h2">3. Host</h2>
+<h3 id="3.1-what-is-a-host" class="spec-h3">3.1 What is a Host</h3>
+<p>A host is a registered keypair that represents a device, application, or environment (e.g. &quot;ChatGPT,&quot; &quot;MacBook Pro,&quot; &quot;Claude Code&quot;). Every agent is created through a host. A host MAY exist without any linked user (unlinked host) or be linked to at most one user (linked host). Hosts carry default capabilities — agents created through them can be granted these capabilities without additional approval.</p>
+<h3 id="3.2-host-establishment" class="spec-h3">3.2 Host Establishment</h3>
+<p>Hosts are established in one of two ways:</p>
+<ol>
+<li><strong>Dynamic registration</strong> — the host is first seen as part of agent registration (§5.3). If the host is unknown, the server creates it in <code>pending</code> state and waits for user approval.</li>
+<li><strong>Pre-registration</strong> — the host is registered before any agent exists. The user provides the host&#39;s public key directly via the server&#39;s dashboard, admin API, or any other server-specific mechanism.</li>
+</ol>
+<p>In both cases, the result is the same host record: a host keypair (or JWKS URL), an optional linked user via <code>user_id</code>, and a set of default capabilities for delegated agents. A host without a linked user MAY provision autonomous agents.</p>
+<h3 id="3.3-host-linking" class="spec-h3">3.3 Host Linking</h3>
+<p>Linking binds an unlinked host to a specific user. It happens through one of two mechanisms:</p>
+<ol>
+<li><strong>Server-side linking</strong> — the server links the host through its own dashboard, admin API, or any implementation-specific mechanism (e.g. a desktop app, browser extension, or local daemon running on the device).</li>
+<li><strong>Delegated registration approval</strong> — an unknown host registers a delegated agent (§5.3). The user approves the registration, and the server links the host to the approving user.</li>
+</ol>
+<p>Once linked, future delegated agents through this host can be auto-approved for the host&#39;s default capabilities.</p>
+<p>A host MAY be linked to at most one user. A user MAY have multiple hosts (e.g. different devices or clients).</p>
+<h3 id="3.4-autonomous-agent-claiming" class="spec-h3">3.4 Autonomous Agent Claiming</h3>
+<p>When a host becomes linked, all active autonomous agents under that host MUST be claimed:</p>
+<ol>
+<li>Each autonomous agent&#39;s capabilities are revoked</li>
+<li>Each autonomous agent&#39;s status is set to <code>&quot;claimed&quot;</code></li>
+<li>Each autonomous agent&#39;s activity history is attributed to the user</li>
+<li>Any resources created or owned by the autonomous agent SHOULD be transferred to the user</li>
+</ol>
+<p>This is analogous to anonymous-to-authenticated user linking: everything the agent did before a user was in the picture becomes the user&#39;s. Servers MAY use a system account or anonymous placeholder to hold autonomous agent ownership until a real user claims it.</p>
+<p>Claiming is automatic — it is a direct consequence of host linking, not a separate decision. Once claimed, the autonomous agent is terminal. If the user wants to continue using the service, the host registers a new delegated agent.</p>
+<h3 id="3.5-host-states" class="spec-h3">3.5 Host States</h3>
+<p>Every host is in exactly one state at any time. Only <code>active</code> hosts can create agents. When a host is revoked, all agents under it are also revoked.</p>
+<table>
+<thead>
+<tr>
+<th>State</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>active</code></td>
+<td>Operational. Can create agents.</td>
+</tr>
+<tr>
+<td><code>pending</code></td>
+<td>Awaiting approval.</td>
+</tr>
+<tr>
+<td><code>revoked</code></td>
+<td>Permanently disabled.</td>
+</tr>
+<tr>
+<td><code>rejected</code></td>
+<td>Approval was denied.</td>
+</tr>
+</tbody></table>
+<h2 id="4.-authentication" class="spec-h2">4. Authentication</h2>
+<h3 id="4.1-keypairs" class="spec-h3">4.1 Keypairs</h3>
+<p>Both hosts and agents use Ed25519 keypairs in JWK format.</p>
+<ul>
+<li>Algorithm: <code>EdDSA</code> with curve <code>Ed25519</code></li>
+<li>The private key MUST never be sent to the server</li>
+<li>The server stores only public keys (or JWKS URLs)</li>
+<li>The agent&#39;s private key lives with the host/client</li>
+</ul>
+<p>The <code>algorithms</code> field in discovery (§5.1) lists what the server accepts for new registrations. Removing an algorithm from the list MUST NOT invalidate existing agents or hosts that registered with it.</p>
+<h3 id="4.2-host-jwt" class="spec-h3">4.2 Host JWT</h3>
+<p>Hosts authenticate by signing short-lived JWTs per <a href="https://datatracker.ietf.org/doc/html/rfc7519">RFC 7519</a> with the host&#39;s private key. The JWT header MUST include <code>kid</code> when using a JWKS URL.</p>
+<p><strong>Required standard claims:</strong> <code>aud</code> (server&#39;s <code>issuer</code> URL from discovery), <code>iat</code>, <code>exp</code>, <code>jti</code>.</p>
+<p><strong>Protocol-specific claims:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Claim</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>host_public_key</code></td>
+<td>JWK</td>
+<td>Conditional</td>
+<td>Inline host public key. Required unless <code>host_jwks_url</code> is provided.</td>
+</tr>
+<tr>
+<td><code>host_jwks_url</code></td>
+<td>string</td>
+<td>Conditional</td>
+<td>JWKS URL for the host&#39;s public keys. Required unless <code>host_public_key</code> is provided. Server matches by <code>kid</code> from the JWT header.</td>
+</tr>
+<tr>
+<td><code>agent_public_key</code></td>
+<td>JWK</td>
+<td>Conditional</td>
+<td>Inline agent public key. Required for registration (§5.3) unless <code>agent_jwks_url</code> is provided. Not required on other endpoints.</td>
+</tr>
+<tr>
+<td><code>agent_jwks_url</code></td>
+<td>string</td>
+<td>Conditional</td>
+<td>JWKS URL for the agent&#39;s public keys. Required for registration (§5.3) unless <code>agent_public_key</code> is provided. Not required on other endpoints.</td>
+</tr>
+<tr>
+<td><code>agent_kid</code></td>
+<td>string</td>
+<td>Conditional</td>
+<td>Key ID for the agent&#39;s key in the agent JWKS. Required when <code>agent_jwks_url</code> is provided.</td>
+</tr>
+</tbody></table>
+<p>Host and agent JWKS URLs MUST point to different endpoints. Servers that fetch JWKS URLs MUST apply URL fetch protections (§9.12) and SHOULD cache previously fetched keys. Servers MUST accept host JWTs with or without agent key claims on non-registration endpoints.</p>
+<h3 id="4.3-agent-jwt" class="spec-h3">4.3 Agent JWT</h3>
+<p>Agents authenticate by signing short-lived JWTs per <a href="https://datatracker.ietf.org/doc/html/rfc7519">RFC 7519</a>. JWTs SHOULD expire within 60 seconds. There is no refresh mechanism — the client signs a new JWT per request.</p>
+<p><strong>Required standard claims:</strong> <code>sub</code> (agent ID), <code>aud</code> (server&#39;s <code>issuer</code> URL from discovery), <code>iat</code>, <code>exp</code>, <code>jti</code>.</p>
+<p><strong>Protocol-specific claims:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Claim</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>capability_ids</code></td>
+<td>No</td>
+<td>String array of capability IDs this JWT is authorized for. If present, the server MUST reject requests for capabilities not in this list — even if the agent has them granted. If absent, the JWT is valid for all the agent&#39;s granted capabilities.</td>
+</tr>
+<tr>
+<td><code>cnf</code></td>
+<td>No</td>
+<td>Optional confirmation claim for proof-of-possession profiles. When present, it binds the JWT to a proof key or client certificate, following <a href="https://datatracker.ietf.org/doc/html/rfc7800">RFC 7800</a>.</td>
+</tr>
+</tbody></table>
+<h3 id="4.4-proof-of-possession-optional" class="spec-h3">4.4 Proof of Possession (Optional)</h3>
+<p>For higher-security deployments, servers MAY require a standard proof-of-possession profile:</p>
+<ul>
+<li><strong>DPoP (<a href="https://datatracker.ietf.org/doc/html/rfc9449">RFC 9449</a>)</strong> — the client sends the agent JWT as the access token and a separate DPoP proof JWT in the <code>DPoP</code> header on each request. The agent JWT SHOULD include <code>cnf.jkt</code> (the JWK thumbprint of the DPoP proof key).</li>
+<li><strong>mTLS (<a href="https://datatracker.ietf.org/doc/html/rfc8705">RFC 8705</a>)</strong> — the client authenticates with a TLS client certificate. The agent JWT SHOULD include <code>cnf.x5t#S256</code> to bind it to that certificate.</li>
+</ul>
+<p>Servers that require proof of possession SHOULD use one of these standard profiles rather than placing <code>htm</code>, <code>htu</code>, or <code>ath</code> directly inside the agent JWT.</p>
+<h3 id="4.5-verification" class="spec-h3">4.5 Verification</h3>
+<ol>
+<li>Extract <code>sub</code> from JWT (agent ID)</li>
+<li>Verify <code>aud</code> matches the server&#39;s own <code>issuer</code> URL — reject if it doesn&#39;t</li>
+<li>Look up agent</li>
+<li>Check status (revoked → reject, expired → reject, pending → reject)</li>
+<li>Verify JWT signature against stored public key (or JWKS)</li>
+<li>Check <code>exp</code>, <code>iat</code>, <code>jti</code> replay</li>
+<li>If proof of possession is required by server policy, validate the DPoP proof or mTLS binding and ensure it matches the JWT&#39;s <code>cnf</code> claim</li>
+<li>Resolve agent&#39;s granted capabilities</li>
+<li>If <code>capability_ids</code> claim present in JWT, intersect with granted capabilities — reject if the requested operation is not in the JWT&#39;s <code>capability_ids</code> list</li>
+<li>Process the request</li>
+</ol>
+<p>The server MUST ensure that revocation takes effect within a bounded window.</p>
+<h3 id="4.6-replay-detection" class="spec-h3">4.6 Replay Detection</h3>
+<p>All JWTs MUST include <code>jti</code>. The server MUST cache seen values and reject duplicates within the JWT&#39;s max age window.</p>
+<h2 id="5.-server" class="spec-h2">5. Server</h2>
+<p>Clients obtain the server configuration from discovery (§5.1). That configuration includes the server&#39;s <code>issuer</code> URL. All endpoint paths in this section are relative to that <code>issuer</code>.</p>
+<p>The Server API is organized into four groups:</p>
+<ul>
+<li><strong>Discovery</strong> (§5.1) — how clients find the server&#39;s configuration</li>
+<li><strong>Capability and registration flow</strong> (§5.2–§5.4) — capabilities, registration, and capability requests</li>
+<li><strong>Lifecycle operations</strong> (§5.5–§5.9) — status, revocation, and key rotation</li>
+<li><strong>Introspection</strong> (§5.10) — token introspection for resource servers</li>
+<li><strong>Error format</strong> (§5.11) — standard error responses</li>
+</ul>
+<hr>
+<h3 id="5.1-discovery" class="spec-h3">5.1 Discovery</h3>
+<div class="spec-code"><pre><code class="hljs">GET /.well-known/agent-configuration</code></pre></div>
+<p>Servers SHOULD publish this endpoint. No authentication required. Returns the service&#39;s Agent Auth configuration.</p>
+<p>This endpoint enables generic clients to work with any Agent Auth server. Purpose-built clients (e.g. an MCP server built specifically for one service) MAY skip discovery and use pre-configured endpoints instead.</p>
+<p><strong>Response:</strong></p>
+<div class="spec-code"><pre><code class="hljs language-json">{
+  &quot;version&quot;: &quot;1.0-draft&quot;,
+  &quot;provider_name&quot;: &quot;bank&quot;,
+  &quot;description&quot;: &quot;Banking services — accounts, transfers, and payments&quot;,
+  &quot;issuer&quot;: &quot;https://auth.bank.com&quot;,
+  &quot;algorithms&quot;: [&quot;Ed25519&quot;],
+  &quot;modes&quot;: [&quot;delegated&quot;, &quot;autonomous&quot;],
+  &quot;approval_methods&quot;: [&quot;device_authorization&quot;, &quot;ciba&quot;],
+  &quot;endpoints&quot;: {
+    &quot;register&quot;: &quot;/agent/register&quot;,
+    &quot;capabilities&quot;: &quot;/agent/capabilities&quot;,
+    &quot;request_capability&quot;: &quot;/agent/request-capability&quot;,
+    &quot;status&quot;: &quot;/agent/status&quot;,
+    &quot;revoke&quot;: &quot;/agent/revoke&quot;,
+    &quot;revoke_host&quot;: &quot;/agent/host/revoke&quot;,
+    &quot;rotate_key&quot;: &quot;/agent/rotate-key&quot;,
+    &quot;rotate_host_key&quot;: &quot;/agent/host/rotate-key&quot;,
+    &quot;introspect&quot;: &quot;/agent/introspect&quot;,
+    &quot;device_authorization&quot;: &quot;/device/code&quot;,
+    &quot;ciba_authorize&quot;: &quot;/agent/ciba/authorize&quot;
+  },
+  &quot;jwks_uri&quot;: &quot;https://auth.bank.com/.well-known/jwks.json&quot;
+}</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>version</code></td>
+<td>string</td>
+<td>Yes</td>
+<td>Version of this protocol draft implemented by the server (e.g. <code>&quot;1.0-draft&quot;</code>). See §5.1.1 for versioning.</td>
+</tr>
+<tr>
+<td><code>provider_name</code></td>
+<td>string</td>
+<td>Yes</td>
+<td>Unique provider identifier.</td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td>string</td>
+<td>Yes</td>
+<td>Human-readable description of the service. Shown in <code>list_providers</code> results.</td>
+</tr>
+<tr>
+<td><code>issuer</code></td>
+<td>string</td>
+<td>Yes</td>
+<td>Base URL of the authorization server</td>
+</tr>
+<tr>
+<td><code>algorithms</code></td>
+<td>string[]</td>
+<td>Yes</td>
+<td>Supported key algorithms</td>
+</tr>
+<tr>
+<td><code>modes</code></td>
+<td>string[]</td>
+<td>Yes</td>
+<td>Supported registration modes: <code>&quot;delegated&quot;</code>, <code>&quot;autonomous&quot;</code>, or both</td>
+</tr>
+<tr>
+<td><code>approval_methods</code></td>
+<td>string[]</td>
+<td>Yes</td>
+<td>How user approval works. Defined values: <code>&quot;device_authorization&quot;</code> (RFC 8628), <code>&quot;ciba&quot;</code> (Client Initiated Backchannel Authentication). Servers MAY include additional custom methods (see §8.4). Clients SHOULD ignore methods they don&#39;t recognize.</td>
+</tr>
+<tr>
+<td><code>endpoints</code></td>
+<td>object</td>
+<td>Yes</td>
+<td>Server API endpoint paths, relative to <code>issuer</code></td>
+</tr>
+<tr>
+<td><code>capabilities</code></td>
+<td>object[]?</td>
+<td>No</td>
+<td>Optional lightweight capability summaries (for example <code>id</code>, <code>title</code>, <code>description</code>). Full invoke details remain on <code>/agent/capabilities</code>.</td>
+</tr>
+<tr>
+<td><code>jwks_uri</code></td>
+<td>string</td>
+<td>No</td>
+<td>URL to the server&#39;s JWKS (JSON Web Key Set). Enables clients to verify server-signed responses in future protocol extensions. Servers that plan to sign responses SHOULD include this.</td>
+</tr>
+</tbody></table>
+<p>Invoke endpoints (MCP endpoints, OpenAPI URLs, HTTP URLs) are not part of the discovery document. They are described per-capability in the <code>/agent/capabilities</code> response (§5.2). The discovery document is strictly for identity and authorization configuration.</p>
+<h4 id="5.1.1-versioning" class="spec-h4">5.1.1 Versioning</h4>
+<p>The <code>version</code> field identifies the draft version of the protocol, using the format <code>MAJOR.MINOR</code> with an optional <code>-draft</code> suffix (for example <code>&quot;1.0-draft&quot;</code>).</p>
+<ul>
+<li>Clients MUST check <code>version</code> before proceeding.</li>
+<li>If the major version is unsupported, the client MUST stop and report the incompatibility to the agent.</li>
+<li>Draft versions MAY introduce breaking changes between releases.</li>
+<li>Clients SHOULD ignore unrecognized fields in responses where possible.</li>
+</ul>
+<h3 id="5.2-capabilities" class="spec-h3">5.2 Capabilities</h3>
+<div class="spec-code"><pre><code class="hljs">GET /agent/capabilities</code></pre></div>
+<p>Returns capabilities the server offers. Each capability has a small protocol-level core (<code>id</code>, <code>title</code>, <code>description</code>, <code>invoke</code>). When the request is authenticated with an agent JWT, each returned capability also includes its per-agent <code>grant_status</code>.</p>
+<p><strong>Terminology:</strong> A <strong>capability</strong> is what the server offers (<code>id</code>, <code>title</code>, <code>description</code>, <code>invoke</code>). Capability IDs are the protocol-level grant unit: registration requests, grant records, and JWT restriction all use capability IDs.</p>
+<p>The protocol defines the core capability schema and the <code>invoke</code> descriptor. Agent Auth does not require a single execution mechanism for all capabilities. The <code>invoke</code> object tells the agent what kind of action the capability represents and provides enough information for the agent to figure out how to invoke it using whatever tools it has available.</p>
+<p>To improve baseline interoperability, this spec defines a recommended standard invoke profile for <code>invoke.type = &quot;http&quot;</code> (§5.2.2). Generic clients SHOULD support that profile out of the box. Servers MAY also publish other invoke types for richer or proprietary integrations.</p>
+<p>Supports three authentication modes:</p>
+<table>
+<thead>
+<tr>
+<th>Auth</th>
+<th>What&#39;s returned</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>No auth</strong></td>
+<td>Public capabilities only (if the server exposes any)</td>
+</tr>
+<tr>
+<td><strong>Host JWT</strong> (<code>Authorization: Bearer &lt;host_jwt&gt;</code>)</td>
+<td>Capabilities available to the host&#39;s linked user. Used before agent registration.</td>
+</tr>
+<tr>
+<td><strong>Agent JWT</strong> (<code>Authorization: Bearer &lt;agent_jwt&gt;</code>)</td>
+<td>All capabilities with per-agent <code>grant_status</code> (<code>&quot;granted&quot;</code> / <code>&quot;not_granted&quot;</code> on every returned capability). Used after agent registration.</td>
+</tr>
+</tbody></table>
+<p><strong>Query parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>intent</code></td>
+<td>string</td>
+<td>No</td>
+<td>Natural language intent for server-side filtering (e.g. <code>&quot;send money&quot;</code>)</td>
+</tr>
+<tr>
+<td><code>cursor</code></td>
+<td>string</td>
+<td>No</td>
+<td>Opaque pagination cursor from a previous response&#39;s <code>next_cursor</code></td>
+</tr>
+<tr>
+<td><code>limit</code></td>
+<td>number</td>
+<td>No</td>
+<td>Maximum capabilities to return. Server MAY enforce a cap (e.g. 100). Default is server-defined.</td>
+</tr>
+</tbody></table>
+<p><strong>Example response (<code>http</code> capabilities):</strong></p>
+<div class="spec-code"><pre><code class="hljs language-json">{
+  &quot;capabilities&quot;: [
+    {
+      &quot;id&quot;: &quot;check_balance&quot;,
+      &quot;title&quot;: &quot;Check balance&quot;,
+      &quot;description&quot;: &quot;Check account balance&quot;,
+      &quot;invoke&quot;: {
+        &quot;type&quot;: &quot;http&quot;,
+        &quot;method&quot;: &quot;GET&quot;,
+        &quot;url&quot;: &quot;https://api.bank.com/v1/accounts/{account_id}/balance&quot;,
+        &quot;input&quot;: {
+          &quot;parameters&quot;: [
+            {
+              &quot;name&quot;: &quot;account_id&quot;,
+              &quot;in&quot;: &quot;path&quot;,
+              &quot;required&quot;: true,
+              &quot;schema&quot;: { &quot;type&quot;: &quot;string&quot; }
+            }
+          ]
+        }
+      },
+      &quot;grant_status&quot;: &quot;granted&quot;
+    },
+    {
+      &quot;id&quot;: &quot;transfer_domestic&quot;,
+      &quot;title&quot;: &quot;Transfer funds domestically&quot;,
+      &quot;description&quot;: &quot;Transfer funds domestically&quot;,
+      &quot;invoke&quot;: {
+        &quot;type&quot;: &quot;http&quot;,
+        &quot;method&quot;: &quot;POST&quot;,
+        &quot;url&quot;: &quot;https://api.bank.com/v1/transfers/domestic&quot;,
+        &quot;input&quot;: {
+          &quot;requestBody&quot;: {
+            &quot;required&quot;: true,
+            &quot;content&quot;: {
+              &quot;application/json&quot;: {
+                &quot;schema&quot;: {
+                  &quot;type&quot;: &quot;object&quot;,
+                  &quot;required&quot;: [&quot;amount&quot;, &quot;currency&quot;, &quot;destination_account&quot;],
+                  &quot;properties&quot;: {
+                    &quot;amount&quot;: { &quot;type&quot;: &quot;number&quot; },
+                    &quot;currency&quot;: { &quot;type&quot;: &quot;string&quot; },
+                    &quot;destination_account&quot;: { &quot;type&quot;: &quot;string&quot; }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      &quot;grant_status&quot;: &quot;granted&quot;
+    },
+    {
+      &quot;id&quot;: &quot;transfer_international&quot;,
+      &quot;title&quot;: &quot;International wire transfer&quot;,
+      &quot;description&quot;: &quot;International wire transfer&quot;,
+      &quot;invoke&quot;: {
+        &quot;type&quot;: &quot;http&quot;,
+        &quot;method&quot;: &quot;POST&quot;,
+        &quot;url&quot;: &quot;https://api.bank.com/v1/transfers/international&quot;
+      },
+      &quot;grant_status&quot;: &quot;not_granted&quot;
+    }
+  ]
+}</code></pre></div>
+<p><strong>Example response (custom invoke type):</strong></p>
+<div class="spec-code"><pre><code class="hljs language-json">{
+  &quot;capabilities&quot;: [
+    {
+      &quot;id&quot;: &quot;get_transactions&quot;,
+      &quot;title&quot;: &quot;Get recent transactions&quot;,
+      &quot;description&quot;: &quot;Get recent transactions&quot;,
+      &quot;invoke&quot;: {
+        &quot;type&quot;: &quot;acme.stream&quot;,
+        &quot;channel&quot;: &quot;deployments&quot;
+      },
+      &quot;grant_status&quot;: &quot;granted&quot;
+    },
+    {
+      &quot;id&quot;: &quot;create_payment&quot;,
+      &quot;title&quot;: &quot;Create payment&quot;,
+      &quot;description&quot;: &quot;Create a new payment&quot;,
+      &quot;invoke&quot;: {
+        &quot;type&quot;: &quot;http&quot;,
+        &quot;method&quot;: &quot;POST&quot;,
+        &quot;url&quot;: &quot;https://api.bank.com/v1/payments&quot;
+      },
+      &quot;grant_status&quot;: &quot;granted&quot;
+    }
+  ]
+}</code></pre></div>
+<p><strong>Example response (mixed standard and custom types):</strong></p>
+<div class="spec-code"><pre><code class="hljs language-json">{
+  &quot;capabilities&quot;: [
+    {
+      &quot;id&quot;: &quot;list_issues&quot;,
+      &quot;title&quot;: &quot;List issues&quot;,
+      &quot;description&quot;: &quot;List GitHub issues&quot;,
+      &quot;invoke&quot;: {
+        &quot;type&quot;: &quot;http&quot;,
+        &quot;method&quot;: &quot;GET&quot;,
+        &quot;url&quot;: &quot;https://api.github.com/repos/{owner}/{repo}/issues&quot;
+      }
+    },
+    {
+      &quot;id&quot;: &quot;get_repo&quot;,
+      &quot;title&quot;: &quot;Get repository&quot;,
+      &quot;description&quot;: &quot;Get repository details&quot;,
+      &quot;invoke&quot;: {
+        &quot;type&quot;: &quot;github.custom-tool&quot;,
+        &quot;tool_name&quot;: &quot;get_repo&quot;
+      }
+    }
+  ]
+}</code></pre></div>
+<p><strong>Core fields</strong> (protocol-level, same for all types):</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>id</code></td>
+<td>string</td>
+<td>Yes</td>
+<td>Stable machine-readable capability identifier. Used in registration, grants, and JWT restriction.</td>
+</tr>
+<tr>
+<td><code>title</code></td>
+<td>string</td>
+<td>No</td>
+<td>Human-readable short label for the capability. Recommended for UIs and agent selection.</td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td>string</td>
+<td>Yes</td>
+<td>What this capability does and when to use it.</td>
+</tr>
+<tr>
+<td><code>invoke</code></td>
+<td>object</td>
+<td>Yes</td>
+<td>Invoke descriptor. Contains a required <code>type</code> field. All other fields are type-specific and optional at the protocol level. Invoke-specific input metadata belongs inside this object.</td>
+</tr>
+<tr>
+<td><code>grant_status</code></td>
+<td>string</td>
+<td>No</td>
+<td><code>&quot;granted&quot;</code> or <code>&quot;not_granted&quot;</code>. Present on every returned capability when using agent JWT auth. Omitted otherwise.</td>
+</tr>
+</tbody></table>
+<p>The protocol does not define top-level invocation fields such as <code>input_schema</code> or <code>output_schema</code> at the capability core level. If an invoke type wants to describe inputs, outputs, parameters, or request bodies, that metadata SHOULD live inside <code>invoke</code>. Servers MAY include additional top-level fields as extensions, and clients SHOULD pass unrecognized capability fields through unchanged.</p>
+<p><strong>Pagination fields:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>next_cursor</code></td>
+<td>string?</td>
+<td>Opaque cursor to pass as <code>?cursor=</code> for the next page. <code>null</code> if no more results.</td>
+</tr>
+<tr>
+<td><code>has_more</code></td>
+<td>boolean</td>
+<td><code>true</code> if more capabilities exist beyond this page.</td>
+</tr>
+</tbody></table>
+<p>Pagination is optional — servers with a small capability set MAY return all capabilities in a single response with <code>has_more: false</code>. Clients MUST handle both paginated and non-paginated responses.</p>
+<h4 id="5.2.1-invoke-descriptors" class="spec-h4">5.2.1 Invoke Descriptors</h4>
+<p>The <code>invoke</code> object MUST contain a <code>type</code> field. All other fields are defined by the server and specific to that type. The protocol does not require any particular invoke type, but it defines a recommended standard profile for <code>type = &quot;http&quot;</code> in §5.2.2.</p>
+<p>The agent reads the invoke descriptor and uses whatever tools, integrations, or reasoning it has available to fulfill the capability. Clients MAY provide helper tools or adapters for additional invoke types. Generic clients SHOULD support the standard HTTP profile so a server can expose a usable baseline without requiring a custom integration.</p>
+<p><strong>Examples of valid invoke descriptors:</strong></p>
+<p>HTTP endpoint:</p>
+<div class="spec-code"><pre><code class="hljs language-json">{
+  &quot;type&quot;: &quot;http&quot;,
+  &quot;method&quot;: &quot;POST&quot;,
+  &quot;url&quot;: &quot;https://api.bank.com/v1/payments&quot;,
+  &quot;input&quot;: {
+    &quot;requestBody&quot;: {
+      &quot;required&quot;: true,
+      &quot;content&quot;: {
+        &quot;application/json&quot;: {
+          &quot;schema&quot;: {
+            &quot;type&quot;: &quot;object&quot;,
+            &quot;required&quot;: [&quot;amount&quot;, &quot;currency&quot;],
+            &quot;properties&quot;: {
+              &quot;amount&quot;: { &quot;type&quot;: &quot;number&quot; },
+              &quot;currency&quot;: { &quot;type&quot;: &quot;string&quot; }
+            }
+          }
+        }
+      }
+    }
+  }
+}</code></pre></div>
+<p>GraphQL:</p>
+<div class="spec-code"><pre><code class="hljs language-json">{
+  &quot;type&quot;: &quot;graphql&quot;,
+  &quot;endpoint&quot;: &quot;https://api.example.com/graphql&quot;,
+  &quot;query&quot;: &quot;query GetUser($id: ID!) { user(id: $id) { name email } }&quot;
+}</code></pre></div>
+<p>Documentation reference:</p>
+<div class="spec-code"><pre><code class="hljs language-json">{
+  &quot;type&quot;: &quot;docs&quot;,
+  &quot;url&quot;: &quot;https://docs.example.com/api/send-email&quot;
+}</code></pre></div>
+<p>Custom / proprietary:</p>
+<div class="spec-code"><pre><code class="hljs language-json">{
+  &quot;type&quot;: &quot;acme.deploy&quot;,
+  &quot;cluster&quot;: &quot;us-east-1&quot;,
+  &quot;runtime&quot;: &quot;node20&quot;
+}</code></pre></div>
+<p>All of these are valid. The protocol treats invoke descriptors as type-tagged descriptors. Only <code>type</code> is universally required by the core protocol.</p>
+<p>Clients SHOULD pass invoke descriptors through unchanged when listing capabilities to the agent. The agent decides how to use them.</p>
+<h4 id="5.2.2-standard-http-invoke-profile" class="spec-h4">5.2.2 Standard HTTP Invoke Profile</h4>
+<p>To improve interoperability across generic clients, this spec defines a recommended standard invoke profile for capabilities with <code>invoke.type = &quot;http&quot;</code>.</p>
+<p>Servers that want their capabilities to work out of the box across generic Agent Auth clients SHOULD expose at least one usable set of capabilities via this profile. Generic clients SHOULD provide a built-in HTTP invoke tool or equivalent adapter for this profile.</p>
+<p><strong>HTTP invoke fields:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>type</code></td>
+<td>string</td>
+<td>Yes</td>
+<td>Must be <code>&quot;http&quot;</code></td>
+</tr>
+<tr>
+<td><code>method</code></td>
+<td>string</td>
+<td>Yes</td>
+<td>HTTP method (for example <code>&quot;GET&quot;</code>, <code>&quot;POST&quot;</code>, <code>&quot;PATCH&quot;</code>)</td>
+</tr>
+<tr>
+<td><code>url</code></td>
+<td>string</td>
+<td>Yes</td>
+<td>Absolute URL to call</td>
+</tr>
+<tr>
+<td><code>headers</code></td>
+<td>object</td>
+<td>No</td>
+<td>Additional headers to send. Client-generated headers (e.g., <code>Authorization</code>) MUST take precedence over values specified here.</td>
+</tr>
+<tr>
+<td><code>interaction_mode</code></td>
+<td>string</td>
+<td>No</td>
+<td>Invoke hint: <code>&quot;sync&quot;</code>, <code>&quot;stream&quot;</code>, or <code>&quot;async&quot;</code></td>
+</tr>
+<tr>
+<td><code>input</code></td>
+<td>object</td>
+<td>No</td>
+<td>OpenAPI-inspired input description for parameters and request body.</td>
+</tr>
+</tbody></table>
+<p>The <code>input</code> object is an optional OpenAPI-compatible subset that lets a capability describe how invocation arguments map onto an HTTP request. This spec intentionally keeps the subset small so servers can generate it easily and clients can implement it consistently.</p>
+<p><strong><code>invoke.input</code> fields:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>parameters</code></td>
+<td>array</td>
+<td>No</td>
+<td>OpenAPI-style parameter definitions. Supported <code>in</code> values are <code>&quot;path&quot;</code>, <code>&quot;query&quot;</code>, and <code>&quot;header&quot;</code>.</td>
+</tr>
+<tr>
+<td><code>requestBody</code></td>
+<td>object</td>
+<td>No</td>
+<td>OpenAPI-style request body definition for body-bearing methods.</td>
+</tr>
+</tbody></table>
+<p>Each entry in <code>parameters</code> follows this subset:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>name</code></td>
+<td>string</td>
+<td>Yes</td>
+<td>Parameter name</td>
+</tr>
+<tr>
+<td><code>in</code></td>
+<td>string</td>
+<td>Yes</td>
+<td><code>&quot;path&quot;</code>, <code>&quot;query&quot;</code>, or <code>&quot;header&quot;</code></td>
+</tr>
+<tr>
+<td><code>required</code></td>
+<td>boolean</td>
+<td>No</td>
+<td>Whether the parameter is required</td>
+</tr>
+<tr>
+<td><code>schema</code></td>
+<td>object</td>
+<td>Yes</td>
+<td>JSON Schema describing the parameter value</td>
+</tr>
+</tbody></table>
+<p>If <code>requestBody</code> is present, clients SHOULD support:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>required</code></td>
+<td>boolean</td>
+<td>No</td>
+<td>Whether the request body is required</td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td>string</td>
+<td>No</td>
+<td>Human-readable description of the request body</td>
+</tr>
+<tr>
+<td><code>content</code></td>
+<td>object</td>
+<td>Yes</td>
+<td>Media-type map, following the OpenAPI <code>content</code> shape. Each key is a media type (e.g. <code>&quot;application/json&quot;</code>), and each value is an object containing a <code>schema</code> field.</td>
+</tr>
+</tbody></table>
+<p>Each entry in <code>content</code> follows this subset:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>schema</code></td>
+<td>object</td>
+<td>Yes</td>
+<td>JSON Schema describing the request body for this media type</td>
+</tr>
+</tbody></table>
+<p>For the initial profile, servers SHOULD use <code>application/json</code> as the media type key with a JSON Schema under <code>content[&quot;application/json&quot;].schema</code>. Clients SHOULD use the media type key as the <code>Content-Type</code> header when sending the request.</p>
+<p><strong>Invocation rules:</strong></p>
+<ol>
+<li>The client SHOULD send the current signed JWT as <code>Authorization: Bearer &lt;token&gt;</code> when invoking the capability.</li>
+<li>If <code>invoke.input</code> is present, the client SHOULD construct the request according to that schema:<ul>
+<li><code>parameters</code> with <code>in = &quot;path&quot;</code> fill <code>{name}</code> placeholders in the URL</li>
+<li><code>parameters</code> with <code>in = &quot;query&quot;</code> become query string parameters</li>
+<li><code>parameters</code> with <code>in = &quot;header&quot;</code> become HTTP headers</li>
+<li><code>requestBody</code> becomes the HTTP request body. The client SHOULD use the first media type key in <code>requestBody.content</code> as the <code>Content-Type</code> header, following the OpenAPI convention.</li>
+</ul>
+</li>
+<li>If <code>invoke.input</code> is not present and the <code>url</code> contains <code>{name}</code> placeholders, the client SHOULD substitute them from the invocation arguments by key and percent-encode the inserted values.</li>
+<li>If <code>invoke.input</code> is not present, remaining invocation arguments SHOULD be encoded as query parameters for <code>GET</code>, <code>HEAD</code>, and <code>DELETE</code> requests.</li>
+<li>If <code>invoke.input</code> is not present, remaining invocation arguments SHOULD be sent as the request body for <code>POST</code>, <code>PUT</code>, and <code>PATCH</code> with <code>Content-Type: application/json</code>.</li>
+<li>If <code>interaction_mode</code> is <code>&quot;sync&quot;</code> or omitted, the client waits for the HTTP response and returns it directly.</li>
+<li>If <code>interaction_mode</code> is <code>&quot;stream&quot;</code>, the client SHOULD expose the response as a stream when the transport supports streaming.</li>
+<li>If <code>interaction_mode</code> is <code>&quot;async&quot;</code>, the server returns HTTP <code>202 Accepted</code> with a JSON body that MUST include a <code>status_url</code> field (absolute URL) for polling. The client SHOULD poll the <code>status_url</code> with <code>GET</code> requests until the operation completes. The polling response MUST include a <code>status</code> field with one of <code>&quot;pending&quot;</code>, <code>&quot;completed&quot;</code>, or <code>&quot;failed&quot;</code>. When <code>status</code> is <code>&quot;completed&quot;</code>, the response SHOULD include a <code>result</code> field containing the operation output. When <code>status</code> is <code>&quot;failed&quot;</code>, the response SHOULD include an <code>error</code> field following the error format in §5.11. The server MAY include a <code>Retry-After</code> header or a <code>retry_after</code> field (in seconds) to suggest a polling interval.</li>
+</ol>
+<p>This profile is a recommended interoperability baseline, not the only valid invoke model. Clients MAY support additional invoke types, and servers MAY publish custom types when they need behavior that does not fit the HTTP profile.</p>
+<h4 id="5.2.3-general-notes" class="spec-h4">5.2.3 General Notes</h4>
+<p>Capability IDs are opaque strings. The protocol does not define a required naming format — servers MAY use any stable string. Clients and agents MUST treat capability IDs as uninterpreted identifiers.</p>
+<p>Servers MAY include additional fields on capability objects beyond those defined above. Clients SHOULD pass through unrecognized fields without dropping them.</p>
+<p>For generic clients that support multiple providers, the client MAY prefix capability IDs with the provider name when presenting them to the agent (e.g. <code>list_issues</code> → <code>github.list_issues</code>) to avoid naming collisions. This is a <strong>client-local convention only</strong>. The client MUST map prefixed capability IDs back to the original capability objects before execution. The server never sees prefixed client-local identifiers.</p>
+<h3 id="5.3-agent-registration" class="spec-h3">5.3 Agent Registration</h3>
+<div class="spec-code"><pre><code class="hljs">POST /agent/register</code></pre></div>
+<p>Registers a new agent through a host.</p>
+<p><strong>Authorization:</strong> Host JWT with agent key claims (§4.2). The host JWT MUST include <code>agent_public_key</code> or <code>agent_jwks_url</code> for registration.</p>
+<p><strong>Request body:</strong></p>
+<div class="spec-code"><pre><code class="hljs language-json">{
+  &quot;name&quot;: &quot;Bank balance checker&quot;,
+  &quot;capability_ids&quot;: [&quot;check_balance&quot;, &quot;transfer_domestic&quot;],
+  &quot;mode&quot;: &quot;delegated&quot;,
+  &quot;reason&quot;: &quot;User asked to check account balances and make a domestic transfer&quot;,
+}</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>name</code></td>
+<td>string</td>
+<td>Yes</td>
+<td>Human-readable name for the agent. Displayed in dashboards, approval screens, and audit logs.</td>
+</tr>
+<tr>
+<td><code>capability_ids</code></td>
+<td>string[]</td>
+<td>No</td>
+<td>Requested capability IDs. If omitted, the server grants the host&#39;s default capabilities.</td>
+</tr>
+<tr>
+<td><code>mode</code></td>
+<td>string</td>
+<td>No</td>
+<td><code>&quot;delegated&quot;</code> (default) or <code>&quot;autonomous&quot;</code></td>
+</tr>
+<tr>
+<td><code>reason</code></td>
+<td>string</td>
+<td>No</td>
+<td>Human-readable reason for the request. Displayed to the user on the approval screen.</td>
+</tr>
+</tbody></table>
+<p><strong>Response (auto-approved):</strong></p>
+<div class="spec-code"><pre><code class="hljs language-json">{
+  &quot;agent_id&quot;: &quot;agt_abc123&quot;,
+  &quot;host_id&quot;: &quot;hst_xyz789&quot;,
+  &quot;name&quot;: &quot;Bank Balance Checker&quot;,
+  &quot;mode&quot;: &quot;delegated&quot;,
+  &quot;status&quot;: &quot;active&quot;,
+  &quot;agent_capability_grants&quot;: [
+    { &quot;capability_id&quot;: &quot;check_balance&quot;, &quot;status&quot;: &quot;active&quot; },
+    { &quot;capability_id&quot;: &quot;transfer_domestic&quot;, &quot;status&quot;: &quot;active&quot; }
+  ]
+}</code></pre></div>
+<p><strong>Response (approval required):</strong></p>
+<div class="spec-code"><pre><code class="hljs language-json">{
+  &quot;agent_id&quot;: &quot;agt_abc123&quot;,
+  &quot;host_id&quot;: &quot;hst_xyz789&quot;,
+  &quot;name&quot;: &quot;Bank Balance Checker&quot;,
+  &quot;mode&quot;: &quot;delegated&quot;,
+  &quot;status&quot;: &quot;pending&quot;,
+  &quot;agent_capability_grants&quot;: [
+    { &quot;capability_id&quot;: &quot;check_balance&quot;, &quot;status&quot;: &quot;pending&quot; },
+    { &quot;capability_id&quot;: &quot;transfer_domestic&quot;, &quot;status&quot;: &quot;pending&quot; }
+  ],
+  &quot;approval&quot;: {
+    &quot;method&quot;: &quot;device_authorization&quot;,
+    &quot;verification_uri&quot;: &quot;https://bank.com/device&quot;,
+    &quot;verification_uri_complete&quot;: &quot;https://bank.com/device?code=ABCD-1234&quot;,
+    &quot;user_code&quot;: &quot;ABCD-1234&quot;,
+    &quot;expires_in&quot;: 300,
+    &quot;interval&quot;: 5
+  }
+}</code></pre></div>
+<p>The client polls <code>GET /agent/status</code> (§5.5) at the <code>interval</code> rate until the agent&#39;s status changes from <code>&quot;pending&quot;</code> to <code>&quot;active&quot;</code> (or the request expires).</p>
+<h3 id="5.4-request-capability" class="spec-h3">5.4 Request Capability</h3>
+<div class="spec-code"><pre><code class="hljs">POST /agent/request-capability</code></pre></div>
+<p>Requests additional capabilities for an existing agent.</p>
+<p><strong>Request headers:</strong></p>
+<div class="spec-code"><pre><code class="hljs">Authorization: Bearer &lt;agent_jwt&gt;
+Content-Type: application/json</code></pre></div>
+<p><strong>Request body:</strong></p>
+<div class="spec-code"><pre><code class="hljs language-json">{
+  &quot;capability_ids&quot;: [&quot;transfer_international&quot;],
+  &quot;reason&quot;: &quot;User requested an international wire transfer&quot;
+}</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>capability_ids</code></td>
+<td>string[]</td>
+<td>Yes</td>
+<td>Additional capability IDs to request for this agent</td>
+</tr>
+<tr>
+<td><code>reason</code></td>
+<td>string</td>
+<td>No</td>
+<td>Human-readable explanation for why the agent is requesting these capabilities. Servers SHOULD store this on the resulting grant records for auditability.</td>
+</tr>
+</tbody></table>
+<p><strong>Response (auto-approved — within host defaults):</strong></p>
+<div class="spec-code"><pre><code class="hljs language-json">{
+  &quot;agent_id&quot;: &quot;agt_abc123&quot;,
+  &quot;status&quot;: &quot;granted&quot;,
+  &quot;agent_capability_grants&quot;: [
+    { &quot;capability_id&quot;: &quot;transfer_international&quot;, &quot;status&quot;: &quot;active&quot; }
+  ]
+}</code></pre></div>
+<p><strong>Response (approval required):</strong></p>
+<div class="spec-code"><pre><code class="hljs language-json">{
+  &quot;agent_id&quot;: &quot;agt_abc123&quot;,
+  &quot;status&quot;: &quot;pending&quot;,
+  &quot;agent_capability_grants&quot;: [
+    { &quot;capability_id&quot;: &quot;transfer_international&quot;, &quot;status&quot;: &quot;pending&quot; }
+  ],
+  &quot;approval&quot;: {
+    &quot;method&quot;: &quot;device_authorization&quot;,
+    &quot;verification_uri&quot;: &quot;https://bank.com/device&quot;,
+    &quot;verification_uri_complete&quot;: &quot;https://bank.com/device?code=WXYZ-5678&quot;,
+    &quot;user_code&quot;: &quot;WXYZ-5678&quot;,
+    &quot;expires_in&quot;: 300,
+    &quot;interval&quot;: 5
+  }
+}</code></pre></div>
+<p>The client polls <code>GET /agent/status</code> (§5.5) at the <code>interval</code> rate to track pending capability requests. When a capability grant&#39;s status changes from <code>&quot;pending&quot;</code> to <code>&quot;active&quot;</code>, it was approved. When it changes to <code>&quot;denied&quot;</code>, it was denied.</p>
+<h3 id="5.5-status" class="spec-h3">5.5 Status</h3>
+<div class="spec-code"><pre><code class="hljs">GET /agent/status</code></pre></div>
+<p>Returns the current status of an agent and its granted capabilities.</p>
+<p><strong>Authorization:</strong> Host JWT. Requires <code>?agent_id=...</code> query param. The server MUST verify the agent was created through this host.</p>
+<p><strong>Request headers:</strong></p>
+<div class="spec-code"><pre><code class="hljs">Authorization: Bearer &lt;host_jwt&gt;
+Content-Type: application/json</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>agent_id</code></td>
+<td>string</td>
+<td>Yes</td>
+<td>The agent&#39;s ID</td>
+</tr>
+</tbody></table>
+<p><strong>Response:</strong></p>
+<div class="spec-code"><pre><code class="hljs language-json">{
+  &quot;agent_id&quot;: &quot;agt_abc123&quot;,
+  &quot;host_id&quot;: &quot;hst_xyz789&quot;,
+  &quot;status&quot;: &quot;active&quot;,
+  &quot;agent_capability_grants&quot;: [
+    { &quot;capability_id&quot;: &quot;check_balance&quot;, &quot;status&quot;: &quot;active&quot;, &quot;granted_by&quot;: &quot;user_alice&quot; },
+    { &quot;capability_id&quot;: &quot;transfer_domestic&quot;, &quot;status&quot;: &quot;active&quot;, &quot;granted_by&quot;: &quot;user_alice&quot; }
+  ],
+  &quot;mode&quot;: &quot;delegated&quot;,
+  &quot;user_id&quot;: &quot;user_alice&quot;,
+  &quot;created_at&quot;: &quot;2026-02-25T10:00:00Z&quot;,
+  &quot;last_used_at&quot;: &quot;2026-02-25T14:30:00Z&quot;,
+  &quot;expires_at&quot;: &quot;2026-02-26T10:00:00Z&quot;
+}</code></pre></div>
+<p>The <code>agent_capability_grants</code> array is the single source of truth for capability state. Each grant has a <code>status</code> field: <code>&quot;active&quot;</code> (granted and usable), <code>&quot;pending&quot;</code> (awaiting approval), or <code>&quot;denied&quot;</code> (user rejected).</p>
+<h3 id="5.6-revoke" class="spec-h3">5.6 Revoke</h3>
+<div class="spec-code"><pre><code class="hljs">POST /agent/revoke</code></pre></div>
+<p>Revokes an agent permanently. The linked user MAY also revoke agents through the server&#39;s UI or API.</p>
+<p><strong>Authorization:</strong> Host JWT. The server MUST verify the agent was created through this host.</p>
+<p><strong>Request body:</strong></p>
+<div class="spec-code"><pre><code class="hljs language-json">{
+  &quot;agent_id&quot;: &quot;agt_abc123&quot;
+}</code></pre></div>
+<p><strong>Response:</strong></p>
+<div class="spec-code"><pre><code class="hljs language-json">{
+  &quot;agent_id&quot;: &quot;agt_abc123&quot;,
+  &quot;status&quot;: &quot;revoked&quot;
+}</code></pre></div>
+<h3 id="5.7-key-rotation" class="spec-h3">5.7 Key Rotation</h3>
+<div class="spec-code"><pre><code class="hljs">POST /agent/rotate-key</code></pre></div>
+<p>Replaces an agent&#39;s public key. The old key stops working immediately.</p>
+<p><strong>Authorization:</strong> Agent JWT. The request MUST be signed with the agent&#39;s current key.</p>
+<p><strong>Request body:</strong></p>
+<div class="spec-code"><pre><code class="hljs language-json">{
+  &quot;public_key&quot;: { &quot;kty&quot;: &quot;OKP&quot;, &quot;crv&quot;: &quot;Ed25519&quot;, &quot;x&quot;: &quot;new-key...&quot; }
+}</code></pre></div>
+<p><strong>Response:</strong></p>
+<div class="spec-code"><pre><code class="hljs language-json">{
+  &quot;agent_id&quot;: &quot;agt_abc123&quot;,
+  &quot;status&quot;: &quot;active&quot;
+}</code></pre></div>
+<h3 id="5.8-rotate-host-key" class="spec-h3">5.8 Rotate Host Key</h3>
+<div class="spec-code"><pre><code class="hljs">POST /agent/host/rotate-key</code></pre></div>
+<p>Replaces a host&#39;s public key in-place. All agents under the host continue to work — only the host&#39;s authentication key changes. The old key stops working immediately.</p>
+<p><strong>Authorization:</strong> Host JWT signed with the <strong>current</strong> key.</p>
+<p><strong>Request headers:</strong></p>
+<div class="spec-code"><pre><code class="hljs">Authorization: Bearer &lt;host_jwt&gt;
+Content-Type: application/json</code></pre></div>
+<p><strong>Request body:</strong></p>
+<div class="spec-code"><pre><code class="hljs language-json">{
+  &quot;public_key&quot;: { &quot;kty&quot;: &quot;OKP&quot;, &quot;crv&quot;: &quot;Ed25519&quot;, &quot;x&quot;: &quot;new-key...&quot; }
+}</code></pre></div>
+<p><strong>Response:</strong></p>
+<div class="spec-code"><pre><code class="hljs language-json">{
+  &quot;host_id&quot;: &quot;hst_xyz789&quot;,
+  &quot;status&quot;: &quot;active&quot;
+}</code></pre></div>
+<p>The server replaces the stored public key. Future host JWTs must be signed with the new key. Existing agents, capability grants, <code>user_id</code>, and trust are unaffected.</p>
+<p>This endpoint is for inline key hosts only. JWKS-based hosts rotate by updating the key at their JWKS URL — servers pick up the new key on their next fetch. See §9.7 for rotation security considerations.</p>
+<h3 id="5.9-revoke-host" class="spec-h3">5.9 Revoke Host</h3>
+<div class="spec-code"><pre><code class="hljs">POST /agent/host/revoke</code></pre></div>
+<p>Revokes a host and all agents created through it.</p>
+<p><strong>Authorization:</strong> Host JWT — the host revokes itself. The server revokes the host and all agents under it. The linked user MAY also revoke hosts through the server&#39;s UI or API.</p>
+<p><strong>Request headers:</strong></p>
+<div class="spec-code"><pre><code class="hljs">Authorization: Bearer &lt;host_jwt&gt;</code></pre></div>
+<p><strong>Response:</strong></p>
+<div class="spec-code"><pre><code class="hljs language-json">{
+  &quot;host_id&quot;: &quot;hst_abc123&quot;,
+  &quot;status&quot;: &quot;revoked&quot;,
+  &quot;agents_revoked&quot;: 3
+}</code></pre></div>
+<hr>
+<h3 id="5.10-introspect" class="spec-h3">5.10 Introspect</h3>
+<div class="spec-code"><pre><code class="hljs">POST /agent/introspect</code></pre></div>
+<p>Validates an agent JWT and returns the agent&#39;s current status and granted capabilities. Follows the model of <a href="https://datatracker.ietf.org/doc/html/rfc7662">RFC 7662 (OAuth 2.0 Token Introspection)</a>. This endpoint enables resource servers that are separate from the auth server to verify agent JWTs without direct access to agent public keys or the auth server&#39;s database.</p>
+<p><strong>Request headers:</strong></p>
+<div class="spec-code"><pre><code class="hljs">Content-Type: application/json</code></pre></div>
+<p><strong>Request body:</strong></p>
+<div class="spec-code"><pre><code class="hljs language-json">{
+  &quot;token&quot;: &quot;eyJhbGciOiJFZERTQSIs...&quot;
+}</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>token</code></td>
+<td>string</td>
+<td>Yes</td>
+<td>The agent JWT to validate</td>
+</tr>
+</tbody></table>
+<p><strong>Response (active):</strong></p>
+<div class="spec-code"><pre><code class="hljs language-json">{
+  &quot;active&quot;: true,
+  &quot;agent_id&quot;: &quot;agt_abc123&quot;,
+  &quot;host_id&quot;: &quot;hst_xyz789&quot;,
+  &quot;user_id&quot;: &quot;user_alice&quot;,
+  &quot;agent_capability_grants&quot;: [
+    { &quot;capability_id&quot;: &quot;check_balance&quot;, &quot;status&quot;: &quot;active&quot; },
+    { &quot;capability_id&quot;: &quot;transfer_domestic&quot;, &quot;status&quot;: &quot;active&quot; }
+  ],
+  &quot;mode&quot;: &quot;delegated&quot;,
+  &quot;expires_at&quot;: &quot;2026-02-28T14:30:00Z&quot;
+}</code></pre></div>
+<p><strong>Response (inactive):</strong></p>
+<div class="spec-code"><pre><code class="hljs language-json">{
+  &quot;active&quot;: false
+}</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>active</code></td>
+<td>boolean</td>
+<td><code>true</code> if the JWT is valid, the agent is active, and the signature verified. <code>false</code> for any reason (expired JWT, revoked agent, bad signature, unknown agent).</td>
+</tr>
+<tr>
+<td><code>agent_id</code></td>
+<td>string</td>
+<td>Agent ID (from JWT <code>sub</code> claim). Only present when <code>active: true</code>.</td>
+</tr>
+<tr>
+<td><code>host_id</code></td>
+<td>string</td>
+<td>Host that created this agent. Only present when <code>active: true</code>.</td>
+</tr>
+<tr>
+<td><code>user_id</code></td>
+<td>string?</td>
+<td>Linked user, if any. Only present when <code>active: true</code>.</td>
+</tr>
+<tr>
+<td><code>agent_capability_grants</code></td>
+<td>array</td>
+<td>Per-capability grant status. If the JWT contained a <code>capability_ids</code> claim, only capabilities in that claim are included. Only present when <code>active: true</code>.</td>
+</tr>
+<tr>
+<td><code>mode</code></td>
+<td>string</td>
+<td><code>&quot;delegated&quot;</code> or <code>&quot;autonomous&quot;</code>. Only present when <code>active: true</code>.</td>
+</tr>
+<tr>
+<td><code>expires_at</code></td>
+<td>string?</td>
+<td>Agent session expiry (ISO 8601). Only present when <code>active: true</code>.</td>
+</tr>
+</tbody></table>
+<p>The auth server performs the full verification flow (§4.5) and returns an active/inactive response.</p>
+<h3 id="5.11-error-format" class="spec-h3">5.11 Error Format</h3>
+<p>All endpoints use a standard error response format:</p>
+<div class="spec-code"><pre><code class="hljs language-json">{
+  &quot;error&quot;: &quot;error_code&quot;,
+  &quot;message&quot;: &quot;Human-readable description of what went wrong&quot;
+}</code></pre></div>
+<p>The <code>error</code> field is a machine-readable code (snake_case string). The <code>message</code> field is a human-readable explanation for debugging — clients SHOULD NOT parse it programmatically.</p>
+<p><strong>Common error codes</strong> (apply to all endpoints):</p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Error Code</th>
+<th>Meaning</th>
+<th>Client Action</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>400</td>
+<td><code>invalid_request</code></td>
+<td>Malformed JSON, missing required fields, or invalid parameter types</td>
+<td>Fix request and retry</td>
+</tr>
+<tr>
+<td>401</td>
+<td><code>invalid_jwt</code></td>
+<td>JWT is invalid, expired, or signature failed</td>
+<td>Re-sign and retry</td>
+</tr>
+<tr>
+<td>403</td>
+<td><code>agent_revoked</code></td>
+<td>Agent has been revoked</td>
+<td>Cannot recover — create new agent</td>
+</tr>
+<tr>
+<td>403</td>
+<td><code>agent_expired</code></td>
+<td>Agent session has expired</td>
+<td>Re-register or reactivate</td>
+</tr>
+<tr>
+<td>403</td>
+<td><code>absolute_lifetime_exceeded</code></td>
+<td>Agent&#39;s absolute lifetime has elapsed</td>
+<td>Cannot recover — create new agent</td>
+</tr>
+<tr>
+<td>403</td>
+<td><code>agent_pending</code></td>
+<td>Agent is still pending approval</td>
+<td>Wait for approval to complete</td>
+</tr>
+<tr>
+<td>403</td>
+<td><code>host_revoked</code></td>
+<td>Host has been revoked</td>
+<td>Cannot recover</td>
+</tr>
+<tr>
+<td>403</td>
+<td><code>host_pending</code></td>
+<td>Host is still pending approval</td>
+<td>Wait for approval to complete</td>
+</tr>
+<tr>
+<td>403</td>
+<td><code>unauthorized</code></td>
+<td>Caller is not authorized for this operation (e.g. host revoking an agent it didn&#39;t create)</td>
+<td>Check authorization</td>
+</tr>
+<tr>
+<td>429</td>
+<td><code>rate_limited</code></td>
+<td>Too many requests</td>
+<td>Retry after delay</td>
+</tr>
+<tr>
+<td>500</td>
+<td><code>internal_error</code></td>
+<td>Server-side failure</td>
+<td>Retry or report</td>
+</tr>
+</tbody></table>
+<p><strong>Per-endpoint error codes:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>Status</th>
+<th>Error Code</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>POST /agent/register</code></td>
+<td>400</td>
+<td><code>unsupported_mode</code></td>
+<td>Requested mode (<code>delegated</code>/<code>autonomous</code>) is not supported by this server</td>
+</tr>
+<tr>
+<td><code>POST /agent/register</code></td>
+<td>400</td>
+<td><code>unsupported_algorithm</code></td>
+<td>Agent&#39;s key algorithm is not in the server&#39;s supported set</td>
+</tr>
+<tr>
+<td><code>POST /agent/register</code></td>
+<td>400</td>
+<td><code>invalid_capabilities</code></td>
+<td>One or more requested capability IDs don&#39;t exist or are blocked</td>
+</tr>
+<tr>
+<td><code>POST /agent/register</code></td>
+<td>409</td>
+<td><code>agent_exists</code></td>
+<td>An agent with this public key is already registered</td>
+</tr>
+<tr>
+<td><code>POST /agent/request-capability</code></td>
+<td>400</td>
+<td><code>invalid_capabilities</code></td>
+<td>One or more requested capability IDs don&#39;t exist or are blocked</td>
+</tr>
+<tr>
+<td><code>POST /agent/request-capability</code></td>
+<td>409</td>
+<td><code>already_granted</code></td>
+<td>All requested capabilities are already granted</td>
+</tr>
+<tr>
+<td>Any agent-authenticated</td>
+<td>403</td>
+<td><code>capability_not_granted</code></td>
+<td>The agent does not have this capability</td>
+</tr>
+<tr>
+<td>Any agent-authenticated</td>
+<td>403</td>
+<td><code>limit_exceeded</code></td>
+<td>The agent has this capability but the request exceeds its limits</td>
+</tr>
+<tr>
+<td><code>POST /agent/revoke</code></td>
+<td>404</td>
+<td><code>agent_not_found</code></td>
+<td>Agent ID doesn&#39;t exist</td>
+</tr>
+<tr>
+<td><code>POST /agent/host/revoke</code></td>
+<td>404</td>
+<td><code>host_not_found</code></td>
+<td>Host ID doesn&#39;t exist</td>
+</tr>
+<tr>
+<td><code>POST /agent/rotate-key</code></td>
+<td>400</td>
+<td><code>unsupported_algorithm</code></td>
+<td>New key&#39;s algorithm is not supported</td>
+</tr>
+<tr>
+<td><code>POST /agent/host/rotate-key</code></td>
+<td>400</td>
+<td><code>unsupported_algorithm</code></td>
+<td>New key&#39;s algorithm is not supported</td>
+</tr>
+<tr>
+<td><code>GET /agent/status</code></td>
+<td>404</td>
+<td><code>agent_not_found</code></td>
+<td>Agent ID doesn&#39;t exist</td>
+</tr>
+<tr>
+<td><code>POST /agent/introspect</code></td>
+<td>404</td>
+<td><code>agent_not_found</code></td>
+<td>Agent ID doesn&#39;t exist</td>
+</tr>
+<tr>
+<td><code>POST /agent/introspect</code></td>
+<td>404</td>
+<td><code>host_not_found</code></td>
+<td>Host ID doesn&#39;t exist</td>
+</tr>
+</tbody></table>
+<p>Servers MAY return additional error codes beyond those listed. Clients SHOULD handle unknown error codes gracefully by falling back to the HTTP status code.</p>
+<p>For CIBA endpoints (§8.2), the authorization and token polling flow follows <a href="https://datatracker.ietf.org/doc/html/rfc8628">RFC 8628</a> (OAuth 2.0 Device Authorization Grant). Error responses for these endpoints use the error codes defined in <a href="https://datatracker.ietf.org/doc/html/rfc8628#section-3.5">RFC 8628 §3.5</a>.</p>
+<h2 id="6.-client" class="spec-h2">6. Client</h2>
+<p>The client sits between the agent and the server. It manages host and agent keys, communicates with servers, and exposes a standard set of tools that agents call to discover, register, authenticate, and execute capabilities. A client can be an MCP server, a CLI, an SDK, or any process that implements these tools.</p>
+<p>The protocol does not define how agents communicate with clients. A client may run in the same process or machine as the agent (e.g. a local MCP server, an embedded SDK) — in this case the agent calls tools directly with no authentication required. Alternatively, a client may be a remote service that the agent reaches over a network, in which case the agent-to-client channel requires its own authentication (OAuth, API keys, session tokens, or whatever the transport provides). This is outside the scope of this protocol.</p>
+<h3 id="6.1-list_providers" class="spec-h3">6.1 list_providers</h3>
+<p>Returns all providers the client knows about. This is typically the first tool an agent calls — it shows what services are available before the agent decides which one to use. Providers can come from previous discoveries, pre-configured lists, or user setup.</p>
+<p>Single-provider clients (e.g. GitHub&#39;s own MCP server) MAY omit this tool since the agent already knows the provider.</p>
+<p><strong>Input:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>(none)</td>
+<td></td>
+<td></td>
+<td>Returns all known providers</td>
+</tr>
+</tbody></table>
+<p><strong>Behavior:</strong></p>
+<p>Returns the list of providers with a <code>name</code> and <code>description</code> for each. The agent reads the list and picks the relevant provider for its task.</p>
+<p><strong>Response shape:</strong></p>
+<div class="spec-code"><pre><code class="hljs language-json">[
+  { &quot;name&quot;: &quot;github&quot;, &quot;description&quot;: &quot;Code repositories, issues, and pull requests&quot; },
+  { &quot;name&quot;: &quot;gmail&quot;, &quot;description&quot;: &quot;Google Email — read, send, and manage emails&quot; },
+  { &quot;name&quot;: &quot;bank&quot;, &quot;description&quot;: &quot;Banking services — accounts, transfers, and payments&quot; }
+]</code></pre></div>
+<h3 id="6.2-discover" class="spec-h3">6.2 discover</h3>
+<p>Resolves a service into a usable provider configuration. This tool serves two distinct use cases:</p>
+<ul>
+<li><strong>Direct discovery</strong> — the agent already has a URL (e.g. the user said &quot;connect to example.com&quot;). The client fetches the service&#39;s discovery document from <code>/.well-known/agent-configuration</code> and stores it.</li>
+<li><strong>Intent-based search</strong> — the agent describes what it needs (e.g. &quot;send emails&quot;) and the client queries a registry to find matching services.</li>
+</ul>
+<p>An agent may call this as its first action, after <code>list_providers</code> returns nothing relevant, or at any point when a new service is needed. Clients that are pre-configured for specific services MAY omit this tool.</p>
+<p>*<em>Input:</em></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>intent</code></td>
+<td>string</td>
+<td>No</td>
+<td>Natural language description of what the agent needs (e.g. <code>&quot;banking&quot;</code>, <code>&quot;send emails&quot;</code>)</td>
+</tr>
+<tr>
+<td><code>url</code></td>
+<td>string</td>
+<td>No</td>
+<td>Direct service URL — SHOULD require user confirmation or allowlist check (see Security Considerations)</td>
+</tr>
+</tbody></table>
+<p>At least one of <code>intent</code> or <code>url</code> MUST be provided.</p>
+<p><strong>Behavior:</strong></p>
+<ol>
+<li><strong>If <code>url</code> is provided:</strong> fetch <code>{url}/.well-known/agent-configuration</code> directly. Clients SHOULD require user confirmation or check against an allowlist before fetching arbitrary URLs.</li>
+<li><strong>If <code>intent</code> is provided:</strong> query a registry (§6.10) to find matching services. Return matching providers for the agent to choose from.</li>
+<li>Store the resolved provider configuration for use by subsequent tools.</li>
+</ol>
+<h3 id="6.3-list_capabilities" class="spec-h3">6.3 list_capabilities</h3>
+<p>Returns available capabilities. All parameters are optional — a bare <code>list_capabilities()</code> returns everything the server offers.</p>
+<p><strong>Input:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>provider</code></td>
+<td>string</td>
+<td>No</td>
+<td>Provider name (from <code>list_providers</code>). Required for multi-provider clients to target a specific service. Single-provider clients omit this.</td>
+</tr>
+<tr>
+<td><code>intent</code></td>
+<td>string</td>
+<td>No</td>
+<td>Natural language intent, passed to the server for server-side filtering (e.g. <code>&quot;send money&quot;</code>). The server returns only capabilities relevant to the intent.</td>
+</tr>
+<tr>
+<td><code>agent_id</code></td>
+<td>string</td>
+<td>No</td>
+<td>If provided, response includes grant status per capability (<code>&quot;granted&quot;</code> / <code>&quot;not_granted&quot;</code>).</td>
+</tr>
+<tr>
+<td><code>cursor</code></td>
+<td>string</td>
+<td>No</td>
+<td>Pagination cursor from a previous response. When provided, returns the next page of results.</td>
+</tr>
+</tbody></table>
+<p><strong>Behavior:</strong></p>
+<ol>
+<li>Determine which server to call (from <code>provider</code>, or the client&#39;s default if single-provider)</li>
+<li>Call <code>GET /agent/capabilities</code> (§5.2) with the appropriate parameters. Authenticate with a host JWT, or an agent JWT if <code>agent_id</code> is provided.</li>
+<li>If the response has <code>has_more: true</code>, the client returns the first page along with the cursor. The agent decides whether to request more by calling <code>list_capabilities</code> again with the cursor.</li>
+</ol>
+<p>The client SHOULD return capabilities unchanged, including <code>invoke</code> descriptors the client does not itself support — the agent decides how to use them.</p>
+<p><strong>Response shape:</strong></p>
+<div class="spec-code"><pre><code class="hljs language-json">{
+  &quot;capabilities&quot;: [
+    {
+      &quot;id&quot;: &quot;transfer_domestic&quot;,
+      &quot;title&quot;: &quot;Transfer funds domestically&quot;,
+      &quot;description&quot;: &quot;Transfer funds domestically&quot;,
+      &quot;grant_status&quot;: &quot;not_granted&quot;,
+      &quot;invoke&quot;: {
+        &quot;type&quot;: &quot;http&quot;,
+        &quot;method&quot;: &quot;POST&quot;,
+        &quot;url&quot;: &quot;https://api.bank.com/v1/transfers/domestic&quot;
+      }
+    },
+    {
+      &quot;id&quot;: &quot;check_balance&quot;,
+      &quot;title&quot;: &quot;Check balance&quot;,
+      &quot;description&quot;: &quot;Check account balance&quot;,
+      &quot;grant_status&quot;: &quot;granted&quot;,
+      &quot;invoke&quot;: {
+        &quot;type&quot;: &quot;http&quot;,
+        &quot;method&quot;: &quot;GET&quot;,
+        &quot;url&quot;: &quot;https://api.bank.com/v1/accounts/balance&quot;
+      }
+    }
+  ]
+}</code></pre></div>
+<p>The <code>grant_status</code> field is present when the request is authenticated with an agent JWT. It indicates whether the agent has already been granted this capability.</p>
+<h3 id="6.4-connect_agent" class="spec-h3">6.4 connect_agent</h3>
+<p>Connects an agent to a service. This generates a keypair, registers the agent on the server, handles any required approval, and stores the connection locally. The agent gets its own identity, keypair, and set of granted capabilities.</p>
+<p><strong>Input:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>provider</code></td>
+<td>string</td>
+<td>Yes</td>
+<td>Provider name (from <code>list_providers</code>) or service URL</td>
+</tr>
+<tr>
+<td><code>capability_ids</code></td>
+<td>string[]</td>
+<td>No</td>
+<td>Capability IDs to request. If omitted, the server decides which capabilities to grant based on its own policy.</td>
+</tr>
+<tr>
+<td><code>mode</code></td>
+<td>string</td>
+<td>No</td>
+<td><code>&quot;delegated&quot;</code> (default) or <code>&quot;autonomous&quot;</code></td>
+</tr>
+</tbody></table>
+<p><strong>Behavior:</strong></p>
+<ol>
+<li>Look up the provider&#39;s configuration (trigger <code>discover</code> if not cached)</li>
+<li>Generate an agent keypair</li>
+<li>Sign a host JWT containing the agent&#39;s public key (see §4.2 for JWT construction)</li>
+<li>Call <code>POST /agent/register</code> (§5.3) with the host JWT, capability IDs, and mode</li>
+<li>If <code>status: &quot;active&quot;</code> → store the agent connection and return agent_id + granted capabilities</li>
+<li>If <code>status: &quot;pending&quot;</code> → initiate the approval flow returned by the server (§8). Poll for status until the agent is approved, rejected, or the approval expires. On approval, store the connection and return agent_id + granted capabilities. On rejection or timeout, report the outcome to the agent.</li>
+</ol>
+<h3 id="6.5-sign_jwt" class="spec-h3">6.5 sign_jwt</h3>
+<p>Returns a signed agent JWT for authenticating capability invocations. The agent does not hold its own private key — the client does (§4.1). This tool lets the client remain the gatekeeper while giving the agent a short-lived token it can use with whatever tools it has (HTTP clients, browser tools, code execution, etc.).</p>
+<p><strong>Input:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>agent_id</code></td>
+<td>string</td>
+<td>Yes</td>
+<td>The agent&#39;s ID</td>
+</tr>
+<tr>
+<td><code>capability_ids</code></td>
+<td>string[]</td>
+<td>No</td>
+<td>Restrict this JWT to specific capabilities. If omitted, the JWT is valid for all the agent&#39;s granted capabilities.</td>
+</tr>
+</tbody></table>
+<p><strong>Behavior:</strong></p>
+<ol>
+<li>If <code>capability_ids</code> is provided, verify all requested capabilities are within the agent&#39;s granted set — reject if any are not</li>
+<li>Sign an agent JWT (see §4.3 for claims and construction). The JWT SHOULD expire within 60 seconds.</li>
+<li>Return the signed JWT string</li>
+</ol>
+<p>The client MAY refuse to sign (e.g. agent is revoked, rate limit exceeded). The client MAY restrict the JWT to specific capabilities even if the agent didn&#39;t request it. See §4.4 for optional proof-of-possession profiles.</p>
+<p><strong>Response shape:</strong></p>
+<div class="spec-code"><pre><code class="hljs language-json">{
+  &quot;token&quot;: &quot;eyJhbGciOiJFZERTQSIs...&quot;,
+  &quot;expires_at&quot;: 1730000060
+}</code></pre></div>
+<h3 id="6.6-request_capability" class="spec-h3">6.6 request_capability</h3>
+<p>Requests additional capabilities for an already-connected agent. This is how an agent escalates beyond its initial grant — for example, an agent that was granted read access now needs write access.</p>
+<p><strong>Input:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>agent_id</code></td>
+<td>string</td>
+<td>Yes</td>
+<td>The agent&#39;s ID</td>
+</tr>
+<tr>
+<td><code>capability_ids</code></td>
+<td>string[]</td>
+<td>Yes</td>
+<td>Additional capability IDs to request</td>
+</tr>
+<tr>
+<td><code>reason</code></td>
+<td>string</td>
+<td>No</td>
+<td>Why the agent needs these capabilities</td>
+</tr>
+</tbody></table>
+<p><strong>Behavior:</strong></p>
+<ol>
+<li>Sign an agent JWT and call <code>POST /agent/request-capability</code> (§5.4)</li>
+<li>If <code>status: &quot;granted&quot;</code> → return the newly granted capabilities</li>
+<li>If <code>status: &quot;pending&quot;</code> → initiate the approval flow returned by the server (§8). Poll for status until approved or denied.</li>
+<li>Return the outcome to the agent</li>
+</ol>
+<p><strong>Response shape:</strong></p>
+<div class="spec-code"><pre><code class="hljs language-json">{
+  &quot;granted&quot;: [&quot;write_document&quot;, &quot;delete_document&quot;],
+  &quot;pending&quot;: [],
+  &quot;denied&quot;: []
+}</code></pre></div>
+<h3 id="6.7-disconnect_agent" class="spec-h3">6.7 disconnect_agent</h3>
+<p>Revokes the agent on the server and removes the stored connection locally. This is permanent — the agent cannot be reactivated after disconnecting.</p>
+<p><strong>Input:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>agent_id</code></td>
+<td>string</td>
+<td>Yes</td>
+<td>The agent&#39;s ID</td>
+</tr>
+</tbody></table>
+<p><strong>Behavior:</strong></p>
+<ol>
+<li>Look up the host identity associated with this agent connection</li>
+<li>Sign a host JWT and call <code>POST /agent/revoke</code> (§5.6)</li>
+<li>Remove the stored connection data (keypair, config)</li>
+<li>Return confirmation</li>
+</ol>
+<h3 id="6.8-agent_status" class="spec-h3">6.8 agent_status</h3>
+<p>Checks the health and status of an existing agent connection.</p>
+<p><strong>Input:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>agent_id</code></td>
+<td>string</td>
+<td>Yes</td>
+<td>The agent&#39;s ID</td>
+</tr>
+</tbody></table>
+<p><strong>Behavior:</strong></p>
+<ol>
+<li>Look up the host identity associated with this agent connection</li>
+<li>Sign a host JWT and call <code>GET /agent/status</code> with <code>?agent_id=...</code></li>
+<li>Return agent status, granted capabilities, and connection health</li>
+</ol>
+<h3 id="6.9-http_request" class="spec-h3">6.9 http_request</h3>
+<p>Optional. Executes a capability with <code>invoke.type = &quot;http&quot;</code> on behalf of an agent. The agent provides a capability ID and arguments; the client looks up the invoke descriptor, constructs the request per the standard HTTP invoke profile (§5.2.2), signs the JWT, and makes the call.</p>
+<p>This tool exists so agents don&#39;t need their own HTTP tools to invoke the most common invoke type. Clients MAY omit it — agents with their own HTTP capabilities can use <code>sign_jwt</code> (§6.5) and make requests directly.</p>
+<p>For capabilities with non-HTTP invoke types, the client MAY provide additional invoke tools beyond what this spec defines. A proprietary client, for example, might offer tools for its own custom invoke types.</p>
+<p><strong>Input:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>agent_id</code></td>
+<td>string</td>
+<td>Yes</td>
+<td>The agent&#39;s ID</td>
+</tr>
+<tr>
+<td><code>capability_id</code></td>
+<td>string</td>
+<td>Yes</td>
+<td>The capability to invoke (must have <code>invoke.type = &quot;http&quot;</code>)</td>
+</tr>
+<tr>
+<td><code>arguments</code></td>
+<td>object</td>
+<td>No</td>
+<td>Invocation arguments, mapped onto the request per the capability&#39;s <code>invoke.input</code> descriptor</td>
+</tr>
+</tbody></table>
+<p><strong>Behavior:</strong></p>
+<ol>
+<li>Look up the capability&#39;s invoke descriptor from the cached capabilities. Reject if <code>invoke.type</code> is not <code>&quot;http&quot;</code>.</li>
+<li>Construct the HTTP request per §5.2.2 invocation rules (substitute path parameters, build query string, set headers, format body)</li>
+<li>Sign an agent JWT scoped to this capability and set <code>Authorization: Bearer &lt;agent_jwt&gt;</code></li>
+<li>Make the request and return the response</li>
+</ol>
+<h3 id="6.10-registry" class="spec-h3">6.10 Registry</h3>
+<p>A registry is a searchable index of services that support Agent Auth. It is a client-side discovery aid, not part of the core server protocol — the registry URL is configured on the client.</p>
+<p>When an agent calls <code>discover</code> with an <code>intent</code>, the client queries its configured registry to find matching providers. Clients SHOULD prefer registry lookups over fetching arbitrary URLs provided by agents.</p>
+<p>Registries MAY be public (open to all services), private (enterprise-only), or bundled with the client as a static list.</p>
+<p><strong>Search interface:</strong></p>
+<p>To be compatible with generic clients, a registry MUST implement the following endpoint:</p>
+<p><code>GET {registry_url}/api/search?intent={intent}&amp;limit={limit}</code></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>intent</code></td>
+<td>string</td>
+<td>Yes</td>
+<td>Natural-language description of what the agent needs (e.g. <code>&quot;send emails&quot;</code>, <code>&quot;deploy websites&quot;</code>)</td>
+</tr>
+<tr>
+<td><code>limit</code></td>
+<td>number</td>
+<td>No</td>
+<td>Maximum number of results (default: 10)</td>
+</tr>
+</tbody></table>
+<p><strong>Response shape:</strong></p>
+<div class="spec-code"><pre><code class="hljs language-json">{
+  &quot;providers&quot;: [
+    {
+      &quot;protocol_version&quot;: &quot;1.0&quot;,
+      &quot;provider_name&quot;: &quot;example&quot;,
+      &quot;description&quot;: &quot;Example service&quot;,
+      &quot;issuer&quot;: &quot;https://example.com&quot;,
+      &quot;algorithms&quot;: [&quot;EdDSA&quot;],
+      &quot;modes&quot;: [&quot;delegated&quot;, &quot;autonomous&quot;],
+      &quot;approval_methods&quot;: [&quot;device_authorization&quot;],
+      &quot;endpoints&quot;: { ... },
+      &quot;jwks_uri&quot;: &quot;https://example.com/.well-known/jwks.json&quot;
+    }
+  ],
+  &quot;intent&quot;: &quot;the original intent&quot;,
+  &quot;count&quot;: 1
+}</code></pre></div>
+<p>Each entry in <code>providers</code> is a standard discovery document (§5.1). The client stores matching providers the same way it stores directly discovered ones.</p>
+<p><strong>Service registration:</strong></p>
+<p>How services are added to a registry is implementation-specific. A registry MAY accept submissions via API, require manual review, auto-discover from a crawl, or any other mechanism. The only requirement for client compatibility is the search interface above.</p>
+<h2 id="7.-data-model" class="spec-h2">7. Data Model</h2>
+<p>This section defines the logical fields the protocol operates on. These are not a mandated database schema — implementations MAY store these fields however they choose, as long as the protocol-facing behavior is preserved.</p>
+<h3 id="7.1-host" class="spec-h3">7.1 Host</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>id</code></td>
+<td>string</td>
+<td>Unique identifier</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>string?</td>
+<td>Human-readable name identifying the environment (e.g. <code>MacBook-Pro&quot;</code>, <code>&quot;ChatGPT&quot;</code>). Informational only — servers MUST NOT use it for authorization.</td>
+</tr>
+<tr>
+<td><code>public_key</code></td>
+<td>JWK?</td>
+<td>Ed25519 public key (see §4.1). Present when inline key registration is used.</td>
+</tr>
+<tr>
+<td><code>jwks_url</code></td>
+<td>string?</td>
+<td>JWKS endpoint URL. Present when JWKS-based registration is used.</td>
+</tr>
+<tr>
+<td><code>user_id</code></td>
+<td>string?</td>
+<td>ID of the owning user in the server&#39;s auth system. Set when a user approves and trusts the host. Drives authorization (revocation, management).</td>
+</tr>
+<tr>
+<td><code>default_capability_ids</code></td>
+<td>string[]</td>
+<td>Default capabilities for agents created through this host</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>enum</td>
+<td>active, pending, revoked, rejected</td>
+</tr>
+<tr>
+<td><code>activated_at</code></td>
+<td>datetime?</td>
+<td>Last activation</td>
+</tr>
+<tr>
+<td><code>expires_at</code></td>
+<td>datetime?</td>
+<td>TTL deadline</td>
+</tr>
+<tr>
+<td><code>last_used_at</code></td>
+<td>datetime?</td>
+<td>Last host JWT usage</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>datetime</td>
+<td>Created</td>
+</tr>
+<tr>
+<td><code>updated_at</code></td>
+<td>datetime</td>
+<td>Last modified</td>
+</tr>
+</tbody></table>
+<p>Clients SHOULD auto-detect the <code>name</code> by combining the tool/IDE name with the device hostname (e.g. <code>&quot;MacBook-Pro&quot;</code>). When no tool is detected, the device hostname alone is sufficient.</p>
+<h3 id="7.2-agent" class="spec-h3">7.2 Agent</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>id</code></td>
+<td>string</td>
+<td>Unique identifier</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>string</td>
+<td>Human-readable name for the agent</td>
+</tr>
+<tr>
+<td><code>host_id</code></td>
+<td>string (FK)</td>
+<td>The host that created this agent (<strong>required</strong>)</td>
+</tr>
+<tr>
+<td><code>user_id</code></td>
+<td>string? (FK)</td>
+<td>The user this agent acts on behalf of. Set from the host&#39;s <code>user_id</code> or session auth.</td>
+</tr>
+<tr>
+<td><code>public_key</code></td>
+<td>JWK?</td>
+<td>Ed25519 public key (see §4.1). Present when inline key registration is used.</td>
+</tr>
+<tr>
+<td><code>jwks_url</code></td>
+<td>string?</td>
+<td>JWKS endpoint URL. Present when JWKS-based registration is used.</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>enum</td>
+<td>active, pending, expired, revoked, rejected, claimed</td>
+</tr>
+<tr>
+<td><code>mode</code></td>
+<td>string</td>
+<td><code>&quot;delegated&quot;</code> or <code>&quot;autonomous&quot;</code>. Immutable after creation (§2.2).</td>
+</tr>
+<tr>
+<td><code>last_used_at</code></td>
+<td>datetime?</td>
+<td>Last authenticated request</td>
+</tr>
+<tr>
+<td><code>activated_at</code></td>
+<td>datetime?</td>
+<td>Last activation</td>
+</tr>
+<tr>
+<td><code>expires_at</code></td>
+<td>datetime?</td>
+<td>TTL deadline</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>datetime</td>
+<td>Created</td>
+</tr>
+<tr>
+<td><code>updated_at</code></td>
+<td>datetime</td>
+<td>Last modified</td>
+</tr>
+</tbody></table>
+<h3 id="7.3-agent-capability-grant" class="spec-h3">7.3 Agent Capability Grant</h3>
+<p>Agent capabilities are stored as individual agent capability grant records rather than flat arrays on the agent. This enables per-capability metadata (expiry, grant source, reason) and granular revocation.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>id</code></td>
+<td>string</td>
+<td>Unique identifier</td>
+</tr>
+<tr>
+<td><code>agent_id</code></td>
+<td>string (FK)</td>
+<td>The agent this capability grant belongs to</td>
+</tr>
+<tr>
+<td><code>capability_id</code></td>
+<td>string</td>
+<td>The granted capability identifier</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>enum</td>
+<td><code>active</code> or <code>pending</code></td>
+</tr>
+<tr>
+<td><code>granted_by</code></td>
+<td>string? (FK)</td>
+<td>User who granted this permission</td>
+</tr>
+<tr>
+<td><code>reason</code></td>
+<td>string?</td>
+<td>Why this permission was granted or requested</td>
+</tr>
+<tr>
+<td><code>expires_at</code></td>
+<td>datetime?</td>
+<td>When this specific permission expires (independent of agent TTL)</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>datetime</td>
+<td>Created</td>
+</tr>
+<tr>
+<td><code>updated_at</code></td>
+<td>datetime</td>
+<td>Last modified</td>
+</tr>
+</tbody></table>
+<p>An agent&#39;s effective capabilities are all agent capability grants where <code>status = &quot;active&quot;</code> and <code>expires_at</code> is null or in the future. Pending capabilities are grants where <code>status = &quot;pending&quot;</code>.</p>
+<p>Implementations MAY use flat arrays on the agent model instead of a separate table, but MUST support at minimum per-capability status tracking (active vs pending).</p>
+<h4 id="7.3.1-multi-grantor-authorization" class="spec-h4">7.3.1 Multi-Grantor Authorization</h4>
+<p>Different users can grant different capabilities to the same agent. Each agent capability grant row has its own <code>granted_by</code>, tracking who authorized it. Grants are independently revocable — revoking one user&#39;s grant does not affect another&#39;s.</p>
+<p><strong>Example:</strong> A single agent with three grants from three different users:</p>
+<table>
+<thead>
+<tr>
+<th>capability_id</th>
+<th>granted_by</th>
+<th>Use case</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>read_emails</code></td>
+<td><code>user_alice</code></td>
+<td>Alice granted access to her emails</td>
+</tr>
+<tr>
+<td><code>create_issue</code></td>
+<td><code>user_bob</code></td>
+<td>Bob granted access to his repository</td>
+</tr>
+<tr>
+<td><code>audit_log</code></td>
+<td><code>admin</code></td>
+<td>Admin granted global audit access</td>
+</tr>
+</tbody></table>
+<p>Revoking Alice&#39;s <code>read_emails</code> grant does not affect Bob&#39;s <code>create_issue</code> or the admin&#39;s <code>audit_log</code>.</p>
+<h2 id="8.-approval-methods" class="spec-h2">8. Approval Methods</h2>
+<p>When a registration or capability request requires user consent, the server returns an <code>approval</code> object describing how the client should facilitate it. This section defines the approval methods the protocol supports.</p>
+<p>Servers MUST support device authorization (§8.1) as the baseline approval method. All other methods are OPTIONAL.</p>
+<h3 id="8.1-device-authorization-rfc-8628" class="spec-h3">8.1 Device Authorization (RFC 8628)</h3>
+<p>The baseline approval method. Every conformant server MUST support this. Used when the client cannot directly interact with the user — the user navigates to a URL and enters a code on a separate device. Polling behavior, error responses, and security considerations follow <a href="https://datatracker.ietf.org/doc/html/rfc8628">RFC 8628</a>.</p>
+<ol>
+<li>Server returns <code>verification_uri</code> + <code>user_code</code> + <code>expires_in</code> + <code>interval</code> in the <code>approval</code> object</li>
+<li>Client presents the URL and user code to the user (opens browser, displays code)</li>
+<li>User authenticates and approves at the URL</li>
+<li>Client polls <code>GET /agent/status</code> (§5.5) at the <code>interval</code> rate until the agent&#39;s status changes from <code>&quot;pending&quot;</code> to <code>&quot;active&quot;</code> (approved), <code>&quot;rejected&quot;</code> (denied), or the request expires</li>
+</ol>
+<p><strong>Agent Auth-specific behavior:</strong></p>
+<ul>
+<li><strong>Agent ID is reusable after timeout only.</strong> A timed-out pending agent stays in <code>pending</code> state. The client MAY retry by calling <code>POST /agent/register</code> with the same agent keypair — the server SHOULD recognize the existing agent and issue a new approval flow rather than creating a duplicate.</li>
+<li><strong>User denial is terminal for that attempt.</strong> If the approval flow returns <code>access_denied</code>, the server SHOULD transition the agent to <code>rejected</code> (not <code>pending</code>). The client MUST NOT automatically retry a denied registration.</li>
+<li><strong>Pending agent cleanup.</strong> Servers SHOULD periodically clean up agents that remain in <code>pending</code> state beyond a server-defined threshold (e.g. 24 hours, 7 days). Cleaned-up pending agents are deleted, not revoked — they never became active.</li>
+</ul>
+<h3 id="8.2-ciba-client-initiated-backchannel-authentication" class="spec-h3">8.2 CIBA (Client Initiated Backchannel Authentication)</h3>
+<p>Used when the server can reach the user directly (e.g. mobile app, email, in-app notification). Servers SHOULD implement CIBA — it provides a better experience than device authorization when the server already knows the user&#39;s identity, since the user doesn&#39;t need to navigate to a URL.</p>
+<ol>
+<li>Client calls <code>POST /agent/ciba/authorize</code> with <code>login_hint</code> (email, phone, user ID) and optional <code>capability_ids</code>, <code>binding_message</code></li>
+<li>Server creates a pending CIBA request and returns <code>expires_in</code>, <code>interval</code></li>
+<li>Server notifies the user through its notification channel (push notification, email, SMS, in-app)</li>
+<li>User approves or denies on their device via <code>POST /agent/ciba/approve</code> or <code>POST /agent/ciba/deny</code></li>
+<li>Client polls <code>GET /agent/status</code> (§5.5) at the <code>interval</code> rate until the agent&#39;s status changes</li>
+</ol>
+<p><strong>CIBA endpoints:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>Method</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>/agent/ciba/authorize</code></td>
+<td>POST</td>
+<td>Initiate a CIBA authentication request</td>
+</tr>
+<tr>
+<td><code>/agent/ciba/approve</code></td>
+<td>POST</td>
+<td>Approve a pending CIBA request (user-facing)</td>
+</tr>
+<tr>
+<td><code>/agent/ciba/deny</code></td>
+<td>POST</td>
+<td>Deny a pending CIBA request (user-facing)</td>
+</tr>
+<tr>
+<td><code>/agent/ciba/pending</code></td>
+<td>GET</td>
+<td>List pending CIBA requests for the current user</td>
+</tr>
+</tbody></table>
+<p>Approval result is observed through <code>GET /agent/status</code> (§5.5), not a separate token endpoint. The client polls the status endpoint at the <code>interval</code> rate.</p>
+<p>Servers implementing CIBA MUST follow the security considerations in <a href="https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html#rfc.section.13">CIBA Core §13</a> — particularly around rate limiting, user enumeration, and notification fatigue.</p>
+<h3 id="8.3-real-time-notification-optional" class="spec-h3">8.3 Real-Time Notification (Optional)</h3>
+<p>Polling is the baseline for all approval methods. However, servers MAY offer real-time notification as an alternative to reduce unnecessary polling.</p>
+<p>If the server supports push notification, the <code>approval</code> object in the response MAY include a <code>notification_url</code> field:</p>
+<div class="spec-code"><pre><code class="hljs language-json">{
+  &quot;approval&quot;: {
+    &quot;method&quot;: &quot;device_authorization&quot;,
+    &quot;verification_uri&quot;: &quot;https://bank.com/device&quot;,
+    &quot;user_code&quot;: &quot;ABCD-1234&quot;,
+    &quot;expires_in&quot;: 300,
+    &quot;interval&quot;: 5,
+    &quot;notification_url&quot;: &quot;https://auth.bank.com/agent/events/agt_abc123&quot;
+  }
+}</code></pre></div>
+<p>The client connects to <code>notification_url</code> via SSE and receives an event when the approval completes, is denied, or expires. If the connection fails or <code>notification_url</code> is absent, the client MUST fall back to polling <code>GET /agent/status</code>.</p>
+<h3 id="8.4-server-defined" class="spec-h3">8.4 Server-Defined</h3>
+<p>The server MAY implement custom approval flows. The <code>approval</code> object in responses carries whatever information the client needs to facilitate approval.</p>
+<h3 id="8.5-method-selection" class="spec-h3">8.5 Method Selection</h3>
+<p>When a server supports multiple approval methods, it decides which one to use based on context. Clients MAY indicate a preferred method, but the server makes the final decision and returns the chosen method in the <code>approval</code> object.</p>
+<p>General guidance:</p>
+<ul>
+<li><strong>CIBA</strong> when the server already knows the user (e.g. host has a <code>user_id</code> or client provides a <code>login_hint</code>)</li>
+<li><strong>Device authorization</strong> when the user is unknown and must navigate to a URL themselves</li>
+</ul>
+<h2 id="9.-security-considerations" class="spec-h2">9. Security Considerations</h2>
+<h3 id="9.1-private-keys" class="spec-h3">9.1 Private Keys</h3>
+<p>Private keys MUST never be transmitted to or stored on the server. The server stores only public keys or JWKS URLs.</p>
+<h3 id="9.2-jwt-lifetime" class="spec-h3">9.2 JWT Lifetime</h3>
+<p>JWTs SHOULD expire within 60 seconds. Short lifetimes limit misuse even without proof of possession.</p>
+<h3 id="9.3-proof-of-possession" class="spec-h3">9.3 Proof of Possession</h3>
+<p>The base protocol does not require proof of possession. Short-lived JWTs over TLS are sufficient for many applications.</p>
+<p>For sensitive operations, servers SHOULD support a standard proof-of-possession profile:</p>
+<ul>
+<li><strong>DPoP</strong> — the client sends a separate DPoP proof JWT on each request, and the agent JWT SHOULD include <code>cnf.jkt</code></li>
+<li><strong>mTLS</strong> — the client authenticates with a TLS client certificate, and the agent JWT SHOULD include <code>cnf.x5t#S256</code></li>
+</ul>
+<p>This keeps the baseline simple for average apps while giving higher-assurance deployments a standards-aligned path.</p>
+<h3 id="9.4-replay-protection" class="spec-h3">9.4 Replay Protection</h3>
+<p>Servers MUST reject duplicate <code>jti</code> values within the JWT&#39;s lifetime window.</p>
+<h3 id="9.5-revocation-cascade" class="spec-h3">9.5 Revocation Cascade</h3>
+<p>Revoking a host MUST cascade to all agents under it.</p>
+<h3 id="9.6-capability-validation" class="spec-h3">9.6 Capability Validation</h3>
+<p>Servers SHOULD validate requested capability IDs against a known set. Servers MAY maintain a blocked capability list.</p>
+<h3 id="9.7-host-key-rotation" class="spec-h3">9.7 Host Key Rotation</h3>
+<p>Inline key hosts rotate via <code>POST /agent/host/rotate-key</code> (§5.8). Since the client does not maintain a durable registry of every server a host is registered on, inline rotation is limited to servers the client currently knows about. For key compromise, revoke the host entirely — a compromised key means you cannot trust the rotation request itself.</p>
+<p>JWKS-based hosts rotate by updating their endpoint — the server picks up new keys on the next cache refresh (recommended: every 5 minutes or on <code>kid</code> miss). The old key SHOULD remain in the JWKS for a grace period to avoid rejecting in-flight requests.</p>
+<p>Hosts that register across many servers SHOULD prefer JWKS-based registration, since key rotation propagates automatically without the client needing to contact each server individually.</p>
+<h3 id="9.8-agent-key-compromise" class="spec-h3">9.8 Agent Key Compromise</h3>
+<p>If an agent&#39;s private key is leaked, anyone holding it can impersonate that agent. This is inherent to any keypair-based system (same as a leaked SSH key or OAuth token). However, unlike bearer tokens, the agent&#39;s private key never traverses the wire — it can only leak from the client&#39;s local storage.</p>
+<p>Mitigations:</p>
+<ul>
+<li><strong>Key rotation.</strong> Use <code>POST /agent/rotate-key</code> to immediately invalidate the compromised key and replace it with a new one.</li>
+<li><strong>Short TTL.</strong> Agents with short <code>session_ttl</code> values auto-expire, limiting the window of compromise.</li>
+<li><strong>Revocation.</strong> If compromise is detected, revoke the agent immediately.</li>
+<li><strong>Secure storage.</strong> Clients SHOULD store agent private keys securely (keychain, encrypted file, memory-only).</li>
+</ul>
+<p>After registration, the agent authenticates independently with its own keypair — the host is not involved in every request. If binding agent requests to the host is required, implementations can enforce this at the server level.</p>
+<h3 id="9.9-discovery-security" class="spec-h3">9.9 Discovery Security</h3>
+<p>Discovery of arbitrary URLs is a prompt injection vector. A malicious prompt can trick an agent into calling <code>discover(url: &quot;https://evil.com&quot;)</code>, which returns a fake configuration. The client then sends the host JWT to the attacker&#39;s &quot;register&quot; endpoint.</p>
+<p>Mitigations:</p>
+<ul>
+<li><strong>Registry-first discovery.</strong> Clients SHOULD resolve new services through a trusted registry (§6.10) using intent-based search rather than arbitrary URLs.</li>
+<li><strong>User confirmation.</strong> If <code>discover</code> is called with a direct URL, the client SHOULD require user confirmation before fetching the configuration.</li>
+<li><strong>Allowlists.</strong> Clients MAY maintain an allowlist of trusted service URLs.</li>
+<li><strong>Proof on host-authenticated registration.</strong> For <strong>discovered servers</strong> (not pre-configured), clients SHOULD use DPoP or an equivalent request-specific proof on host-authenticated registration requests so they cannot be replayed to a different endpoint.</li>
+<li><strong>TLS verification.</strong> Clients MUST verify TLS certificates when fetching discovery endpoints.</li>
+</ul>
+<h4 id="9.10-approval-gravity" class="spec-h4">9.10 Approval Gravity</h4>
+<p>User approval is the primary trust boundary in this protocol — for unknown host registration, capability escalation, and account linking.</p>
+<p>First-time host approval is the highest-risk moment: the server knows nothing about the host beyond a self-signed keypair. Servers SHOULD present the requested capabilities clearly and warn if the host is requesting unusually broad access.</p>
+<p>Capability escalation deserves the same scrutiny. Servers SHOULD NOT auto-approve high-risk capabilities even for linked hosts. Servers MUST calibrate approval requirements to the sensitivity of their capabilities — the protocol provides the mechanism (approval flows, fresh auth, 2FA), but the server decides which to enforce.</p>
+<h3 id="9.11-approval-self-authorization" class="spec-h3">9.11 Approval Self-Authorization</h3>
+<p>Agents often run with access to the user&#39;s browser or session (via browser tools, MCP, automation frameworks). This creates a unique threat: an agent could navigate to the device authorization <code>verification_uri</code> and approve its own registration without the user being physically present.</p>
+<p>This is not a concern in traditional OAuth because the client requesting authorization doesn&#39;t control the user&#39;s browser. In Agent Auth, it often does.</p>
+<p>Mitigations, from least to most restrictive:</p>
+<ul>
+<li><strong>Fresh authentication.</strong> Require the user to have authenticated within a short window (e.g. 5 minutes). Stale sessions — where the user logged in hours or days ago — SHOULD NOT be sufficient to approve an agent. This is the minimum bar.</li>
+<li><strong>Biometric passkeys</strong> (WebAuthn with <code>userVerification: &quot;required&quot;</code>) — proves a human is physically present</li>
+<li><strong>Hardware security keys</strong> — physical interaction required</li>
+<li><strong>TOTP/OTP from a separate device</strong> — ensures the approver has a second factor the agent can&#39;t access</li>
+</ul>
+<p>The approval page SHOULD NOT be completable with only a long-lived session cookie. A session cookie proves the user logged in at some point — not that they are present now and intending to approve this specific agent.</p>
+<p>This applies equally to CIBA approvals. An agent with access to the user&#39;s notification channel (email tools, push notifications) could intercept the approval request and approve itself. CIBA approval endpoints SHOULD require fresh authentication before completing the approval — receiving the notification alone is not proof of user intent.</p>
+<h3 id="9.12-url-fetch-protection" class="spec-h3">9.12 URL Fetch Protection</h3>
+<p>Both servers and clients fetch external URLs as part of the protocol. The threat model differs:</p>
+<ul>
+<li><strong>Server-side fetches</strong> (JWKS URLs provided by clients during registration) — classic SSRF. An attacker-controlled client sends a JWKS URL pointing to an internal service, tricking the server into making requests to its own infrastructure.</li>
+<li><strong>Client-side fetches</strong> (discovery endpoints, OpenAPI specs, JWKS URLs for server key verification) — not SSRF in the traditional sense, but a malicious or compromised URL can probe the client&#39;s local network, exfiltrate data via DNS, or serve oversized responses to exhaust resources.</li>
+</ul>
+<p><strong>Server-side URL fetches</strong> (JWKS URLs) MUST apply:</p>
+<ul>
+<li><strong>IP filtering.</strong> Block private, loopback, and link-local ranges (<code>127.0.0.0/8</code>, <code>10.0.0.0/8</code>, <code>172.16.0.0/12</code>, <code>192.168.0.0/16</code>, <code>169.254.0.0/16</code>, <code>::1</code>, <code>fc00::/7</code>). Resolve DNS <strong>before</strong> connecting and check the resolved IP — not just the hostname.</li>
+<li><strong>DNS rebinding protection.</strong> Pin the resolved IP for the duration of the request. Do not re-resolve between DNS lookup and connection.</li>
+<li><strong>HTTPS only.</strong> Reject <code>http://</code> URLs.</li>
+<li><strong>Redirect limits.</strong> Follow at most 3 redirects. Validate each redirect target against the same IP filtering rules.</li>
+<li><strong>Response size limits.</strong> Cap response bodies (e.g. 1 MB for JWKS). Abort on oversized responses.</li>
+<li><strong>Timeouts.</strong> Enforce connect and read timeouts (e.g. 5 seconds each).</li>
+</ul>
+<p><strong>Client-side URL fetches</strong> (discovery, OpenAPI specs, server JWKS) SHOULD apply:</p>
+<ul>
+<li><strong>HTTPS only.</strong> Reject <code>http://</code> URLs.</li>
+<li><strong>Response size limits.</strong> Cap response bodies (e.g. 1 MB for discovery/JWKS, 10 MB for OpenAPI specs). Abort on oversized responses.</li>
+<li><strong>Timeouts.</strong> Enforce connect and read timeouts (e.g. 5 seconds each).</li>
+<li><strong>Redirect limits.</strong> Follow at most 3 redirects.</li>
+</ul>
+<p>For discovery-specific protections (allowlists, user confirmation, TLS verification), see §9.9.</p>
+<h3 id="9.13-rate-limiting" class="spec-h3">9.13 Rate Limiting</h3>
+<p>Servers MUST implement rate limiting. Agents can generate high request volumes — both legitimately and due to bugs or compromised keys.</p>
+<p><strong>Dimensions:</strong> Rate limits SHOULD apply at multiple levels:</p>
+<table>
+<thead>
+<tr>
+<th>Level</th>
+<th>What it limits</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Per agent</td>
+<td>Requests from a single agent (by <code>sub</code> claim)</td>
+<td>60 requests/minute</td>
+</tr>
+<tr>
+<td>Per host</td>
+<td>Requests from all agents under a host</td>
+<td>300 requests/minute</td>
+</tr>
+<tr>
+<td>Per user</td>
+<td>Requests from all agents linked to a user (by <code>user_id</code>)</td>
+<td>600 requests/minute</td>
+</tr>
+<tr>
+<td>Per capability</td>
+<td>Requests to a specific capability</td>
+<td>10 transfers/hour</td>
+</tr>
+<tr>
+<td>Per IP</td>
+<td>Unauthenticated endpoints (registration, discovery)</td>
+<td>30 requests/minute</td>
+</tr>
+</tbody></table>
+<p>Servers decide which dimensions to enforce and at what thresholds. High-risk capabilities (e.g. financial transfers) SHOULD have tighter per-capability limits than read-only capabilities.</p>
+<p><strong>Response:</strong> When rate limited, the server MUST return <code>429</code> with the <code>rate_limited</code> error code (§5.11) and SHOULD include a <code>Retry-After</code> header (seconds until the client can retry):</p>
+<div class="spec-code"><pre><code class="hljs">HTTP/1.1 429 Too Many Requests
+Retry-After: 30
+Content-Type: application/json
+
+{&quot;error&quot;: &quot;rate_limited&quot;, &quot;message&quot;: &quot;Agent agt_abc123 exceeded 60 requests/minute&quot;}</code></pre></div>
+<p>Clients MUST respect <code>Retry-After</code> when present. If absent, clients SHOULD use exponential backoff starting at 1 second.</p>
+<p><strong>Unknown host registration</strong> is particularly sensitive to abuse. Servers SHOULD apply aggressive rate limits per IP on <code>POST /agent/register</code> for unknown hosts (e.g. 5 per hour per IP).</p>
+<h3 id="9.14-proof-of-possession-profiles" class="spec-h3">9.14 Proof of Possession Profiles</h3>
+<p>The protocol relies on JWT signatures over TLS for authentication. For high-security deployments (financial services, healthcare, government), servers MAY require an additional proof-of-possession profile:</p>
+<ul>
+<li><strong>DPoP.</strong> Servers MAY require a DPoP proof JWT on each request. When used, the agent JWT SHOULD carry <code>cnf.jkt</code> so the server can bind the access token to the DPoP proof key.</li>
+<li><strong>Mutual TLS (mTLS).</strong> Servers MAY require client certificates in addition to JWT authentication. When used, the agent JWT SHOULD carry <code>cnf.x5t#S256</code> so the server can bind the access token to the client certificate.</li>
+</ul>
+<p>These are optional enhancements. The base protocol&#39;s security model (short-lived signed JWTs + TLS) is sufficient for most deployments. Proof of possession adds defense-in-depth for environments where token theft or replay is a realistic threat.</p>
+<h2 id="10.-relationship-to-other-specifications" class="spec-h2">10. Relationship to Other Specifications</h2>
+<h3 id="10.1-specifications-used" class="spec-h3">10.1 Specifications Used</h3>
+<p>Agent Auth builds on existing standards for cryptography, key formats, user consent, and token validation.</p>
+<h4 id="mcp" class="spec-h4">MCP</h4>
+<p>Services with MCP servers can expose Agent Auth-backed capabilities through an MCP adapter or gateway. Agent Auth does not standardize MCP execution in the core protocol; MCP remains an implementation layer that can sit in front of or behind Agent Auth HTTP execution.</p>
+<h4 id="openapi" class="spec-h4">OpenAPI</h4>
+<p>Services with OpenAPI documents can derive capability definitions from existing API operations. OpenAPI is descriptive input to an adapter, not a required invoke type in Agent Auth itself.</p>
+<h4 id="oauth-2.0" class="spec-h4">OAuth 2.0</h4>
+<p>Agent Auth is not an OAuth extension — it&#39;s a standalone protocol. It reuses specific OAuth mechanisms where they fit:</p>
+<ul>
+<li><strong>Device Authorization (<a href="https://datatracker.ietf.org/doc/html/rfc8628">RFC 8628</a>)</strong> — the primary user consent flow. When agent registration requires approval, the server returns a <code>verification_uri</code> and <code>user_code</code> following RFC 8628. The client polls <code>GET /agent/status</code> for the result instead of a token endpoint.</li>
+<li><strong>CIBA (<a href="https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html">OpenID CIBA Core</a>)</strong> — backchannel consent for autonomous agents that need user authorization without a browser.</li>
+<li><strong>DPoP (<a href="https://datatracker.ietf.org/doc/html/rfc9449">RFC 9449</a>)</strong> — optional proof of possession for higher-security deployments. When used, Agent Auth follows the standard DPoP model: a separate proof JWT plus <code>cnf</code> binding on the access token.</li>
+<li><strong>Token Introspection (<a href="https://datatracker.ietf.org/doc/html/rfc7662">RFC 7662</a>)</strong> — the <code>/agent/introspect</code> endpoint follows the introspection model for resource servers that validate JWTs externally.</li>
+<li><strong>JWK / JWKS (<a href="https://datatracker.ietf.org/doc/html/rfc7517">RFC 7517</a>)</strong> — public keys use standard JWK format. Hosts and agents MAY publish keys at JWKS URLs for rotation.</li>
+</ul>
+<p>Agent Auth can coexist with OAuth deployments. A server can accept both OAuth bearer tokens (for traditional clients) and Agent Auth JWTs (for agents) on the same endpoints.</p>
+<h3 id="10.2-related-agent-authorization-proposals" class="spec-h3">10.2 Related Agent Authorization Proposals</h3>
+<p>The following specifications address overlapping problem spaces. Agent Auth differs in focus and approach from each.</p>
+<h4 id="ietf-on-behalf-of-user-authorization-for-ai-agents" class="spec-h4">IETF: On-Behalf-Of User Authorization for AI Agents</h4>
+<p><a href="https://datatracker.ietf.org/doc/draft-oauth-ai-agents-on-behalf-of-user/">draft-oauth-ai-agents-on-behalf-of-user</a> (Senarath &amp; Dissanayaka, 2025) extends the OAuth Authorization Code flow with a <code>requested_actor</code> parameter so users can explicitly consent to agent delegation. The resulting JWT uses the <code>act</code> claim (<a href="https://datatracker.ietf.org/doc/html/rfc8693">RFC 8693</a>) where <code>sub</code> = user and <code>act.sub</code> = agent. The agent authenticates during token exchange via an <code>actor_token</code>.</p>
+<p>On-Behalf-Of solves a narrow problem: letting an OAuth authorization server issue a token that identifies both user and agent. Agent Auth solves the broader problem of agent identity, registration, capability discovery, and lifecycle management. The two protocols could coexist — a server could use On-Behalf-Of for OAuth-native clients and Agent Auth for MCP-native agents.</p>
+<h4 id="ietf-agent-authorization-profile-aap-for-oauth-2.0" class="spec-h4">IETF: Agent Authorization Profile (AAP) for OAuth 2.0</h4>
+<p><a href="https://www.ietf.org/archive/id/draft-aap-oauth-profile-00.html">draft-aap-oauth-profile-00</a> (Cruz, February 2026) defines structured JWT claims for autonomous agent authorization. AAP layers seven claim sections onto standard OAuth tokens: <code>aap_agent</code> (identity + model + runtime), <code>aap_task</code> (purpose binding), <code>aap_capabilities</code> (actions + constraints), <code>aap_oversight</code> (human approval requirements), <code>aap_delegation</code> (chains with depth control), <code>aap_context</code> (network/geo/time restrictions), and <code>aap_audit</code> (trace propagation).</p>
+<p><strong>Complementary areas:</strong> AAP&#39;s task binding, delegation chains, and structured constraints address concerns that Agent Auth defers to the server. Future Agent Auth extensions could adopt AAP-style claims as optional JWT fields — particularly <code>aap_task</code> for audit-sensitive deployments and <code>aap_delegation</code> for multi-agent orchestration. AAP&#39;s <code>requires_human_approval_for</code> maps conceptually to Agent Auth&#39;s pending capability approval mechanism.</p>
+<p><strong>Architectural distinction:</strong> AAP is a policy-expression profile — it tells resource servers <em>what</em> an agent can do via token claims but doesn&#39;t define <em>how</em> agents register, discover capabilities, or manage their lifecycle. Agent Auth is a registration-and-lifecycle protocol — it defines the operational flow from discovery through execution. They solve different layers and could work together: an Agent Auth server could issue AAP-compliant tokens.</p>
+<h4 id="aauth-hardt" class="spec-h4">AAuth (Hardt)</h4>
+<p><a href="https://github.com/dickhardt/agent-auth">AAuth</a> takes a different approach: URI-based agent identity, HTTP signatures for authentication, and asynchronous consent via <code>202 Accepted</code> with a <code>Location</code> header for polling. Agent Auth chose keypair-based identity (no URI requirement) and RFC 8628 device authorization for consent. AAuth&#39;s URI model supports key rotation (the URI stays stable while the JWKS at that URI changes) — Agent Auth achieves similar rotation through JWKS URLs as an optional alternative to inline keys.</p>
+<h2 id="11.-observability" class="spec-h2">11. Observability</h2>
+<p>The protocol does not define logging formats, audit trail schemas, or webhook events. However, the JWT-based authentication model provides per-agent, per-call traceability by default.</p>
+<p>Every authenticated request contains a JWT with:</p>
+<table>
+<thead>
+<tr>
+<th>Claim</th>
+<th>What it tells you</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>sub</code></td>
+<td>Which agent made the call</td>
+</tr>
+<tr>
+<td><code>jti</code></td>
+<td>Unique call identifier (for correlation and replay detection)</td>
+</tr>
+<tr>
+<td><code>iat</code></td>
+<td>When the JWT was issued</td>
+</tr>
+<tr>
+<td><code>exp</code></td>
+<td>When it expires</td>
+</tr>
+<tr>
+<td><code>cnf</code></td>
+<td>Which proof key or client certificate the JWT is bound to (if a proof-of-possession profile is used)</td>
+</tr>
+</tbody></table>
+<p>Combined with the agent&#39;s <code>host_id</code> and <code>user_id</code> (from stored state), the server can reconstruct the full chain: <strong>which user</strong> → <strong>which host</strong> → <strong>which agent</strong> → <strong>which capability</strong> → <strong>when</strong>.</p>
+<p>Servers SHOULD log at least: agent ID, capability ID, timestamp, and result (success/error) for each capability call. How to store, query, export, or alert on these logs is an implementation concern.</p>
+<h2 id="12.-implementation-considerations" class="spec-h2">12. Implementation Considerations</h2>
+<h3 id="12.1-data-model-flexibility" class="spec-h3">12.1 Data Model Flexibility</h3>
+<p>The data model (§7) describes logical fields and relationships. Implementations MAY use flat arrays on the agent model instead of a separate capability-grants table, but MUST support at minimum per-capability status tracking (active vs pending). The <code>agent_capability_grants</code> array in the status response (§5.5) is the protocol-facing contract — how it&#39;s stored internally is an implementation choice.</p>
+<h3 id="12.2-agent-and-host-caching" class="spec-h3">12.2 Agent and Host Caching</h3>
+<p>Servers SHOULD cache agent status, public keys, and granted capabilities in memory with a short TTL (e.g. 5–30 seconds) to avoid per-request database lookups. Revocation propagation is delayed by at most the cache TTL. Servers with stricter revocation requirements SHOULD use shorter TTLs or event-driven cache invalidation.</p>
+<p>A separate revocation set (bloom filter, in-memory set, Redis) enables O(1) revocation checks without loading the full agent record.</p>
+<h3 id="12.3-replay-detection-storage" class="spec-h3">12.3 Replay Detection Storage</h3>
+<p>The <code>jti</code> replay cache does not need persistence. Replay detection only matters within the JWT&#39;s lifetime window (SHOULD be ≤60 seconds). An in-memory cache or probabilistic structure (bloom filter) with a TTL matching the JWT&#39;s max age is sufficient. The cache is partitioned by identity (agent ID or host ID) — see §4.6.</p>
+<h3 id="12.4-jwks-caching" class="spec-h3">12.4 JWKS Caching</h3>
+<p>Servers that fetch JWKS URLs SHOULD cache the response and refresh periodically (recommended: every 5 minutes or on <code>kid</code> miss). Servers SHOULD handle JWKS URL unavailability gracefully — use previously cached keys and return a clear error if the URL is unreachable and no cached keys exist.</p>
+<h3 id="12.5-client-key-storage" class="spec-h3">12.5 Client Key Storage</h3>
+<p>Clients SHOULD store private keys securely:</p>
+<ul>
+<li><strong>Desktop/server:</strong> OS keychain, encrypted file, or hardware security module</li>
+<li><strong>Memory-only:</strong> Acceptable for ephemeral agents where key loss is tolerable</li>
+<li><strong>Environment variables:</strong> Common but less secure — keys are visible to process inspection tools</li>
+</ul>
+<p>The protocol does not mandate a storage mechanism. The security of the system depends on the client protecting its private keys.</p>
+<h3 id="12.6-pending-agent-cleanup" class="spec-h3">12.6 Pending Agent Cleanup</h3>
+<p>Servers SHOULD periodically clean up agents that remain in <code>pending</code> state beyond a server-defined threshold (e.g. 24 hours, 7 days). Cleaned-up pending agents are deleted, not revoked — they never became active. Hosts in <code>pending</code> state should be cleaned up similarly.</p>
+<h2 id="13.-privacy-considerations" class="spec-h2">13. Privacy Considerations</h2>
+<h3 id="13.1-host-key-correlation" class="spec-h3">13.1 Host Key Correlation</h3>
+<p>A host uses the same keypair across all servers it connects to. This means two colluding servers can correlate activity: if <code>bank.com</code> and <code>shop.com</code> both see the same host public key, they know the same client is connecting to both. This is analogous to a browser fingerprint.</p>
+<p>Mitigations:</p>
+<ul>
+<li><strong>Per-server host keys.</strong> Clients MAY generate a separate host keypair for each server. This eliminates cross-server correlation at the cost of more keys to manage.</li>
+<li><strong>JWKS rotation.</strong> Hosts using JWKS URLs can rotate keys independently per server, but the JWKS URL itself is a stable identifier — rotating the URL too is necessary for full unlinkability.</li>
+</ul>
+<h3 id="13.2-agent-activity-tracking" class="spec-h3">13.2 Agent Activity Tracking</h3>
+<p>The protocol provides per-agent, per-call traceability by design (§12). This is a feature for security and auditing, but also a privacy concern: the server has a complete record of every capability an agent invoked, when, and with what inputs.</p>
+<ul>
+<li>Servers SHOULD define and publish data retention policies for agent activity logs.</li>
+<li>Servers SHOULD provide users with the ability to view and delete agent activity data associated with their account.</li>
+<li>Servers MUST NOT share per-agent activity data with third parties without user consent.</li>
+</ul>
+<h3 id="13.3-autonomous-agent-data-collection" class="spec-h3">13.3 Autonomous Agent Data Collection</h3>
+<p>Autonomous agents (<code>mode: &quot;autonomous&quot;</code>) can register and operate without a user in the loop. When a host acquires a <code>user_id</code>, autonomous agents under it are automatically claimed and their activity history is attributed to the user (§3.4). The user may not be aware of what the agent did before the host was linked.</p>
+<ul>
+<li>Servers MUST show users the autonomous agent&#39;s activity history as part of the host linking flow so the user can make an informed decision.</li>
+<li>Servers SHOULD clearly indicate that the agent operated autonomously before the user was involved.</li>
+</ul>
+<h3 id="13.4-capability-requests-as-behavioral-signal" class="spec-h3">13.4 Capability Requests as Behavioral Signal</h3>
+<p>The capabilities an agent requests reveal intent. A request for <code>transfer_international</code> tells the server the user is planning an international transfer, even if the transfer never happens. Pending capability requests (user hasn&#39;t approved yet) are also stored server-side.</p>
+<ul>
+<li>Servers SHOULD treat pending capability requests with the same data protection as granted capabilities.</li>
+<li>Servers SHOULD NOT use pending or denied capability requests for profiling or marketing purposes.</li>
+</ul>
+<h3 id="13.5-metadata-and-reason-fields" class="spec-h3">13.5 Metadata and Reason Fields</h3>
+<p>The <code>metadata</code> field on agents and the <code>reason</code> field on registration and capability requests are freetext. Agents may include sensitive information (e.g. &quot;User wants to transfer $50,000 to account ending in 4321&quot;). Servers that store these fields SHOULD apply the same access controls and retention policies as other PII.</p>
+<h2 id="14.-references" class="spec-h2">14. References</h2>
+<h3 id="14.1-normative-references" class="spec-h3">14.1 Normative References</h3>
+<ul>
+<li><strong>[RFC 2119]</strong> Bradner, S., &quot;Key words for use in RFCs to Indicate Requirement Levels&quot;, BCP 14, March 1997. <a href="https://datatracker.ietf.org/doc/html/rfc2119">https://datatracker.ietf.org/doc/html/rfc2119</a></li>
+<li><strong>[RFC 7517]</strong> Jones, M., &quot;JSON Web Key (JWK)&quot;, May 2015. <a href="https://datatracker.ietf.org/doc/html/rfc7517">https://datatracker.ietf.org/doc/html/rfc7517</a></li>
+<li><strong>[RFC 7638]</strong> Jones, M. and N. Sakimura, &quot;JSON Web Key (JWK) Thumbprint&quot;, September 2015. <a href="https://datatracker.ietf.org/doc/html/rfc7638">https://datatracker.ietf.org/doc/html/rfc7638</a></li>
+<li><strong>[RFC 8174]</strong> Leiba, B., &quot;Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words&quot;, BCP 14, May 2017. <a href="https://datatracker.ietf.org/doc/html/rfc8174">https://datatracker.ietf.org/doc/html/rfc8174</a></li>
+<li><strong>[RFC 8628]</strong> Denniss, W., et al., &quot;OAuth 2.0 Device Authorization Grant&quot;, August 2019. <a href="https://datatracker.ietf.org/doc/html/rfc8628">https://datatracker.ietf.org/doc/html/rfc8628</a></li>
+</ul>
+<h3 id="14.2-informative-references" class="spec-h3">14.2 Informative References</h3>
+<ul>
+<li><strong>[RFC 7662]</strong> Richer, J., &quot;OAuth 2.0 Token Introspection&quot;, October 2015. <a href="https://datatracker.ietf.org/doc/html/rfc7662">https://datatracker.ietf.org/doc/html/rfc7662</a></li>
+<li><strong>[RFC 7800]</strong> Jones, M., Bradley, J., and H. Tschofenig, &quot;Proof-of-Possession Key Semantics for JSON Web Tokens (JWTs)&quot;, April 2016. <a href="https://datatracker.ietf.org/doc/html/rfc7800">https://datatracker.ietf.org/doc/html/rfc7800</a></li>
+<li><strong>[RFC 8693]</strong> Jones, M., et al., &quot;OAuth 2.0 Token Exchange&quot;, January 2020. <a href="https://datatracker.ietf.org/doc/html/rfc8693">https://datatracker.ietf.org/doc/html/rfc8693</a></li>
+<li><strong>[RFC 8705]</strong> Campbell, B., et al., &quot;OAuth 2.0 Mutual-TLS Client Authentication and Certificate-Bound Access Tokens&quot;, February 2020. <a href="https://datatracker.ietf.org/doc/html/rfc8705">https://datatracker.ietf.org/doc/html/rfc8705</a></li>
+<li><strong>[RFC 9449]</strong> Fett, D., et al., &quot;OAuth 2.0 Demonstrating Proof of Possession (DPoP)&quot;, September 2023. <a href="https://datatracker.ietf.org/doc/html/rfc9449">https://datatracker.ietf.org/doc/html/rfc9449</a></li>
+<li><strong>[OpenID CIBA]</strong> Fernandez, G., et al., &quot;OpenID Connect Client-Initiated Backchannel Authentication Flow - Core 1.0&quot;, September 2021. <a href="https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html">https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html</a></li>
+<li><strong>[MCP]</strong> Anthropic, &quot;Model Context Protocol Specification&quot;, November 2025. <a href="https://modelcontextprotocol.io/specification/2025-11-25">https://modelcontextprotocol.io/specification/2025-11-25</a></li>
+<li><strong>[draft-oauth-ai-agents-on-behalf-of-user]</strong> Senarath, &quot;On-Behalf-Of User Authorization for AI Agents&quot;, May 2025. <a href="https://www.ietf.org/archive/id/draft-oauth-ai-agents-on-behalf-of-user-00.html">https://www.ietf.org/archive/id/draft-oauth-ai-agents-on-behalf-of-user-00.html</a></li>
+<li><strong>[draft-aap-oauth-profile]</strong> Cruz, &quot;Agent Authorization Profile (AAP) for OAuth 2.0&quot;, February 2026. <a href="https://www.ietf.org/archive/id/draft-aap-oauth-profile-00.html">https://www.ietf.org/archive/id/draft-aap-oauth-profile-00.html</a></li>
+<li><strong>[AAuth]</strong> Hardt, D., &quot;Agent Auth&quot;. <a href="https://github.com/dickhardt/agent-auth">https://github.com/dickhardt/agent-auth</a></li>
+</ul>
+<h2 id="15.-what-this-protocol-does-not-define" class="spec-h2">15. What This Protocol Does Not Define</h2>
+<ul>
+<li><strong>Internal authorization policy</strong> — the server decides how granted capabilities map to backend roles, policies, or other internal checks</li>
+<li><strong>Execution</strong> — the protocol defines the capability envelope and a flexible <code>invoke</code> descriptor, but does not standardize how capabilities are invoked. How the agent calls a capability — HTTP, code execution, browser tools, MCP, or any other mechanism — is outside this specification.</li>
+<li><strong>Logging format / audit schema</strong> — the protocol provides the data (JWT claims, agent state); how to log and query it is up to the server</li>
+<li><strong>Webhook notifications</strong> — lifecycle events (agent created, revoked, expired) are server-side concerns</li>
+<li><strong>Agent-to-agent delegation</strong> — Agent A cannot delegate granted capabilities to Agent B at the protocol level. In multi-agent systems, coordination happens at the client/orchestrator layer: the orchestrator holds keys for multiple agents, routes work between them, and signs JWTs for each independently. The protocol doesn&#39;t need to know about agent relationships — each agent authenticates and authorizes independently. Cross-client delegation (Agent A on Client 1 delegating to Agent B on Client 2) would require delegation chains, capability intersection, and trust transitivity — these are future protocol extensions, not v1 concerns.</li>
+<li><strong>Cross-client agent coordination</strong> — agents registered on the same server can coordinate through server-defined capabilities (task assignment, messaging, shared state). The server mediates — it decides which agents can interact and how. Both agents authenticate independently with their own JWTs; the server enforces coordination policy. Direct agent-to-agent delegation (Agent A granting Agent B its capabilities) is not part of v1.</li>
+<li><strong>Billing</strong> — how autonomous agents pay for access</li>
+<li><strong>User signup</strong> — how new user accounts are created</li>
+<li><strong>Internal routing</strong> — how the server routes capability calls to backends</li>
+<li><strong>MCP server implementation</strong> — the protocol uses MCP as an invoke type but does not define MCP servers. Services that expose MCP capabilities implement their MCP server independently.</li>
+</ul>
+<hr>
+<h2 id="appendix-a-use-case-flows" class="spec-h2">Appendix A: Use Case Flows</h2>
+<p>Worked examples showing the protocol in action. These are illustrative, not normative.</p>
+<h3 id="a.1-known-host-default-capabilities-happy-path" class="spec-h3">A.1 Known Host, Default Capabilities (Happy Path)</h3>
+<p>The simplest case — the host is already linked to a user, and the requested capabilities are within the host&#39;s defaults. No user interaction needed.</p>
+<div class="spec-diagram"><pre>Agent                    Client                   Server
+  │                        │                        │
+  │ list_capabilities()    │                        │
+  │───────────────────────&gt;│                        │
+  │                        │  GET /agent/capabilities│
+  │                        │  (host JWT)            │
+  │                        │───────────────────────&gt;│
+  │                        │  capabilities          │
+  │  capabilities          │&lt;───────────────────────│
+  │&lt;───────────────────────│                        │
+  │                        │                        │
+  │ connect_agent(        │                        │
+  │   capability_ids: [a,b],│                        │
+  │   mode: &quot;delegated&quot;    │                        │
+  │ )                      │                        │
+  │───────────────────────&gt;│                        │
+  │                        │  POST /agent/register  │
+  │                        │  (host JWT + agent key)│
+  │                        │───────────────────────&gt;│
+  │                        │                        │ host known ✓
+  │                        │                        │ capabilities in defaults ✓
+  │                        │  { status: &quot;active&quot;,   │
+  │                        │    agent_id, capability_ids }│
+  │  agent_id + capability_ids│&lt;───────────────────────│
+  │&lt;───────────────────────│                        │
+  │                        │                        │
+  │ sign_jwt(agent_id)     │                        │
+  │───────────────────────&gt;│                        │
+  │  { token }             │                        │
+  │&lt;───────────────────────│                        │
+  │                        │                        │
+  │  (agent invokes capability &quot;a&quot; directly         │
+  │   using invoke descriptor + signed JWT)      │
+  │─────────────────────────────────────────────────&gt;│
+  │  { result }                                     │
+  │&lt;─────────────────────────────────────────────────│</pre></div>
+<h3 id="a.2-unknown-host-user-approval-required" class="spec-h3">A.2 Unknown Host, User Approval Required</h3>
+<p>First time connecting to a service. Host is unknown — user must approve.</p>
+<div class="spec-diagram"><pre>Agent                    Client                   Server              User
+  │                        │                        │                   │
+  │ discover(&quot;bank.com&quot;)   │                        │                   │
+  │───────────────────────&gt;│                        │                   │
+  │                        │ GET /.well-known/      │                   │
+  │                        │  agent-configuration   │                   │
+  │                        │───────────────────────&gt;│                   │
+  │                        │ { issuer, endpoints }  │                   │
+  │  config cached         │&lt;───────────────────────│                   │
+  │&lt;───────────────────────│                        │                   │
+  │                        │                        │                   │
+  │ connect_agent(        │                        │                   │
+  │   capability_ids:[a,b],│                        │                   │
+  │   mode: &quot;delegated&quot;   │                        │                   │
+  │ )                      │                        │                   │
+  │───────────────────────&gt;│                        │                   │
+  │                        │ POST /agent/register   │                   │
+  │                        │ (host JWT + agent key) │                   │
+  │                        │───────────────────────&gt;│                   │
+  │                        │                        │ host unknown      │
+  │                        │ { status: &quot;pending&quot;,   │                   │
+  │                        │   approval: {          │                   │
+  │                        │     verification_uri,  │                   │
+  │                        │     user_code } }      │                   │
+  │                        │&lt;───────────────────────│                   │
+  │                        │                        │                   │
+  │ &quot;Approve at this URL:  │                        │                   │
+  │  https://bank.com/     │                        │                   │
+  │  device?code=ABCD&quot;     │                        │                   │
+  │&lt;───────────────────────│                        │                   │
+  │                        │                        │                   │
+  │                        │ poll GET /agent/status  │                   │
+  │                        │───────────────────────&gt;│                   │
+  │                        │ { status: &quot;pending&quot; }  │   user opens URL  │
+  │                        │&lt;───────────────────────│&lt;──────────────────│
+  │                        │                        │   user approves   │
+  │                        │                        │   + trusts host   │
+  │                        │ poll GET /agent/status  │   (optional)      │
+  │                        │───────────────────────&gt;│&lt;──────────────────│
+  │                        │                        │                   │
+  │                        │ { status: &quot;active&quot;,    │                   │
+  │                        │   agent_capability_grants }│               │
+  │  agent_id + grants     │&lt;───────────────────────│                   │
+  │&lt;───────────────────────│                        │                   │</pre></div>
+<h3 id="a.3-autonomous-agent-no-user" class="spec-h3">A.3 Autonomous Agent (No User)</h3>
+<p>An agent registers itself for its own purposes. No user in the loop.</p>
+<div class="spec-diagram"><pre>Agent                    Client                   Server
+  │                        │                        │
+  │ connect_agent(        │                        │
+  │   capability_ids:[a,b],│                        │
+  │   mode: &quot;autonomous&quot;  │                        │
+  │ )                      │                        │
+  │───────────────────────&gt;│                        │
+  │                        │ POST /agent/register   │
+  │                        │ (host JWT + agent key) │
+  │                        │ mode: &quot;autonomous&quot;     │
+  │                        │───────────────────────&gt;│
+  │                        │                        │ server policy check
+  │                        │                        │ (host known? API key?
+  │                        │                        │  payment? open reg?)
+  │                        │                        │
+  │                        │ { status: &quot;active&quot;,    │
+  │                        │   agent_id, capability_ids }│
+  │  agent_id + capability_ids│&lt;───────────────────────│
+  │&lt;───────────────────────│                        │
+  │                        │                        │
+  │ sign_jwt(agent_id)     │                        │
+  │───────────────────────&gt;│                        │
+  │  { token }             │                        │
+  │&lt;───────────────────────│                        │
+  │  (agent invokes capabilities directly)          │</pre></div>
+<h3 id="a.4-dynamic-capabilities-unknown-at-discovery" class="spec-h3">A.4 Dynamic Capabilities (Unknown at Discovery)</h3>
+<p>The server has user-specific capabilities (e.g. a gateway with connected providers). Capabilities aren&#39;t available until the host is linked to a user.</p>
+<div class="spec-diagram"><pre>Agent                    Client                   Server              User
+  │                        │                        │                   │
+  │ discover(&quot;gateway.com&quot;)│                        │                   │
+  │───────────────────────&gt;│                        │                   │
+  │                        │ GET /.well-known/      │                   │
+  │                        │  agent-configuration   │                   │
+  │                        │───────────────────────&gt;│                   │
+  │                        │ { issuer, endpoints }  │                   │
+  │&lt;───────────────────────│&lt;───────────────────────│                   │
+  │                        │                        │                   │
+  │ list_capabilities()    │                        │                   │
+  │───────────────────────&gt;│                        │                   │
+  │                        │ GET /agent/capabilities │                   │
+  │                        │ (host JWT)             │                   │
+  │                        │───────────────────────&gt;│                   │
+  │                        │                        │ host unknown      │
+  │                        │ { providers: [],       │ no user linked    │
+  │                        │   requires_approval:   │                   │
+  │                        │     true }             │                   │
+  │  &quot;no capabilities yet&quot; │&lt;───────────────────────│                   │
+  │&lt;───────────────────────│                        │                   │
+  │                        │                        │                   │
+  │ connect_agent(        │                        │                   │
+  │   capability_ids: [],  │  (register with no     │                   │
+  │   mode: &quot;delegated&quot;   │   capabilities to trigger│                  │
+  │ )                      │   user approval)       │                   │
+  │───────────────────────&gt;│                        │                   │
+  │                        │ POST /agent/register   │                   │
+  │                        │───────────────────────&gt;│                   │
+  │                        │ { status: &quot;pending&quot;,   │                   │
+  │                        │   approval: { ... } }  │                   │
+  │                        │&lt;───────────────────────│                   │
+  │                        │                        │                   │
+  │ &quot;Please approve...&quot;    │                        │   user approves   │
+  │&lt;───────────────────────│                        │&lt;──────────────────│
+  │                        │                        │                   │
+  │                        │  approved, host linked  │                   │
+  │  agent_id              │&lt;───────────────────────│                   │
+  │&lt;───────────────────────│                        │                   │
+  │                        │                        │                   │
+  │ list_capabilities()    │                        │                   │
+  │───────────────────────&gt;│                        │                   │
+  │                        │ GET /agent/capabilities │                   │
+  │                        │ (host JWT — now known) │                   │
+  │                        │───────────────────────&gt;│                   │
+  │                        │                        │ host known ✓
+  │                        │                        │ user: alice
+  │                        │                        │ → alice's providers
+  │                        │ { providers: [         │                   │
+  │                        │   { github: [...] },   │                   │
+  │                        │   { slack: [...] }     │                   │
+  │                        │ ] }                    │                   │
+  │  github + slack tools  │&lt;───────────────────────│                   │
+  │&lt;───────────────────────│                        │                   │
+  │                        │                        │                   │
+  │  (now agent can inspect│                        │                   │
+  │   capabilities,        │                        │                   │
+  │   request them, and    │                        │                   │
+  │   call tools)          │                        │                   │</pre></div>
+<h3 id="a.5-capability-escalation-mid-task" class="spec-h3">A.5 Capability Escalation Mid-Task</h3>
+<p>An active agent discovers it needs more permissions while working.</p>
+<div class="spec-diagram"><pre>Agent                    Client                   Server              User
+  │                        │                        │                   │
+  │ sign_jwt(agent_id)     │                        │                   │
+  │───────────────────────&gt;│                        │                   │
+  │  { token }             │                        │                   │
+  │&lt;───────────────────────│                        │                   │
+  │                        │                        │                   │
+  │  (agent invokes capability &quot;x&quot; with JWT)        │                   │
+  │─────────────────────────────────────────────────&gt;│                   │
+  │                        │ 403: capability not granted│                │
+  │  &quot;I need capability x&quot; │&lt;───────────────────────────────────────────│
+  │                        │                        │                   │
+  │                        │                        │                   │
+  │ request_capability(   │                        │                   │
+  │   agent_id,            │                        │                   │
+  │   capability_ids:[&quot;x&quot;],│                        │                   │
+  │   reason: &quot;need x to  │                        │                   │
+  │     complete task&quot;     │                        │                   │
+  │ )                      │                        │                   │
+  │───────────────────────&gt;│                        │                   │
+  │                        │ POST /agent/request-capability│             │
+  │                        │ (agent JWT)            │                   │
+  │                        │───────────────────────&gt;│                   │
+  │                        │                        │                   │
+  │  ┌─ In host defaults? ─────────────────────────────────────────┐   │
+  │  │                                                              │   │
+  │  │ YES → { status: &quot;granted&quot; }                                  │   │
+  │  │        agent can now call capability x                       │   │
+  │  │                                                              │   │
+  │  │ NO  → { status: &quot;pending&quot;, approval: { ... } }              │   │
+  │  │        client facilitates user approval                     │   │
+  │  │        user approves → capability x granted                  │   │
+  │  └──────────────────────────────────────────────────────────────┘   │
+  │                        │                        │                   │
+  │  &quot;capability x granted&quot;│                        │                   │
+  │&lt;───────────────────────│                        │                   │
+  │                        │                        │                   │
+  │  (agent invokes capability &quot;x&quot; again with JWT)   │                   │
+  │─────────────────────────────────────────────────&gt;│                   │
+  │  { result }            │                        │                   │
+  │&lt;─────────────────────────────────────────────────│                   │</pre></div>
+<h3 id="a.6-host-linking-claims-autonomous-agents" class="spec-h3">A.6 Host Linking Claims Autonomous Agents</h3>
+<p>A user links a host that previously operated autonomously. All autonomous agents are automatically claimed.</p>
+<div class="spec-diagram"><pre>                         Client                   Server              User
+                           │                        │                   │
+  (host previously         │                        │                   │
+   registered as           │                        │                   │
+   autonomous, agents      │                        │                   │
+   created trips)          │                        │                   │
+                           │                        │                   │
+                           │                        │   user links host │
+                           │                        │   via dashboard   │
+                           │                        │   or other        │
+                           │                        │   server-side     │
+                           │                        │   mechanism       │
+                           │                        │&lt;──────────────────│
+                           │                        │                   │
+                           │                        │ link host to user │
+                           │                        │ claim all auto    │
+                           │                        │ agents under host │
+                           │                        │                   │
+  ── new delegated agent registered via §5.3 ──     │                   │</pre></div>
+<h3 id="a.7-multi-provider-client-with-discovery" class="spec-h3">A.7 Multi-Provider Client with Discovery</h3>
+<p>A generic client connected to multiple services. The agent doesn&#39;t know which provider to use and discovers a new one.</p>
+<div class="spec-diagram"><pre>Agent                    Client                   Server(s)
+  │                        │                        │
+  │ list_providers()       │                        │
+  │───────────────────────&gt;│                        │
+  │  [ { name: &quot;github&quot;,  │                        │
+  │      desc: &quot;...&quot; },   │                        │
+  │    { name: &quot;gmail&quot;,   │                        │
+  │      desc: &quot;...&quot; } ]  │                        │
+  │&lt;───────────────────────│                        │
+  │                        │                        │
+  │  (no banking provider  │                        │
+  │   found — discover one)│                        │
+  │                        │                        │
+  │ discover(              │                        │
+  │   intent: &quot;banking&quot;)   │                        │
+  │───────────────────────&gt;│                        │
+  │                        │ query registry or      │
+  │                        │ fetch well-known URL   │
+  │                        │───────────────────────&gt;│
+  │                        │ { provider_name,       │
+  │                        │   issuer, endpoints }  │
+  │  &quot;bank&quot; added          │&lt;───────────────────────│
+  │&lt;───────────────────────│                        │
+  │                        │                        │
+  │ list_capabilities(     │                        │
+  │   provider: &quot;bank&quot;,    │                        │
+  │   intent: &quot;send money&quot;)│                        │   bank.com
+  │───────────────────────&gt;│                        │      │
+  │                        │ GET /agent/capabilities │      │
+  │                        │────────────────────────────&gt;  │
+  │                        │ { capabilities: [...] } │      │
+  │  capabilities          │&lt;────────────────────────────  │
+  │&lt;───────────────────────│                        │
+  │                        │                        │
+  │  ... normal connect +  │                        │
+  │      call flow ...     │                        │</pre></div>
+</div> </article> <footer class="border-t border-[var(--color-border)]"> <div class="mx-auto max-w-[1400px] px-5 sm:px-6 py-6 lg:py-8"> <div class="flex flex-wrap items-center justify-center gap-x-1 gap-y-1.5 mb-5"> <span class="flex items-center"> <a href="https://github.com/AgenAuthProtocol/agent-auth-protocol" target="_blank" rel="noopener noreferrer" class="inline-flex items-center text-[11px] font-[var(--font-mono)] text-[var(--color-muted)] hover:text-[var(--color-fg)] transition-colors"> GitHub </a> <span class="text-[var(--color-border)] mx-1 text-[10px] select-none">/</span> </span><span class="flex items-center"> <a href="/specification" class="inline-flex items-center text-[11px] font-[var(--font-mono)] text-[var(--color-muted)] hover:text-[var(--color-fg)] transition-colors"> Specification </a> <span class="text-[var(--color-border)] mx-1 text-[10px] select-none">/</span> </span><span class="flex items-center"> <a href="https://discord.gg/better-auth" target="_blank" rel="noopener noreferrer" class="inline-flex items-center text-[11px] font-[var(--font-mono)] text-[var(--color-muted)] hover:text-[var(--color-fg)] transition-colors"> Discord </a>  </span> </div> <div class="flex items-center justify-between"> <span class="text-[10px] text-[var(--color-muted)] font-[var(--font-mono)]">
+Built on Better Auth
+</span> <a href="https://github.com/AgenAuthProtocol/agent-auth-protocol" aria-label="GitHub" target="_blank" rel="noopener noreferrer" class="text-[var(--color-muted)] hover:text-[var(--color-fg)] transition-colors"> <svg height="16" width="16" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"> <path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5c.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34c-.46-1.16-1.11-1.47-1.11-1.47c-.91-.62.07-.6.07-.6c1 .07 1.53 1.03 1.53 1.03c.87 1.52 2.34 1.07 2.91.83c.09-.65.35-1.09.63-1.34c-2.22-.25-4.55-1.11-4.55-4.92c0-1.11.38-2 1.03-2.71c-.1-.25-.45-1.29.1-2.64c0 0 .84-.27 2.75 1.02c.79-.22 1.65-.33 2.5-.33s1.71.11 2.5.33c1.91-1.29 2.75-1.02 2.75-1.02c.55 1.35.2 2.39.1 2.64c.65.71 1.03 1.6 1.03 2.71c0 3.82-2.34 4.66-4.57 4.91c.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2" fill="currentColor"></path> </svg> </a> </div> </div> </footer> </div> <!-- TOC --> <aside class="spec-reader-toc"> <nav aria-label="Table of Contents"> <div class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-[0.15em] text-[var(--color-muted)] mb-4 pb-2 border-b border-[var(--color-border)]">
+Table of Contents
+</div> <ul class="space-y-0"> <li> <a href="#1.-introduction" class="spec-toc-link" data-toc-id="1.-introduction"> 1. Introduction </a> <ul> <li> <a href="#1.1-problem-statement" class="spec-toc-child" data-toc-id="1.1-problem-statement"> 1.1 Problem Statement </a> </li><li> <a href="#1.2-solution" class="spec-toc-child" data-toc-id="1.2-solution"> 1.2 Solution </a> </li><li> <a href="#1.3-conformance" class="spec-toc-child" data-toc-id="1.3-conformance"> 1.3 Conformance </a> </li><li> <a href="#1.4-terminology" class="spec-toc-child" data-toc-id="1.4-terminology"> 1.4 Terminology </a> </li><li> <a href="#1.5-architecture" class="spec-toc-child" data-toc-id="1.5-architecture"> 1.5 Architecture </a> </li><li> <a href="#1.6-protocol-flow" class="spec-toc-child" data-toc-id="1.6-protocol-flow"> 1.6 Protocol Flow </a> </li> </ul> </li><li> <a href="#2.-agent" class="spec-toc-link" data-toc-id="2.-agent"> 2. Agent </a> <ul> <li> <a href="#2.1-what-is-an-agent" class="spec-toc-child" data-toc-id="2.1-what-is-an-agent"> 2.1 What is an Agent </a> </li><li> <a href="#2.2-modes" class="spec-toc-child" data-toc-id="2.2-modes"> 2.2 Modes </a> </li><li> <a href="#2.3-states" class="spec-toc-child" data-toc-id="2.3-states"> 2.3 States </a> </li><li> <a href="#2.4-lifetime-clocks" class="spec-toc-child" data-toc-id="2.4-lifetime-clocks"> 2.4 Lifetime Clocks </a> </li><li> <a href="#2.5-reactivation" class="spec-toc-child" data-toc-id="2.5-reactivation"> 2.5 Reactivation </a> </li><li> <a href="#2.6-revocation" class="spec-toc-child" data-toc-id="2.6-revocation"> 2.6 Revocation </a> </li> </ul> </li><li> <a href="#3.-host" class="spec-toc-link" data-toc-id="3.-host"> 3. Host </a> <ul> <li> <a href="#3.1-what-is-a-host" class="spec-toc-child" data-toc-id="3.1-what-is-a-host"> 3.1 What is a Host </a> </li><li> <a href="#3.2-host-establishment" class="spec-toc-child" data-toc-id="3.2-host-establishment"> 3.2 Host Establishment </a> </li><li> <a href="#3.3-host-linking" class="spec-toc-child" data-toc-id="3.3-host-linking"> 3.3 Host Linking </a> </li><li> <a href="#3.4-autonomous-agent-claiming" class="spec-toc-child" data-toc-id="3.4-autonomous-agent-claiming"> 3.4 Autonomous Agent Claiming </a> </li><li> <a href="#3.5-host-states" class="spec-toc-child" data-toc-id="3.5-host-states"> 3.5 Host States </a> </li> </ul> </li><li> <a href="#4.-authentication" class="spec-toc-link" data-toc-id="4.-authentication"> 4. Authentication </a> <ul> <li> <a href="#4.1-keypairs" class="spec-toc-child" data-toc-id="4.1-keypairs"> 4.1 Keypairs </a> </li><li> <a href="#4.2-host-jwt" class="spec-toc-child" data-toc-id="4.2-host-jwt"> 4.2 Host JWT </a> </li><li> <a href="#4.3-agent-jwt" class="spec-toc-child" data-toc-id="4.3-agent-jwt"> 4.3 Agent JWT </a> </li><li> <a href="#4.4-proof-of-possession-optional" class="spec-toc-child" data-toc-id="4.4-proof-of-possession-optional"> 4.4 Proof of Possession (Optional) </a> </li><li> <a href="#4.5-verification" class="spec-toc-child" data-toc-id="4.5-verification"> 4.5 Verification </a> </li><li> <a href="#4.6-replay-detection" class="spec-toc-child" data-toc-id="4.6-replay-detection"> 4.6 Replay Detection </a> </li> </ul> </li><li> <a href="#5.-server" class="spec-toc-link" data-toc-id="5.-server"> 5. Server </a> <ul> <li> <a href="#5.1-discovery" class="spec-toc-child" data-toc-id="5.1-discovery"> 5.1 Discovery </a> </li><li> <a href="#5.2-capabilities" class="spec-toc-child" data-toc-id="5.2-capabilities"> 5.2 Capabilities </a> </li><li> <a href="#5.3-agent-registration" class="spec-toc-child" data-toc-id="5.3-agent-registration"> 5.3 Agent Registration </a> </li><li> <a href="#5.4-request-capability" class="spec-toc-child" data-toc-id="5.4-request-capability"> 5.4 Request Capability </a> </li><li> <a href="#5.5-status" class="spec-toc-child" data-toc-id="5.5-status"> 5.5 Status </a> </li><li> <a href="#5.6-revoke" class="spec-toc-child" data-toc-id="5.6-revoke"> 5.6 Revoke </a> </li><li> <a href="#5.7-key-rotation" class="spec-toc-child" data-toc-id="5.7-key-rotation"> 5.7 Key Rotation </a> </li><li> <a href="#5.8-rotate-host-key" class="spec-toc-child" data-toc-id="5.8-rotate-host-key"> 5.8 Rotate Host Key </a> </li><li> <a href="#5.9-revoke-host" class="spec-toc-child" data-toc-id="5.9-revoke-host"> 5.9 Revoke Host </a> </li><li> <a href="#5.10-introspect" class="spec-toc-child" data-toc-id="5.10-introspect"> 5.10 Introspect </a> </li><li> <a href="#5.11-error-format" class="spec-toc-child" data-toc-id="5.11-error-format"> 5.11 Error Format </a> </li> </ul> </li><li> <a href="#6.-client" class="spec-toc-link" data-toc-id="6.-client"> 6. Client </a> <ul> <li> <a href="#6.1-list_providers" class="spec-toc-child" data-toc-id="6.1-list_providers"> 6.1 list_providers </a> </li><li> <a href="#6.2-discover" class="spec-toc-child" data-toc-id="6.2-discover"> 6.2 discover </a> </li><li> <a href="#6.3-list_capabilities" class="spec-toc-child" data-toc-id="6.3-list_capabilities"> 6.3 list_capabilities </a> </li><li> <a href="#6.4-connect_agent" class="spec-toc-child" data-toc-id="6.4-connect_agent"> 6.4 connect_agent </a> </li><li> <a href="#6.5-sign_jwt" class="spec-toc-child" data-toc-id="6.5-sign_jwt"> 6.5 sign_jwt </a> </li><li> <a href="#6.6-request_capability" class="spec-toc-child" data-toc-id="6.6-request_capability"> 6.6 request_capability </a> </li><li> <a href="#6.7-disconnect_agent" class="spec-toc-child" data-toc-id="6.7-disconnect_agent"> 6.7 disconnect_agent </a> </li><li> <a href="#6.8-agent_status" class="spec-toc-child" data-toc-id="6.8-agent_status"> 6.8 agent_status </a> </li><li> <a href="#6.9-http_request" class="spec-toc-child" data-toc-id="6.9-http_request"> 6.9 http_request </a> </li><li> <a href="#6.10-registry" class="spec-toc-child" data-toc-id="6.10-registry"> 6.10 Registry </a> </li> </ul> </li><li> <a href="#7.-data-model" class="spec-toc-link" data-toc-id="7.-data-model"> 7. Data Model </a> <ul> <li> <a href="#7.1-host" class="spec-toc-child" data-toc-id="7.1-host"> 7.1 Host </a> </li><li> <a href="#7.2-agent" class="spec-toc-child" data-toc-id="7.2-agent"> 7.2 Agent </a> </li><li> <a href="#7.3-agent-capability-grant" class="spec-toc-child" data-toc-id="7.3-agent-capability-grant"> 7.3 Agent Capability Grant </a> </li> </ul> </li><li> <a href="#8.-approval-methods" class="spec-toc-link" data-toc-id="8.-approval-methods"> 8. Approval Methods </a> <ul> <li> <a href="#8.1-device-authorization-rfc-8628" class="spec-toc-child" data-toc-id="8.1-device-authorization-rfc-8628"> 8.1 Device Authorization (RFC 8628) </a> </li><li> <a href="#8.2-ciba-client-initiated-backchannel-authentication" class="spec-toc-child" data-toc-id="8.2-ciba-client-initiated-backchannel-authentication"> 8.2 CIBA (Client Initiated Backchannel Authentication) </a> </li><li> <a href="#8.3-real-time-notification-optional" class="spec-toc-child" data-toc-id="8.3-real-time-notification-optional"> 8.3 Real-Time Notification (Optional) </a> </li><li> <a href="#8.4-server-defined" class="spec-toc-child" data-toc-id="8.4-server-defined"> 8.4 Server-Defined </a> </li><li> <a href="#8.5-method-selection" class="spec-toc-child" data-toc-id="8.5-method-selection"> 8.5 Method Selection </a> </li> </ul> </li><li> <a href="#9.-security-considerations" class="spec-toc-link" data-toc-id="9.-security-considerations"> 9. Security Considerations </a> <ul> <li> <a href="#9.1-private-keys" class="spec-toc-child" data-toc-id="9.1-private-keys"> 9.1 Private Keys </a> </li><li> <a href="#9.2-jwt-lifetime" class="spec-toc-child" data-toc-id="9.2-jwt-lifetime"> 9.2 JWT Lifetime </a> </li><li> <a href="#9.3-proof-of-possession" class="spec-toc-child" data-toc-id="9.3-proof-of-possession"> 9.3 Proof of Possession </a> </li><li> <a href="#9.4-replay-protection" class="spec-toc-child" data-toc-id="9.4-replay-protection"> 9.4 Replay Protection </a> </li><li> <a href="#9.5-revocation-cascade" class="spec-toc-child" data-toc-id="9.5-revocation-cascade"> 9.5 Revocation Cascade </a> </li><li> <a href="#9.6-capability-validation" class="spec-toc-child" data-toc-id="9.6-capability-validation"> 9.6 Capability Validation </a> </li><li> <a href="#9.7-host-key-rotation" class="spec-toc-child" data-toc-id="9.7-host-key-rotation"> 9.7 Host Key Rotation </a> </li><li> <a href="#9.8-agent-key-compromise" class="spec-toc-child" data-toc-id="9.8-agent-key-compromise"> 9.8 Agent Key Compromise </a> </li><li> <a href="#9.9-discovery-security" class="spec-toc-child" data-toc-id="9.9-discovery-security"> 9.9 Discovery Security </a> </li><li> <a href="#9.11-approval-self-authorization" class="spec-toc-child" data-toc-id="9.11-approval-self-authorization"> 9.11 Approval Self-Authorization </a> </li><li> <a href="#9.12-url-fetch-protection" class="spec-toc-child" data-toc-id="9.12-url-fetch-protection"> 9.12 URL Fetch Protection </a> </li><li> <a href="#9.13-rate-limiting" class="spec-toc-child" data-toc-id="9.13-rate-limiting"> 9.13 Rate Limiting </a> </li><li> <a href="#9.14-proof-of-possession-profiles" class="spec-toc-child" data-toc-id="9.14-proof-of-possession-profiles"> 9.14 Proof of Possession Profiles </a> </li> </ul> </li><li> <a href="#10.-relationship-to-other-specifications" class="spec-toc-link" data-toc-id="10.-relationship-to-other-specifications"> 10. Relationship to Other Specifications </a> <ul> <li> <a href="#10.1-specifications-used" class="spec-toc-child" data-toc-id="10.1-specifications-used"> 10.1 Specifications Used </a> </li><li> <a href="#10.2-related-agent-authorization-proposals" class="spec-toc-child" data-toc-id="10.2-related-agent-authorization-proposals"> 10.2 Related Agent Authorization Proposals </a> </li> </ul> </li><li> <a href="#11.-observability" class="spec-toc-link" data-toc-id="11.-observability"> 11. Observability </a>  </li><li> <a href="#12.-implementation-considerations" class="spec-toc-link" data-toc-id="12.-implementation-considerations"> 12. Implementation Considerations </a> <ul> <li> <a href="#12.1-data-model-flexibility" class="spec-toc-child" data-toc-id="12.1-data-model-flexibility"> 12.1 Data Model Flexibility </a> </li><li> <a href="#12.2-agent-and-host-caching" class="spec-toc-child" data-toc-id="12.2-agent-and-host-caching"> 12.2 Agent and Host Caching </a> </li><li> <a href="#12.3-replay-detection-storage" class="spec-toc-child" data-toc-id="12.3-replay-detection-storage"> 12.3 Replay Detection Storage </a> </li><li> <a href="#12.4-jwks-caching" class="spec-toc-child" data-toc-id="12.4-jwks-caching"> 12.4 JWKS Caching </a> </li><li> <a href="#12.5-client-key-storage" class="spec-toc-child" data-toc-id="12.5-client-key-storage"> 12.5 Client Key Storage </a> </li><li> <a href="#12.6-pending-agent-cleanup" class="spec-toc-child" data-toc-id="12.6-pending-agent-cleanup"> 12.6 Pending Agent Cleanup </a> </li> </ul> </li><li> <a href="#13.-privacy-considerations" class="spec-toc-link" data-toc-id="13.-privacy-considerations"> 13. Privacy Considerations </a> <ul> <li> <a href="#13.1-host-key-correlation" class="spec-toc-child" data-toc-id="13.1-host-key-correlation"> 13.1 Host Key Correlation </a> </li><li> <a href="#13.2-agent-activity-tracking" class="spec-toc-child" data-toc-id="13.2-agent-activity-tracking"> 13.2 Agent Activity Tracking </a> </li><li> <a href="#13.3-autonomous-agent-data-collection" class="spec-toc-child" data-toc-id="13.3-autonomous-agent-data-collection"> 13.3 Autonomous Agent Data Collection </a> </li><li> <a href="#13.4-capability-requests-as-behavioral-signal" class="spec-toc-child" data-toc-id="13.4-capability-requests-as-behavioral-signal"> 13.4 Capability Requests as Behavioral Signal </a> </li><li> <a href="#13.5-metadata-and-reason-fields" class="spec-toc-child" data-toc-id="13.5-metadata-and-reason-fields"> 13.5 Metadata and Reason Fields </a> </li> </ul> </li><li> <a href="#14.-references" class="spec-toc-link" data-toc-id="14.-references"> 14. References </a> <ul> <li> <a href="#14.1-normative-references" class="spec-toc-child" data-toc-id="14.1-normative-references"> 14.1 Normative References </a> </li><li> <a href="#14.2-informative-references" class="spec-toc-child" data-toc-id="14.2-informative-references"> 14.2 Informative References </a> </li> </ul> </li><li> <a href="#15.-what-this-protocol-does-not-define" class="spec-toc-link" data-toc-id="15.-what-this-protocol-does-not-define"> 15. What This Protocol Does Not Define </a>  </li><li> <a href="#appendix-a-use-case-flows" class="spec-toc-link" data-toc-id="appendix-a-use-case-flows"> Appendix A: Use Case Flows </a>  </li> </ul> </nav> </aside> </div> <script>
+    (function() {
+      const container = document.getElementById("spec-scroll-container");
+      if (!container) return;
+
+      const headings = container.querySelectorAll("h2[id], h3[id], h4[id]");
+      const tocLinks = document.querySelectorAll("[data-toc-id]");
+      const tocMap = new Map();
+      tocLinks.forEach(link => tocMap.set(link.getAttribute("data-toc-id"), link));
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          let activeId = "";
+          const visible = entries.filter(e => e.isIntersecting);
+          if (visible.length > 0) {
+            visible.sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+            activeId = visible[0].target.id;
+          }
+          if (activeId) {
+            tocLinks.forEach(link => link.classList.remove("active"));
+            const activeLink = tocMap.get(activeId);
+            if (activeLink) activeLink.classList.add("active");
+          }
+        },
+        { root: container, rootMargin: "-20px 0px -65% 0px", threshold: 0 }
+      );
+
+      headings.forEach(h => observer.observe(h));
+
+      tocLinks.forEach(link => {
+        link.addEventListener("click", (e) => {
+          e.preventDefault();
+          const id = link.getAttribute("data-toc-id");
+          const el = document.getElementById(id);
+          if (!el) return;
+          const containerRect = container.getBoundingClientRect();
+          const elRect = el.getBoundingClientRect();
+          const offset = elRect.top - containerRect.top + container.scrollTop - 24;
+          container.scrollTo({ top: offset, behavior: "smooth" });
+        });
+      });
+    })();
+  </script>  <script>
+      (function() {
+        const stored = localStorage.getItem("theme");
+        if (stored === "dark" || (!stored && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+          document.documentElement.classList.add("dark");
+        }
+      })();
+    </script> </body> </html>

@@ -1,0 +1,195 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import Nav from "@/components/Nav.astro";
+import Footer from "@/components/Footer.astro";
+---
+
+<Layout title="Examples — Agent Auth Protocol">
+  <Nav active="/examples" />
+
+  <main class="flex-1">
+    <div class="mx-auto max-w-[1400px] px-5 sm:px-6 py-16 sm:py-20">
+      <!-- Header -->
+      <div class="max-w-3xl mb-12">
+        <p class="text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-[0.2em] text-[var(--color-muted)] mb-4">Examples</p>
+        <h1 class="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight mb-6">End-to-end flows</h1>
+        <p class="text-[15px] text-[var(--color-muted)] leading-[1.85] font-[family-name:var(--font-serif)]">
+          Practical examples showing how Agent Auth works from registration to authenticated requests.
+        </p>
+      </div>
+
+      <!-- Example 1: Registration -->
+      <div class="flex items-center gap-3 mb-8">
+        <span class="text-[10px] font-[family-name:var(--font-mono)] tracking-[0.15em] uppercase text-[var(--color-muted)]">Registration</span>
+        <div class="flex-1 border-t border-[var(--color-border)]"></div>
+      </div>
+
+      <div class="max-w-3xl mb-16">
+        <h2 class="text-lg font-semibold tracking-tight mb-4">First-time agent registration with device flow</h2>
+        <p class="text-[15px] text-[var(--color-muted)] leading-[1.85] font-[family-name:var(--font-serif)] mb-6">
+          When a host (e.g. Cursor) creates an agent for the first time on a server, the server triggers a device authorization flow. The user approves in their browser, and the agent is created.
+        </p>
+
+        <div class="space-y-3 mb-8">
+          <div class="flex gap-3 items-start border border-[var(--color-border)] p-4">
+            <div class="text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] mt-0.5 shrink-0 w-5 text-right">1</div>
+            <div class="flex-1">
+              <div class="flex items-center gap-1.5 mb-1">
+                <span class="text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">host</span>
+                <svg class="h-2.5 w-2.5 text-[var(--color-muted)] opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                <span class="text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">server</span>
+              </div>
+              <div class="text-[13px] font-medium">Host sends agent creation request</div>
+              <div class="text-[11px] text-[var(--color-muted)] mt-1 leading-relaxed">Includes host public key, agent public key, requested capabilities.</div>
+              <div class="text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] mt-2 bg-[var(--color-surface)] px-2 py-1.5 border border-[var(--color-border)]">POST /agent/register {"{"} publicKey, hostKey, name, capabilities {"}"}</div>
+            </div>
+          </div>
+          <div class="flex gap-3 items-start border border-[var(--color-border)] p-4">
+            <div class="text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] mt-0.5 shrink-0 w-5 text-right">2</div>
+            <div class="flex-1">
+              <div class="flex items-center gap-1.5 mb-1">
+                <span class="text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">server</span>
+                <svg class="h-2.5 w-2.5 text-[var(--color-muted)] opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                <span class="text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">host</span>
+              </div>
+              <div class="text-[13px] font-medium">Server triggers device authorization flow</div>
+              <div class="text-[11px] text-[var(--color-muted)] mt-1 leading-relaxed">Returns verification URL and device code. User must approve.</div>
+              <div class="text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] mt-2 bg-[var(--color-surface)] px-2 py-1.5 border border-[var(--color-border)]">→ {"{"} device_code, user_code, verification_uri {"}"}</div>
+            </div>
+          </div>
+          <div class="flex gap-3 items-start border border-[var(--color-border)] p-4">
+            <div class="text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] mt-0.5 shrink-0 w-5 text-right">3</div>
+            <div class="flex-1">
+              <div class="flex items-center gap-1.5 mb-1">
+                <span class="text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">user</span>
+                <svg class="h-2.5 w-2.5 text-[var(--color-muted)] opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                <span class="text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">server</span>
+              </div>
+              <div class="text-[13px] font-medium">User approves host and agent</div>
+              <div class="text-[11px] text-[var(--color-muted)] mt-1 leading-relaxed">User can trust the host (auto-approve future agents) or approve this agent only.</div>
+            </div>
+          </div>
+          <div class="flex gap-3 items-start border border-[var(--color-border)] p-4">
+            <div class="text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] mt-0.5 shrink-0 w-5 text-right">4</div>
+            <div class="flex-1">
+              <div class="flex items-center gap-1.5 mb-1">
+                <span class="text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">host</span>
+                <svg class="h-2.5 w-2.5 text-[var(--color-muted)] opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                <span class="text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">server</span>
+              </div>
+              <div class="text-[13px] font-medium">Host polls, receives agent ID</div>
+              <div class="text-[11px] text-[var(--color-muted)] mt-1 leading-relaxed">Host is registered. Agent is created. On future requests, the host is recognized.</div>
+              <div class="text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] mt-2 bg-[var(--color-surface)] px-2 py-1.5 border border-[var(--color-border)]">→ {"{"} agentId, hostId, capabilities: [...] {"}"}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Example 2: Signed request -->
+      <div class="flex items-center gap-3 mb-8">
+        <span class="text-[10px] font-[family-name:var(--font-mono)] tracking-[0.15em] uppercase text-[var(--color-muted)]">Authenticated Request</span>
+        <div class="flex-1 border-t border-[var(--color-border)]"></div>
+      </div>
+
+      <div class="max-w-3xl mb-16">
+        <h2 class="text-lg font-semibold tracking-tight mb-4">Cryptographically signed agent request</h2>
+        <p class="text-[15px] text-[var(--color-muted)] leading-[1.85] font-[family-name:var(--font-serif)] mb-6">
+          Every agent request carries a short-lived JWT (60s TTL) with DPoP-style request binding. The server verifies the signature, checks the binding, and resolves the agent's capabilities.
+        </p>
+
+        <div class="border border-[var(--color-border)] mb-8">
+          <div class="flex border-b border-[var(--color-border)] bg-[var(--color-surface)]">
+            <div class="px-4 py-2.5 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)]">JWT payload</div>
+          </div>
+          <pre class="p-5 sm:p-6 text-[12.5px] font-[family-name:var(--font-mono)] leading-[1.7] text-[var(--color-muted)] overflow-x-auto bg-[var(--color-surface)]">{"{"}
+  "sub": "agt_k7x9m2...",       <span class="opacity-50">// agent ID</span>
+  "iat": 1709736000,            <span class="opacity-50">// issued at</span>
+  "exp": 1709736060,            <span class="opacity-50">// expires in 60s</span>
+  "jti": "unique-request-id",   <span class="opacity-50">// replay protection</span>
+  "htm": "POST",                <span class="opacity-50">// HTTP method binding</span>
+  "htu": "/api/reports",        <span class="opacity-50">// HTTP URI binding</span>
+  "ath": "sha256(body)"         <span class="opacity-50">// body hash binding</span>
+{"}"}</pre>
+        </div>
+
+        <div class="border border-[var(--color-border)]">
+          <div class="flex border-b border-[var(--color-border)] bg-[var(--color-surface)]">
+            <div class="px-4 py-2.5 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)]">HTTP request</div>
+          </div>
+          <pre class="p-5 sm:p-6 text-[12.5px] font-[family-name:var(--font-mono)] leading-[1.7] text-[var(--color-muted)] overflow-x-auto bg-[var(--color-surface)]">POST /api/reports HTTP/1.1
+Host: api.example.com
+Authorization: Bearer eyJhbGciOiJFZERTQSIsInR5cCI6...
+Content-Type: application/json
+
+{"{"} "query": "monthly summary" {"}"}</pre>
+        </div>
+      </div>
+
+      <!-- Example 3: Scope escalation -->
+      <div class="flex items-center gap-3 mb-8">
+        <span class="text-[10px] font-[family-name:var(--font-mono)] tracking-[0.15em] uppercase text-[var(--color-muted)]">Scope Escalation</span>
+        <div class="flex-1 border-t border-[var(--color-border)]"></div>
+      </div>
+
+      <div class="max-w-3xl mb-16">
+        <h2 class="text-lg font-semibold tracking-tight mb-4">Requesting additional capabilities at runtime</h2>
+        <p class="text-[15px] text-[var(--color-muted)] leading-[1.85] font-[family-name:var(--font-serif)] mb-6">
+          Capabilities are separated from agent identity. When an agent needs more access, it requests "pending" capability grants. Users approve or deny each one independently.
+        </p>
+
+        <div class="border border-[var(--color-border)]">
+          <div class="flex border-b border-[var(--color-border)] bg-[var(--color-surface)]">
+            <div class="px-4 py-2.5 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)]">Escalation flow</div>
+          </div>
+          <div class="p-5 sm:p-6 text-[12.5px] font-[family-name:var(--font-mono)] leading-[1.8] text-[var(--color-muted)] space-y-2">
+            <div><span class="text-[var(--color-fg)]">1.</span> Agent requests additional capabilities</div>
+            <div class="pl-4 text-[11px] bg-[var(--color-surface)] border border-[var(--color-border)] px-2 py-1">POST /agent/request-scope {"{"} capabilities: ["github.push", "slack.send"] {"}"}</div>
+            <div class="pt-2"><span class="text-[var(--color-fg)]">2.</span> Server creates "pending" capability grants, returns verification URL</div>
+            <div class="pl-4 text-[11px] bg-[var(--color-surface)] border border-[var(--color-border)] px-2 py-1">→ {"{"} requestId, status: "pending", verificationUrl {"}"}</div>
+            <div class="pt-2"><span class="text-[var(--color-fg)]">3.</span> User approves or denies each capability independently</div>
+            <div class="pl-4 text-[11px] bg-[var(--color-surface)] border border-[var(--color-border)] px-2 py-1">POST /agent/approve-scope {"{"} requestId, action: "approve", capabilities: ["github.push"] {"}"}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Example 4: Server verification -->
+      <div class="flex items-center gap-3 mb-8">
+        <span class="text-[10px] font-[family-name:var(--font-mono)] tracking-[0.15em] uppercase text-[var(--color-muted)]">Server Verification</span>
+        <div class="flex-1 border-t border-[var(--color-border)]"></div>
+      </div>
+
+      <div class="max-w-3xl">
+        <h2 class="text-lg font-semibold tracking-tight mb-4">Verifying agent requests on the server</h2>
+        <p class="text-[15px] text-[var(--color-muted)] leading-[1.85] font-[family-name:var(--font-serif)] mb-6">
+          On the server, extract the JWT, verify the signature against the agent's stored public key, check request binding, and resolve the agent's active capabilities.
+        </p>
+
+        <div class="border border-[var(--color-border)] mb-6">
+          <div class="flex border-b border-[var(--color-border)] bg-[var(--color-surface)]">
+            <div class="px-4 py-2.5 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)]">With Better Auth</div>
+          </div>
+          <pre class="p-5 sm:p-6 text-[12.5px] font-[family-name:var(--font-mono)] leading-[1.7] text-[var(--color-muted)] overflow-x-auto bg-[var(--color-surface)]"><span class="text-[var(--color-fg)]">const</span> session = <span class="text-[var(--color-fg)]">await</span> auth.api.getAgentSession({"{"} headers {"}"});
+
+<span class="text-[var(--color-fg)]">if</span> (session) {"{"}{"\n"}  <span class="text-[var(--color-fg)]">const</span> {"{"} agent, user {"}"} = session;{"\n"}  <span class="opacity-50">// agent.id        → "agt_k7x9m2..."</span>{"\n"}  <span class="opacity-50">// agent.capabilities → [{"{"}id, status, grantedBy{"}"}]</span>{"\n"}  <span class="opacity-50">// user.id         → "user_xyz"</span>{"\n"}{"}"}</pre>
+        </div>
+
+        <div class="border border-[var(--color-border)]">
+          <div class="flex border-b border-[var(--color-border)] bg-[var(--color-surface)]">
+            <div class="px-4 py-2.5 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)]">Raw protocol</div>
+          </div>
+          <div class="p-5 sm:p-6 text-[12.5px] font-[family-name:var(--font-mono)] leading-[1.8] text-[var(--color-muted)]">
+            <div><span class="text-[var(--color-fg)]">1.</span> Extract JWT from Authorization header</div>
+            <div><span class="text-[var(--color-fg)]">2.</span> Look up agent by <code class="text-[11px] bg-[var(--color-surface)] px-1 border border-[var(--color-border)]">sub</code> claim</div>
+            <div><span class="text-[var(--color-fg)]">3.</span> Verify Ed25519 signature with stored public key</div>
+            <div><span class="text-[var(--color-fg)]">4.</span> Verify request binding (<code class="text-[11px] bg-[var(--color-surface)] px-1 border border-[var(--color-border)]">htm</code>, <code class="text-[11px] bg-[var(--color-surface)] px-1 border border-[var(--color-border)]">htu</code>, <code class="text-[11px] bg-[var(--color-surface)] px-1 border border-[var(--color-border)]">ath</code>)</div>
+            <div><span class="text-[var(--color-fg)]">5.</span> Check JTI replay, expiry, lifecycle state</div>
+            <div><span class="text-[var(--color-fg)]">6.</span> Resolve active capabilities from database</div>
+            <div><span class="text-[var(--color-fg)]">7.</span> Return AgentSession {"{"} agent, capabilities, user {"}"}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <Footer />
+</Layout>

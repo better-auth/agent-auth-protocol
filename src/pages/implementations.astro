@@ -1,0 +1,146 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import Nav from "@/components/Nav.astro";
+import Footer from "@/components/Footer.astro";
+
+const implementations = [
+  {
+    name: "Better Auth Plugin",
+    description: "Full reference implementation as a Better Auth plugin. Drop-in agent identity, registration, device flow, capability management, and session verification.",
+    language: "TypeScript",
+    type: "Server",
+    status: "Reference",
+    href: "https://github.com/better-auth/better-auth",
+    features: ["Agent registration", "Device authorization flow", "Capability management", "Session verification", "Lifecycle management"],
+  },
+  {
+    name: "Agent Auth SDK",
+    description: "Client SDK for agent runtimes. Manages keypairs, signs requests, handles registration and capability escalation.",
+    language: "TypeScript",
+    type: "Client",
+    status: "Reference",
+    href: "https://github.com/AgenAuthProtocol/agent-auth-protocol",
+    features: ["Ed25519 key management", "JWT signing", "Request binding (DPoP)", "Auto-registration", "Scope escalation"],
+  },
+];
+
+const community = [
+  {
+    name: "Your implementation here",
+    description: "The protocol is open. Implement it in any language and submit a PR to be listed.",
+    language: "Any",
+    type: "Server / Client",
+    status: "Open",
+    href: "https://github.com/AgenAuthProtocol/agent-auth-protocol",
+  },
+];
+---
+
+<Layout title="Implementations — Agent Auth Protocol">
+  <Nav active="/implementations" />
+
+  <main class="flex-1">
+    <div class="mx-auto max-w-[1400px] px-5 sm:px-6 py-16 sm:py-20">
+      <!-- Header -->
+      <div class="max-w-3xl mb-12">
+        <p class="text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-[0.2em] text-[var(--color-muted)] mb-4">Implementations</p>
+        <h1 class="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight mb-6">SDKs & Libraries</h1>
+        <p class="text-[15px] text-[var(--color-muted)] leading-[1.85] font-[family-name:var(--font-serif)]">
+          Reference implementations and community libraries for the Agent Auth Protocol. The protocol is simple enough to implement from scratch — Ed25519 keypairs, device authorization flow, signed JWTs, and three database tables.
+        </p>
+      </div>
+
+      <!-- Reference implementations -->
+      <div class="flex items-center gap-3 mb-8">
+        <span class="text-[10px] font-[family-name:var(--font-mono)] tracking-[0.15em] uppercase text-[var(--color-muted)]">Reference</span>
+        <div class="flex-1 border-t border-[var(--color-border)]"></div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-0 border border-[var(--color-border)] mb-16">
+        {implementations.map((impl, i) => (
+          <a
+            href={impl.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            class:list={[
+              "block p-6 sm:p-8 hover:bg-[var(--color-surface)] transition-colors group",
+              i < implementations.length - 1 && "border-b lg:border-b-0 lg:border-r border-[var(--color-border)]"
+            ]}
+          >
+            <div class="flex items-start justify-between mb-3">
+              <div>
+                <h3 class="text-base font-medium mb-1 group-hover:underline underline-offset-4 decoration-[var(--color-border)]">{impl.name}</h3>
+                <div class="flex items-center gap-2">
+                  <span class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)]">{impl.language}</span>
+                  <span class="text-[var(--color-border)]">/</span>
+                  <span class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)]">{impl.type}</span>
+                  <span class="text-[var(--color-border)]">/</span>
+                  <span class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)]">{impl.status}</span>
+                </div>
+              </div>
+              <svg class="h-4 w-4 text-[var(--color-muted)] opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </div>
+            <p class="text-[13px] text-[var(--color-muted)] leading-relaxed mb-4">{impl.description}</p>
+            {impl.features && (
+              <div class="flex flex-wrap gap-1.5">
+                {impl.features.map((feature) => (
+                  <span class="text-[10px] font-[family-name:var(--font-mono)] px-2 py-0.5 border border-[var(--color-border)] text-[var(--color-muted)]">{feature}</span>
+                ))}
+              </div>
+            )}
+          </a>
+        ))}
+      </div>
+
+      <!-- Community -->
+      <div class="flex items-center gap-3 mb-8">
+        <span class="text-[10px] font-[family-name:var(--font-mono)] tracking-[0.15em] uppercase text-[var(--color-muted)]">Community</span>
+        <div class="flex-1 border-t border-[var(--color-border)]"></div>
+      </div>
+
+      <div class="border border-[var(--color-border)]">
+        {community.map((impl) => (
+          <a
+            href={impl.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="block p-6 sm:p-8 hover:bg-[var(--color-surface)] transition-colors group"
+          >
+            <div class="flex items-start justify-between mb-2">
+              <h3 class="text-base font-medium group-hover:underline underline-offset-4 decoration-[var(--color-border)]">{impl.name}</h3>
+              <svg class="h-4 w-4 text-[var(--color-muted)] opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </div>
+            <p class="text-[13px] text-[var(--color-muted)] leading-relaxed">{impl.description}</p>
+          </a>
+        ))}
+      </div>
+
+      <!-- Build your own -->
+      <div class="mt-16 max-w-3xl">
+        <div class="flex items-center gap-3 mb-8">
+          <span class="text-[10px] font-[family-name:var(--font-mono)] tracking-[0.15em] uppercase text-[var(--color-muted)]">Build your own</span>
+          <div class="flex-1 border-t border-[var(--color-border)]"></div>
+        </div>
+        <h2 class="text-xl font-semibold tracking-tight mb-4">Implementing from scratch</h2>
+        <p class="text-[15px] text-[var(--color-muted)] leading-[1.85] font-[family-name:var(--font-serif)] mb-6">
+          The protocol is intentionally simple to implement. On the server side, you need three database tables (hosts, agents, agent capabilities), Ed25519 signature verification, and a device authorization flow. On the client side, you need key generation, JWT signing, and HTTP request binding.
+        </p>
+        <div class="border border-[var(--color-border)]">
+          <div class="flex border-b border-[var(--color-border)] bg-[var(--color-surface)]">
+            <div class="px-4 py-2.5 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)]">What you need</div>
+          </div>
+          <div class="p-5 sm:p-6 text-[12.5px] font-[family-name:var(--font-mono)] leading-[1.8] text-[var(--color-muted)]">
+            <div>Server: 3 tables + JWT verification + device flow</div>
+            <div>Client: Ed25519 keygen + JWT signing + request binding</div>
+            <div>Protocol: DPoP-style (RFC 9449) + Device Auth (RFC 8628)</div>
+            <div class="mt-3 pt-3 border-t border-[var(--color-border)]">
+              <a href="/specification" class="underline underline-offset-2 hover:text-[var(--color-fg)] transition-colors">Read the full specification →</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <Footer />
+</Layout>

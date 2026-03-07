@@ -1,0 +1,38 @@
+---
+import "@/styles/global.css";
+
+interface Props {
+  title: string;
+  description?: string;
+  bodyClass?: string;
+  darkMode?: boolean;
+}
+
+const { title, description = "An implementation-oriented protocol that gives AI agents their own identity, permissions, and lifecycle, so services can authenticate, authorize, and audit them independently.", bodyClass = "", darkMode = false } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en" data-dark-mode={darkMode ? "true" : undefined}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <title>{title}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..900&family=Geist+Mono:wght@300..700&family=Lora:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet" />
+    <link rel="preload" href="/fonts/GeistPixel-Square.woff2" as="font" type="font/woff2" crossorigin />
+  </head>
+  <body class:list={["min-h-screen flex flex-col", bodyClass]}>
+    <slot />
+    <script is:inline>
+      (function() {
+        if (document.documentElement.getAttribute("data-dark-mode") !== "true") return;
+        const stored = localStorage.getItem("theme");
+        if (stored === "dark" || (!stored && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+          document.documentElement.classList.add("dark");
+        }
+      })();
+    </script>
+  </body>
+</html>
