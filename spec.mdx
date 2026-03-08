@@ -29,18 +29,18 @@ This gap is especially acute for autonomous agents. They may discover capabiliti
 
 Agent Auth makes the runtime agent a first-class principal. Instead of borrowing a user's session or a shared application token, each agent gets its own identity, its own granted capabilities, and its own lifecycle. That gives the server something existing auth models are missing: a durable way to reason about which specific agent is acting, what it is allowed to do, and how to suspend, expire, or revoke it without affecting everything else.
 
-The mechanism is simple: each agent has its own cryptographic identity (Ed25519 keypair), and the client also has its own registered host identity. The host creates and manages agents; the agent authenticates its requests with short-lived signed JWTs. This lets the server attribute every call to a concrete chain of trust: which host created the agent, whether it was `delegated` or `autonomous`, which capabilities were granted, and which capability was invoked.
+The mechanism is simple: each agent has its own cryptographic identity (Ed25519 keypair), and the client also has its own registered host identity. The host creates and manages agents; the agent authenticates its requests with short-lived signed JWTs. This lets the server attribute every call to a concrete chain of trust: which host created the agent, whether it was `delegated` or `autonomous`, which capabilities were granted, and which capability is being used.
 
 In other words, the protocol separates identity (who is this agent?), authorization (what can it do?), and execution (how does it call the service?) so services can safely support both user-linked agents and autonomous agents with the same model.
 
-Agent Auth is intentionally practical and product-shaped. It is closer in spirit to MCP than to OAuth core: it specifies the pieces an implementation needs to interoperate today, including capability discovery, registration, approval flows, execution handoff, and lifecycle management. It is not trying to be the smallest possible greenfield standards primitive.
+Agent Auth is intentionally practical and product-shaped. It is closer in spirit to MCP than to OAuth core: it specifies the pieces an implementation needs to interoperate today, including capability discovery, registration, approval flows, and lifecycle management.
 
 The protocol defines two layers:
 
 - **Server API** — how a service registers agents, manages capabilities, and verifies identity
 - **Client interface** — standardized tools that agents call to discover services, register, and execute capabilities. The client has its own registered identity (host keypair) on each server.
 
-The protocol separates identity (who is this agent?) from authorization (what can it do?) from execution (how does it call capabilities?).
+The protocol separates identity (who is this agent?) from authorization (what can it do?). Execution — how the agent actually calls a capability — is left to the server and client.
 
 ### 1.3 Conformance
 
@@ -53,8 +53,7 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "S
 - **Client** — The tool layer the agent calls (MCP tools, CLI, SDK, IDE integration). It manages host and agent keys, talks to servers, and signs JWTs. A client is a running process.
 - **Server** — The service's authorization server. It manages discovery, host and agent registrations, approvals, capability grants, and JWT verification. Also called the auth server.
 - **Host** — A stable identity representing the environment or device that creates agents (e.g. "ChatGPT," "Claude Code," "MacBook-Pro"). A host is a keypair plus metadata — not a running process. It may be linked to a user or unlinked.
-- **Capability** — A server-offered action or function. Each capability has an `id`, a human-readable description, and an invoke descriptor that tells agents how to call it.
-- **Invoke descriptor** — The execution metadata on a capability: how to call it (HTTP endpoint, MCP tool, or OpenAPI operation), what inputs it takes, and how to authenticate.
+- **Capability** — A server-offered action or function. Each capability has an `id` and a human-readable description. Servers MAY include additional fields describing how to execute the capability (e.g. HTTP endpoint details, MCP tool metadata).
 - **Agent Capability Grant** — A stored grant of one capability to one agent. Carries per-capability state and metadata such as `status`, `granted_by`, and `expires_at`.
 - **Default capabilities** — The set of capabilities a host is pre-authorized to grant its agents without additional user approval.
 - **Registration** — The process by which a host creates or re-establishes an agent identity on a server. A successful registration results in an `agent_id`, a mode, and an initial permission set.
@@ -153,7 +152,7 @@ Resource servers that are co-located with the authorization server MAY verify th
 **Notes:**
 
 - **Discovery is a pre-step for generic clients.** Multi-provider clients MAY call `list_providers` (§7.1.1), `search_providers` (§7.1.2), and `discover_provider` (§7.1.3) before step (A). Single-service clients skip discovery.
-- **Agents invoke capabilities using their own tools.** The protocol does not define a built-in execute tool. The agent reads the capability's `invoke` descriptor and uses whatever tools it has available (HTTP clients, browser tools, code execution) to make the call with the signed JWT.
+- **Agents execute capabilities using their own tools.** The protocol does not define a built-in execute tool. The agent reads the capability's execution metadata and uses whatever tools it has available (HTTP clients, browser tools, code execution) to make the call with the signed JWT.
 - **Capability escalation.** An active agent that needs additional capabilities calls `request_capability` (§7.5), which may trigger another approval flow (D) for the new capabilities.
 - **Reactivation.** An expired agent can be reactivated via `reactivate_agent` (§7.7), which calls `POST /agent/reactivate` (§6.6). Capabilities decay to host defaults; escalated capabilities must be re-requested.
 
@@ -273,56 +272,66 @@ Every host is in exactly one state at any time. Only `active` hosts can create a
 
 ## 4. Capabilities
 
-Capabilities are the protocol's unit of authorization. A capability is a server-offered action described by a stable identifier and an `invoke` descriptor. Registration requests, capability grants, and JWT restriction all operate on capability IDs.
+Capabilities are the protocol's unit of authorization. A capability is a server-offered action described by a stable identifier and a human-readable description. Registration requests, capability grants, and JWT restriction all operate on capability IDs.
 
-This section defines the capability model itself: what a capability is, what fields it carries, and how invocation metadata is represented. The server endpoint used to list capabilities is defined later in §6.2.
+This section defines the capability model itself: what a capability is and what fields it carries. The server endpoint used to list capabilities is defined later in §6.2.
 
-It is useful to distinguish three related concepts:
+It is useful to distinguish two related concepts:
 
 - **Capability** — what the server offers
 - **Capability grant** — whether a specific agent is allowed to use that capability
-- **Invoke descriptor** — how the agent can execute the capability
 
 The same capability ID can appear in different parts of the protocol for different reasons. It can be requested by an agent, granted by the server, included in a host's defaults, or used to limit a specific JWT. The capability ID identifies the action itself; the surrounding context determines how it is being used.
 
-Each capability includes a protocol-level core (`id`, `title`, `description`) and an `invoke` descriptor. The `invoke` descriptor is defined in §4.1.
-
-**Core fields** (protocol-level, same for all types):
+**Core fields** (protocol-level):
 
 - `id` (`string`, required): Stable machine-readable capability identifier. Used in registration, grants, and JWT restriction.
 - `title` (`string`, optional): Human-readable short label for the capability. Recommended for UIs and agent selection.
 - `description` (`string`, required): What this capability does and when to use it.
-- `invoke` (`object`, required): Invoke descriptor. Contains a required `type` field. All other fields are type-specific and optional at the protocol level. Invoke-specific input metadata belongs inside this object.
 - `grant_status` (`string`, optional): `"granted"` or `"not_granted"`. Present on every returned capability when using agent JWT auth. Omitted otherwise.
 
-### 4.1 Invoke Descriptors
-
-The `invoke` object describes how a capability is invoked. It is part of the capability definition and tells the agent what kind of invocation the capability uses.
-
-Every `invoke` object MUST contain a `type` field. All other fields are defined by the server and are specific to that type. The protocol does not require any particular invoke type, but it defines a recommended standard profile for `type = "http"` in §4.2.
-
-The agent reads the invoke descriptor and uses whatever tools, integrations, or reasoning it has available to fulfill the capability. Clients MAY provide helper tools or adapters for additional invoke types. Generic clients SHOULD support the standard HTTP profile so a server can expose a usable baseline without requiring a custom integration.
-
-**Examples of valid invoke descriptors:**
-
-HTTP endpoint:
+**Example capability:**
 
 ```json
 {
-  "type": "http",
-  "method": "POST",
-  "url": "https://api.bank.com/v1/payments",
-  "input": {
-    "requestBody": {
-      "required": true,
-      "content": {
-        "application/json": {
-          "schema": {
-            "type": "object",
-            "required": ["amount", "currency"],
-            "properties": {
-              "amount": { "type": "number" },
-              "currency": { "type": "string" }
+  "id": "check_balance",
+  "title": "Check balance",
+  "description": "Check the balance of a bank account",
+  "grant_status": "granted"
+}
+```
+
+Servers typically include additional fields describing how the capability is executed (e.g. an HTTP endpoint, an MCP tool name). These are covered in §4.1.
+
+### 4.1 Execution Metadata
+
+Servers MAY include additional fields on a capability object beyond the core fields to describe how the capability is executed. These fields are server-defined — the core protocol does not constrain their shape or require any particular execution model.
+
+The agent reads whatever execution metadata the server provides and uses its available tools (HTTP clients, browser tools, code execution, etc.) to fulfill the capability with a signed JWT. Clients SHOULD pass all fields through unchanged when listing capabilities to the agent. Clients MAY provide helper tools for execution profiles they recognize (e.g. an HTTP request tool).
+
+**Examples:**
+
+A capability with HTTP execution metadata:
+
+```json
+{
+  "id": "create_payment",
+  "description": "Create a new payment",
+  "http": {
+    "method": "POST",
+    "url": "https://api.bank.com/v1/payments",
+    "input": {
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": ["amount", "currency"],
+              "properties": {
+                "amount": { "type": "number" },
+                "currency": { "type": "string" }
+              }
             }
           }
         }
@@ -332,57 +341,61 @@ HTTP endpoint:
 }
 ```
 
-GraphQL:
+A capability with a GraphQL descriptor:
 
 ```json
 {
-  "type": "graphql",
-  "endpoint": "https://api.example.com/graphql",
-  "query": "query GetUser($id: ID!) { user(id: $id) { name email } }"
+  "id": "get_user",
+  "description": "Look up a user by ID",
+  "graphql": {
+    "endpoint": "https://api.example.com/graphql",
+    "query": "query GetUser($id: ID!) { user(id: $id) { name email } }"
+  }
 }
 ```
 
-Documentation reference:
+A capability pointing to documentation:
 
 ```json
 {
-  "type": "docs",
-  "url": "https://docs.example.com/api/send-email"
+  "id": "send_email",
+  "description": "Send an email",
+  "docs": {
+    "url": "https://docs.example.com/api/send-email"
+  }
 }
 ```
 
-Custom / proprietary:
+A capability with a custom / proprietary descriptor:
 
 ```json
 {
-  "type": "acme.deploy",
-  "cluster": "us-east-1",
-  "runtime": "node20"
+  "id": "deploy_service",
+  "description": "Deploy a service to production",
+  "acme.deploy": {
+    "cluster": "us-east-1",
+    "runtime": "node20"
+  }
 }
 ```
 
-All of these are valid. The protocol treats invoke descriptors as type-tagged descriptors. Only `type` is universally required by the core protocol.
+All of these are valid. The core protocol only requires `id` and `description`. Everything else is execution metadata that the server provides and the client passes through.
 
-Clients SHOULD pass invoke descriptors through unchanged when listing capabilities to the agent. The agent decides how to use them.
+### 4.2 Recommended HTTP Profile
 
-### 4.2 Standard HTTP Invoke Profile
+To improve interoperability across generic clients, this spec defines a recommended execution profile for HTTP/REST-style capabilities. Servers that want their capabilities to work out of the box across generic Agent Auth clients SHOULD expose a usable baseline using this profile. Generic clients SHOULD provide a built-in HTTP request tool or equivalent adapter for this profile.
 
-To improve interoperability across generic clients, this spec defines a recommended standard invoke profile for capabilities with `invoke.type = "http"`, intended for calling HTTP/REST-style endpoints.
+An HTTP capability includes an `http` field with the following shape:
 
-Servers that want their capabilities to work out of the box across generic Agent Auth clients SHOULD expose a usable baseline set of capabilities via this profile. Generic clients SHOULD provide a built-in HTTP invoke tool or equivalent adapter for this profile.
-
-**HTTP invoke fields:**
-
-- `type` (`string`, required): Must be `"http"`.
 - `method` (`string`, required): HTTP method such as `"GET"`, `"POST"`, or `"PATCH"`.
 - `url` (`string`, required): Absolute URL to call.
 - `headers` (`object`, optional): Additional headers to send. Client-generated headers such as `Authorization` MUST take precedence over values specified here.
-- `interaction_mode` (`string`, optional): Invoke hint: `"sync"`, `"stream"`, or `"async"`.
+- `interaction_mode` (`string`, optional): Execution hint: `"sync"`, `"stream"`, or `"async"`.
 - `input` (`object`, optional): OpenAPI-inspired input description for parameters and request body.
 
-The `input` object is an optional OpenAPI-compatible subset that lets a capability describe how invocation arguments map onto an HTTP request. This spec intentionally keeps the subset small so servers can generate it easily and clients can implement it consistently.
+The `input` object is an optional OpenAPI-compatible subset that lets a capability describe how arguments map onto an HTTP request. This spec intentionally keeps the subset small so servers can generate it easily and clients can implement it consistently.
 
-**`invoke.input` fields:**
+**`input` fields:**
 
 - `parameters` (`array`, optional): OpenAPI-style parameter definitions. Supported `in` values are `"path"`, `"query"`, and `"header"`.
 - `requestBody` (`object`, optional): OpenAPI-style request body definition for body-bearing methods.
@@ -406,23 +419,23 @@ Each entry in `content` follows this subset:
 
 For the initial profile, servers SHOULD use `application/json` as the media type key with a JSON Schema under `content["application/json"].schema`. Clients SHOULD use the media type key as the `Content-Type` header when sending the request.
 
-**Invocation rules:**
+**Execution rules:**
 
-1. The client SHOULD send the current signed JWT as `Authorization: Bearer <token>` when invoking the capability.
-2. If `invoke.input` is present, the client SHOULD construct the request according to that schema:
+1. The client SHOULD send the current signed JWT as `Authorization: Bearer <token>` when executing the capability.
+2. If `input` is present, the client SHOULD construct the request according to that schema:
    - path parameters fill `{name}` placeholders in the URL
    - query parameters become query string parameters
    - header parameters become HTTP headers
    - `requestBody` becomes the HTTP request body
-3. If `invoke.input` is absent, the client SHOULD apply a simple fallback mapping:
-   - URL placeholders are substituted from invocation arguments
+3. If `input` is absent, the client SHOULD apply a simple fallback mapping:
+   - URL placeholders are substituted from arguments
    - remaining arguments are sent as query parameters for read-style requests
    - remaining arguments are sent as a JSON body for body-bearing requests
 4. If `interaction_mode` is `"sync"` or omitted, the client waits for the HTTP response and returns it directly.
 5. If `interaction_mode` is `"stream"`, the client SHOULD expose the response as a stream when the transport supports streaming.
 6. If `interaction_mode` is `"async"`, the server returns HTTP `202 Accepted` with a JSON body that MUST include a `status_url` field (absolute URL) for polling. The client SHOULD poll the `status_url` until the operation completes. The polling response MUST include a `status` field with one of `"pending"`, `"completed"`, or `"failed"`. When `status` is `"completed"`, the response SHOULD include a `result` field. When `status` is `"failed"`, the response SHOULD include an `error` field following the error format in §6.12. The server MAY include a `Retry-After` header or a `retry_after` field (in seconds) to suggest a polling interval.
 
-This profile is a recommended interoperability baseline, not the only valid invoke model. Clients MAY support additional invoke types, and servers MAY publish custom types when they need behavior that does not fit the HTTP profile.
+This profile is a recommended interoperability baseline. Servers MAY use any execution metadata shape they want, and clients MAY support additional profiles beyond HTTP.
 
 ### 4.3 General Notes
 
@@ -568,10 +581,10 @@ This endpoint enables generic clients to work with any Agent Auth server. Purpos
 | `modes` | string[] | Yes | Supported registration modes: `"delegated"`, `"autonomous"`, or both |
 | `approval_methods` | string[] | Yes | How user approval works. Defined values: `"device_authorization"` (RFC 8628), `"ciba"` (Client Initiated Backchannel Authentication). Servers MAY include additional custom methods (see §9.4). Clients SHOULD ignore methods they don't recognize. |
 | `endpoints` | object | Yes | Server API endpoint paths, relative to `issuer` |
-| `capabilities` | object[]? | No | Optional lightweight capability summaries (for example `id`, `title`, `description`). Full invoke details remain on `/capabilities`. |
+| `capabilities` | object[]? | No | Optional lightweight capability summaries (for example `id`, `title`, `description`). Full execution metadata remains on `/capabilities`. |
 | `jwks_uri` | string | No | URL to the server's JWKS (JSON Web Key Set). Enables clients to verify server-signed responses in future protocol extensions. Servers that plan to sign responses SHOULD include this. |
 
-Invoke endpoints (MCP endpoints, OpenAPI URLs, HTTP URLs) are not part of the discovery document. They are described per-capability in the `/capabilities` response (§4). The discovery document is strictly for identity and authorization configuration.
+Execution metadata (HTTP URLs, MCP endpoints, etc.) is not part of the discovery document. It is described per-capability in the `/capabilities` response (§4). The discovery document is strictly for identity and authorization configuration.
 
 #### 6.1.1 Versioning
 
@@ -606,7 +619,7 @@ Supports three authentication modes:
 | `cursor` | string | No | Opaque pagination cursor from a previous response's `next_cursor` |
 | `limit` | number | No | Maximum capabilities to return. Server MAY enforce a cap (e.g. 100). Default is server-defined. |
 
-**Example response (`http` capabilities):**
+**Example response (HTTP capabilities):**
 
 ```json
 {
@@ -615,8 +628,7 @@ Supports three authentication modes:
       "id": "check_balance",
       "title": "Check balance",
       "description": "Check account balance",
-      "invoke": {
-        "type": "http",
+      "http": {
         "method": "GET",
         "url": "https://api.bank.com/v1/accounts/{account_id}/balance",
         "input": {
@@ -636,8 +648,7 @@ Supports three authentication modes:
       "id": "transfer_domestic",
       "title": "Transfer funds domestically",
       "description": "Transfer funds domestically",
-      "invoke": {
-        "type": "http",
+      "http": {
         "method": "POST",
         "url": "https://api.bank.com/v1/transfers/domestic",
         "input": {
@@ -665,8 +676,7 @@ Supports three authentication modes:
       "id": "transfer_international",
       "title": "International wire transfer",
       "description": "International wire transfer",
-      "invoke": {
-        "type": "http",
+      "http": {
         "method": "POST",
         "url": "https://api.bank.com/v1/transfers/international"
       },
@@ -676,7 +686,7 @@ Supports three authentication modes:
 }
 ```
 
-**Example response (custom invoke type):**
+**Example response (custom execution metadata):**
 
 ```json
 {
@@ -685,8 +695,7 @@ Supports three authentication modes:
       "id": "get_transactions",
       "title": "Get recent transactions",
       "description": "Get recent transactions",
-      "invoke": {
-        "type": "acme.stream",
+      "acme.stream": {
         "channel": "deployments"
       },
       "grant_status": "granted"
@@ -695,8 +704,7 @@ Supports three authentication modes:
       "id": "create_payment",
       "title": "Create payment",
       "description": "Create a new payment",
-      "invoke": {
-        "type": "http",
+      "http": {
         "method": "POST",
         "url": "https://api.bank.com/v1/payments"
       },
@@ -706,7 +714,7 @@ Supports three authentication modes:
 }
 ```
 
-**Example response (mixed standard and custom types):**
+**Example response (mixed standard and custom execution metadata):**
 
 ```json
 {
@@ -715,8 +723,7 @@ Supports three authentication modes:
       "id": "list_issues",
       "title": "List issues",
       "description": "List GitHub issues",
-      "invoke": {
-        "type": "http",
+      "http": {
         "method": "GET",
         "url": "https://api.github.com/repos/{owner}/{repo}/issues"
       }
@@ -725,8 +732,7 @@ Supports three authentication modes:
       "id": "get_repo",
       "title": "Get repository",
       "description": "Get repository details",
-      "invoke": {
-        "type": "github.custom-tool",
+      "github.custom-tool": {
         "tool_name": "get_repo"
       }
     }
@@ -1353,7 +1359,7 @@ Returns available capabilities. All parameters are optional — a bare `list_cap
 **Behavior:**
 
 1. Call `GET /capabilities` (§6.2) with a host JWT, or an agent JWT if `agent_id` is provided.
-2. Return capabilities to the agent, including `invoke` descriptors the client does not itself support.
+2. Return capabilities to the agent, including execution metadata the client does not itself support.
 
 **Response shape:**
 
@@ -1365,8 +1371,7 @@ Returns available capabilities. All parameters are optional — a bare `list_cap
       "title": "Transfer funds domestically",
       "description": "Transfer funds domestically",
       "grant_status": "not_granted",
-      "invoke": {
-        "type": "http",
+      "http": {
         "method": "POST",
         "url": "https://api.bank.com/v1/transfers/domestic"
       }
@@ -1376,8 +1381,7 @@ Returns available capabilities. All parameters are optional — a bare `list_cap
       "title": "Check balance",
       "description": "Check account balance",
       "grant_status": "granted",
-      "invoke": {
-        "type": "http",
+      "http": {
         "method": "GET",
         "url": "https://api.bank.com/v1/accounts/balance"
       }
@@ -1533,7 +1537,7 @@ Checks the health and status of an existing agent connection.
 
 ### 7.9 http_request
 
-Executes a capability with `invoke.type = "http"` on behalf of the agent. The client looks up the invoke descriptor, constructs the HTTP request per §4.2, signs the JWT, and makes the call.
+Executes a capability that has an `http` execution profile (§4.2) on behalf of the agent. The client looks up the capability's `http` metadata, constructs the HTTP request per §4.2, signs the JWT, and makes the call.
 
 Clients MAY omit this tool. Agents with their own HTTP tools can use `sign_jwt` (§7.4) and make requests directly.
 
@@ -1542,13 +1546,13 @@ Clients MAY omit this tool. Agents with their own HTTP tools can use `sign_jwt` 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `agent_id` | string | Yes | The agent's ID |
-| `capability_id` | string | Yes | The capability to invoke (must have `invoke.type = "http"`) |
-| `arguments` | object | No | Invocation arguments, mapped onto the request per the capability's `invoke.input` descriptor |
+| `capability_id` | string | Yes | The capability to execute (must have an `http` field) |
+| `arguments` | object | No | Arguments mapped onto the request per the capability's `http.input` descriptor |
 
 **Behavior:**
 
-1. Look up the capability's invoke descriptor from the cached capabilities. Reject if `invoke.type` is not `"http"`.
-2. Construct the HTTP request per §4.2 invocation rules (substitute path parameters, build query string, set headers, format body)
+1. Look up the capability from the cached capabilities. Reject if it does not have an `http` field.
+2. Construct the HTTP request per §4.2 execution rules (substitute path parameters, build query string, set headers, format body)
 3. Sign an agent JWT scoped to this capability and set `Authorization: Bearer <agent_jwt>`
 4. Make the request and return the response
 
@@ -1917,7 +1921,7 @@ Services with MCP servers can expose Agent Auth-backed capabilities through an M
 
 #### OpenAPI
 
-Services with OpenAPI documents can derive capability definitions from existing API operations. OpenAPI is descriptive input to an adapter, not a required invoke type in Agent Auth itself.
+Services with OpenAPI documents can derive capability definitions from existing API operations. OpenAPI is descriptive input to an adapter, not a required execution profile in Agent Auth itself.
 
 #### OAuth 2.0
 
@@ -2020,7 +2024,7 @@ Mitigations:
 
 ### 14.2 Agent Activity Tracking
 
-The protocol provides per-agent, per-call traceability by design (§12). This is a feature for security and auditing, but also a privacy concern: the server has a complete record of every capability an agent invoked, when, and with what inputs.
+The protocol provides per-agent, per-call traceability by design (§12). This is a feature for security and auditing, but also a privacy concern: the server has a complete record of every capability an agent executed, when, and with what inputs.
 
 - Servers SHOULD define and publish data retention policies for agent activity logs.
 - Servers SHOULD provide users with the ability to view and delete agent activity data associated with their account.
@@ -2070,7 +2074,7 @@ The `metadata` field on agents and the `reason` field on registration and capabi
 ## 16. What This Protocol Does Not Define
 
 - **Internal authorization policy** — the server decides how granted capabilities map to backend roles, policies, or other internal checks
-- **Execution** — the protocol defines the capability envelope and a flexible `invoke` descriptor, but does not standardize how capabilities are invoked. How the agent calls a capability — HTTP, code execution, browser tools, MCP, or any other mechanism — is outside this specification.
+- **Execution** — the protocol defines the capability envelope and allows servers to attach execution metadata, but does not standardize how capabilities are executed. How the agent calls a capability — HTTP, code execution, browser tools, MCP, or any other mechanism — is outside this specification.
 - **Logging format / audit schema** — the protocol provides the data (JWT claims, agent state); how to log and query it is up to the server
 - **Webhook notifications** — lifecycle events (agent created, revoked, expired) are server-side concerns
 - **Agent-to-agent delegation** — Agent A cannot delegate granted capabilities to Agent B at the protocol level. In multi-agent systems, coordination happens at the client/orchestrator layer: the orchestrator holds keys for multiple agents, routes work between them, and signs JWTs for each independently. The protocol doesn't need to know about agent relationships — each agent authenticates and authorizes independently. Cross-client delegation (Agent A on Client 1 delegating to Agent B on Client 2) would require delegation chains, capability intersection, and trust transitivity — these are future protocol extensions, not v1 concerns.
@@ -2078,7 +2082,7 @@ The `metadata` field on agents and the `reason` field on registration and capabi
 - **Billing** — how autonomous agents pay for access
 - **User signup** — how new user accounts are created
 - **Internal routing** — how the server routes capability calls to backends
-- **MCP server implementation** — the protocol uses MCP as an invoke type but does not define MCP servers. Services that expose MCP capabilities implement their MCP server independently.
+- **MCP server implementation** — a server may include MCP-related execution metadata on capabilities, but the protocol does not define MCP servers. Services that expose MCP capabilities implement their MCP server independently.
 
 ---
 
@@ -2122,8 +2126,8 @@ Agent                    Client                   Server
   │  { token }             │                        │
   │<───────────────────────│                        │
   │                        │                        │
-  │  (agent invokes capability "a" directly         │
-  │   using invoke descriptor + signed JWT)      │
+  │  (agent executes capability "a" directly         │
+  │   using execution metadata + signed JWT)     │
   │─────────────────────────────────────────────────>│
   │  { result }                                     │
   │<─────────────────────────────────────────────────│
@@ -2210,7 +2214,7 @@ Agent                    Client                   Server
   │───────────────────────>│                        │
   │  { token }             │                        │
   │<───────────────────────│                        │
-  │  (agent invokes capabilities directly)          │
+  │  (agent executes capabilities directly)          │
 ```
 
 ### A.4 Dynamic Capabilities (Unknown at Discovery)
@@ -2292,7 +2296,7 @@ Agent                    Client                   Server              User
   │  { token }             │                        │                   │
   │<───────────────────────│                        │                   │
   │                        │                        │                   │
-  │  (agent invokes capability "x" with JWT)        │                   │
+  │  (agent executes capability "x" with JWT)        │                   │
   │─────────────────────────────────────────────────>│                   │
   │                        │ 403: capability not granted│                │
   │  "I need capability x" │<───────────────────────────────────────────│
@@ -2322,7 +2326,7 @@ Agent                    Client                   Server              User
   │  "capability x granted"│                        │                   │
   │<───────────────────────│                        │                   │
   │                        │                        │                   │
-  │  (agent invokes capability "x" again with JWT)   │                   │
+  │  (agent executes capability "x" again with JWT)   │                   │
   │─────────────────────────────────────────────────>│                   │
   │  { result }            │                        │                   │
   │<─────────────────────────────────────────────────│                   │
@@ -2406,7 +2410,7 @@ Agent                    Client                   Registry        bank.com
   │  agent_id + grants     │<────────────────────────────────────────│
   │<───────────────────────│                        │                │
   │                        │                        │                │
-  │  ... sign_jwt + invoke flow ...                 │                │
+  │  ... sign_jwt + execute flow ...                 │                │
 ```
 
 ### A.8 Multi-Provider Client
