@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "astro build && pagefind --site dist/client && cp -r dist/client/pagefind public/pagefind",
     "preview": "astro preview"
   },
   "dependencies": {
@@ -16,6 +16,7 @@
     "tailwindcss": "^4.2.1"
   },
   "devDependencies": {
-    "@types/node": "^25.3.5"
+    "@types/node": "^25.3.5",
+    "pagefind": "^1.4.0"
   }
 }

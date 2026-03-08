@@ -553,9 +553,9 @@ This endpoint enables generic clients to work with any Agent Auth server. Purpos
     "status": "/agent/status",
     "reactivate": "/agent/reactivate",
     "revoke": "/agent/revoke",
-    "revoke_host": "/agent/host/revoke",
+    "revoke_host": "/host/revoke",
     "rotate_key": "/agent/rotate-key",
-    "rotate_host_key": "/agent/host/rotate-key",
+    "rotate_host_key": "/host/rotate-key",
     "introspect": "/agent/introspect",
     "device_authorization": "/device/code",
     "ciba_authorize": "/agent/ciba/authorize"
@@ -1053,7 +1053,7 @@ Replaces an agent's public key. The old key stops working immediately.
 ### 6.9 Rotate Host Key
 
 ```
-POST /agent/host/rotate-key
+POST /host/rotate-key
 ```
 
 Replaces a host's public key in-place. All agents under the host continue to work — only the host's authentication key changes. The old key stops working immediately.
@@ -1091,7 +1091,7 @@ This endpoint is for inline key hosts only. JWKS-based hosts rotate by updating 
 ### 6.10 Revoke Host
 
 ```
-POST /agent/host/revoke
+POST /host/revoke
 ```
 
 Revokes a host and all agents created through it.
@@ -1224,9 +1224,9 @@ The `error` field is a machine-readable code (snake_case string). The `message` 
 | `POST /agent/reactivate` | 403 | `agent_not_expired` | Agent is not in `expired` state (e.g. active, revoked, rejected, claimed) |
 | `POST /agent/reactivate` | 403 | `absolute_lifetime_exceeded` | Agent's absolute lifetime has elapsed — cannot reactivate |
 | `POST /agent/revoke` | 404 | `agent_not_found` | Agent ID doesn't exist |
-| `POST /agent/host/revoke` | 404 | `host_not_found` | Host ID doesn't exist |
+| `POST /host/revoke` | 404 | `host_not_found` | Host ID doesn't exist |
 | `POST /agent/rotate-key` | 400 | `unsupported_algorithm` | New key's algorithm is not supported |
-| `POST /agent/host/rotate-key` | 400 | `unsupported_algorithm` | New key's algorithm is not supported |
+| `POST /host/rotate-key` | 400 | `unsupported_algorithm` | New key's algorithm is not supported |
 | `GET /agent/status` | 404 | `agent_not_found` | Agent ID doesn't exist |
 | `POST /agent/introspect` | 404 | `agent_not_found` | Agent ID doesn't exist |
 | `POST /agent/introspect` | 404 | `host_not_found` | Host ID doesn't exist |
@@ -1785,7 +1785,7 @@ Servers SHOULD validate requested capability IDs against a known set. Servers MA
 
 ### 10.7 Host Key Rotation
 
-Inline key hosts rotate via `POST /agent/host/rotate-key` (§6.9). Since the client does not maintain a durable registry of every server a host is registered on, inline rotation is limited to servers the client currently knows about. For key compromise, revoke the host entirely — a compromised key means you cannot trust the rotation request itself.
+Inline key hosts rotate via `POST /host/rotate-key` (§6.9). Since the client does not maintain a durable registry of every server a host is registered on, inline rotation is limited to servers the client currently knows about. For key compromise, revoke the host entirely — a compromised key means you cannot trust the rotation request itself.
 
 JWKS-based hosts rotate by updating their endpoint — the server picks up new keys on the next cache refresh (recommended: every 5 minutes or on `kid` miss). The old key SHOULD remain in the JWKS for a grace period to avoid rejecting in-flight requests.
 

@@ -3,6 +3,8 @@
 
 # generated content
 .source
+/dist
+/public/pagefind
 
 # test & build
 /coverage

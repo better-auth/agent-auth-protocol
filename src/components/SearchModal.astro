@@ -1,0 +1,402 @@
+---
+---
+
+<!-- Search modal — rendered at Layout level so it's never inside collapsed containers -->
+<div id="search-modal" class="search-modal">
+  <div class="search-backdrop" id="search-backdrop"></div>
+  <div class="search-dialog">
+    <div class="search-input-wrap">
+      <svg class="search-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/>
+        <path d="m21 21-4.3-4.3"/>
+      </svg>
+      <input id="search-input" type="text" placeholder="Search the specification…" autocomplete="off" spellcheck="false" />
+      <kbd class="search-esc">ESC</kbd>
+    </div>
+    <div id="search-results" class="search-results">
+      <div class="search-placeholder">
+        <p>Type to search across the Agent Auth specification</p>
+      </div>
+    </div>
+    <div class="search-footer">
+      <span class="search-footer-hint">
+        <kbd>↑</kbd><kbd>↓</kbd> navigate
+      </span>
+      <span class="search-footer-hint">
+        <kbd>↵</kbd> open
+      </span>
+      <span class="search-footer-hint">
+        <kbd>esc</kbd> close
+      </span>
+    </div>
+  </div>
+</div>
+
+<style is:global>
+  .search-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: min(20vh, 140px);
+    visibility: hidden;
+    opacity: 0;
+    transition: visibility 0s 0.2s, opacity 0.2s ease;
+  }
+  .search-modal.open {
+    visibility: visible;
+    opacity: 1;
+    transition-delay: 0s;
+  }
+
+  .search-backdrop {
+    position: absolute;
+    inset: 0;
+    background: color-mix(in oklch, var(--color-bg) 85%, transparent);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .search-dialog {
+    position: relative;
+    width: 90%;
+    max-width: 580px;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg);
+    box-shadow:
+      0 16px 70px color-mix(in oklch, #000 18%, transparent),
+      0 0 0 1px color-mix(in oklch, var(--color-fg) 5%, transparent);
+    transform: translateY(8px) scale(0.98);
+    transition: transform 0.2s cubic-bezier(0.32, 0.72, 0, 1);
+    display: flex;
+    flex-direction: column;
+    max-height: min(70vh, 520px);
+  }
+  .search-modal.open .search-dialog {
+    transform: translateY(0) scale(1);
+  }
+
+  .search-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--color-border);
+    flex-shrink: 0;
+  }
+
+  .search-input-icon {
+    width: 16px;
+    height: 16px;
+    color: var(--color-muted);
+    flex-shrink: 0;
+  }
+
+  #search-input {
+    flex: 1;
+    height: 48px;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-family: var(--font-sans);
+    font-size: 14px;
+    color: var(--color-fg);
+  }
+  #search-input::placeholder {
+    color: color-mix(in oklch, var(--color-fg) 30%, transparent);
+  }
+
+  .search-esc {
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 2px 6px;
+    border: 1px solid var(--color-border);
+    color: var(--color-muted);
+    line-height: 1.4;
+  }
+
+  .search-results {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+    padding: 6px;
+  }
+
+  .search-placeholder,
+  .search-no-results {
+    padding: 28px 16px;
+    text-align: center;
+  }
+  .search-placeholder p,
+  .search-no-results p {
+    font-family: var(--font-sans) !important;
+    font-size: 13px !important;
+    color: var(--color-muted) !important;
+    line-height: 1.5 !important;
+    margin: 0 !important;
+  }
+  .search-no-results strong {
+    color: var(--color-fg);
+    font-weight: 500;
+  }
+
+  .search-result-item {
+    display: block;
+    padding: 10px 12px;
+    text-decoration: none !important;
+    color: inherit;
+    transition: background 0.1s;
+    cursor: pointer;
+  }
+  .search-result-item:hover,
+  .search-result-item.active {
+    background: color-mix(in oklch, var(--color-fg) 5%, transparent);
+  }
+  .search-result-item.active {
+    background: color-mix(in oklch, var(--color-fg) 8%, transparent);
+  }
+
+  .search-result-title {
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-fg);
+    margin-bottom: 3px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .search-result-title::before {
+    content: "§";
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-muted);
+    flex-shrink: 0;
+  }
+
+  .search-result-excerpt {
+    font-family: var(--font-spec);
+    font-size: 12px;
+    line-height: 1.65;
+    color: var(--color-muted);
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .search-result-excerpt mark {
+    background: color-mix(in oklch, var(--color-fg) 12%, transparent);
+    color: var(--color-fg);
+    font-weight: 500;
+    padding: 0 1px;
+  }
+
+  .search-footer {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px;
+    border-top: 1px solid var(--color-border);
+  }
+  .search-footer-hint {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: color-mix(in oklch, var(--color-fg) 30%, transparent);
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .search-footer-hint kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 3px;
+    border: 1px solid color-mix(in oklch, var(--color-fg) 10%, transparent);
+    font-size: 10px;
+    line-height: 1;
+  }
+</style>
+
+<script is:inline>
+(function() {
+  var modal = document.getElementById("search-modal");
+  var backdrop = document.getElementById("search-backdrop");
+  var input = document.getElementById("search-input");
+  var resultsEl = document.getElementById("search-results");
+
+  if (!modal || !input || !resultsEl) return;
+
+  var pagefind = null;
+  var debounceTimer = null;
+  var activeIndex = -1;
+
+  async function loadPagefind() {
+    if (pagefind) return pagefind;
+    try {
+      pagefind = await import("/pagefind/pagefind.js");
+      await pagefind.init();
+      return pagefind;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function openSearch() {
+    modal.classList.add("open");
+    document.body.style.overflow = "hidden";
+    input.value = "";
+    activeIndex = -1;
+    showPlaceholder();
+    setTimeout(function() { input.focus(); }, 50);
+    loadPagefind();
+  }
+
+  function closeSearch() {
+    modal.classList.remove("open");
+    document.body.style.overflow = "";
+  }
+
+  function escapeHtml(text) {
+    var d = document.createElement("div");
+    d.textContent = text;
+    return d.innerHTML;
+  }
+
+  function showPlaceholder() {
+    resultsEl.innerHTML = '<div class="search-placeholder"><p>Type to search across the Agent Auth specification</p></div>';
+  }
+
+  function showNoResults(query) {
+    resultsEl.innerHTML = '<div class="search-no-results"><p>No results for \u201c<strong>' + escapeHtml(query) + '</strong>\u201d</p></div>';
+  }
+
+  function showError() {
+    resultsEl.innerHTML = '<div class="search-placeholder"><p>Search index not available. Run a production build first.</p></div>';
+  }
+
+  async function doSearch(query) {
+    if (!query.trim()) {
+      showPlaceholder();
+      return;
+    }
+
+    var pf = await loadPagefind();
+    if (!pf) {
+      showError();
+      return;
+    }
+
+    var result = await pf.search(query);
+
+    if (!result.results.length) {
+      showNoResults(query);
+      return;
+    }
+
+    var dataList = await Promise.all(
+      result.results.slice(0, 10).map(function(r) { return r.data(); })
+    );
+
+    resultsEl.innerHTML = "";
+    activeIndex = -1;
+
+    dataList.forEach(function(item) {
+      var subs = item.sub_results && item.sub_results.length ? item.sub_results : null;
+
+      if (subs) {
+        subs.forEach(function(sub) {
+          addResultItem(sub.title, sub.excerpt, sub.url);
+        });
+      } else {
+        addResultItem(
+          item.meta.title || "Result",
+          item.excerpt,
+          item.url
+        );
+      }
+    });
+  }
+
+  function addResultItem(title, excerpt, url) {
+    var a = document.createElement("a");
+    a.href = url;
+    a.className = "search-result-item";
+    a.innerHTML =
+      '<div class="search-result-title">' + escapeHtml(title) + '</div>' +
+      '<div class="search-result-excerpt">' + (excerpt || "") + '</div>';
+    a.addEventListener("click", function() { closeSearch(); });
+    resultsEl.appendChild(a);
+  }
+
+  function updateActive() {
+    var items = resultsEl.querySelectorAll(".search-result-item");
+    items.forEach(function(el, i) {
+      if (i === activeIndex) {
+        el.classList.add("active");
+        el.scrollIntoView({ block: "nearest" });
+      } else {
+        el.classList.remove("active");
+      }
+    });
+  }
+
+  // Wire up all search triggers (Nav button + floating button)
+  document.querySelectorAll("[data-search-trigger]").forEach(function(el) {
+    el.addEventListener("click", openSearch);
+  });
+
+  // Also wire up legacy IDs
+  var navTrigger = document.getElementById("search-trigger");
+  if (navTrigger) navTrigger.addEventListener("click", openSearch);
+
+  var specTrigger = document.getElementById("spec-search-trigger");
+  if (specTrigger) specTrigger.addEventListener("click", openSearch);
+
+  backdrop.addEventListener("click", closeSearch);
+
+  document.addEventListener("keydown", function(e) {
+    if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+      e.preventDefault();
+      modal.classList.contains("open") ? closeSearch() : openSearch();
+    }
+
+    if (!modal.classList.contains("open")) return;
+
+    if (e.key === "Escape") {
+      e.preventDefault();
+      closeSearch();
+    }
+
+    var items = resultsEl.querySelectorAll(".search-result-item");
+    if (!items.length) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      activeIndex = Math.min(activeIndex + 1, items.length - 1);
+      updateActive();
+    }
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      activeIndex = Math.max(activeIndex - 1, -1);
+      updateActive();
+    }
+    if (e.key === "Enter" && activeIndex >= 0 && items[activeIndex]) {
+      e.preventDefault();
+      items[activeIndex].click();
+    }
+  });
+
+  input.addEventListener("input", function() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(function() {
+      doSearch(input.value);
+    }, 150);
+  });
+})();
+</script>
