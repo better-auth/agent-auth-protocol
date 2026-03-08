@@ -46,7 +46,7 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "S
 - **Client** — The process that runs on a host and exposes protocol tools to AI systems (MCP server, CLI, SDK). It manages host and agent keys, talks to servers, and signs JWTs. AI tools like Claude Code or Cursor connect to a client.
 - **Server** — The service's authorization server. It manages discovery, host and agent registrations, approvals, capability grants, and JWT verification. Also called the auth server.
 - **Host** — A stable identity representing the environment where keys are managed (e.g. a laptop, a cloud server, a CI runner). A host is a keypair plus metadata — not a running process. It may be linked to a user or unlinked.
-- **Capability** — A server-offered action or function. Each capability has an `id` and a human-readable description. Servers MAY include additional fields describing how to execute the capability (e.g. HTTP endpoint details, MCP tool metadata).
+- **Capability** — A server-offered action or function. Each capability has an `id` and a human-readable description. Capabilities are executed through the server's execute endpoint (`POST /capabilities/execute`). Servers MAY also include additional metadata for direct execution by clients (e.g. HTTP endpoint details, MCP tool metadata).
 - **Agent Capability Grant** — A stored grant of one capability to one agent. Carries per-capability state and metadata such as `status`, `granted_by`, and `expires_at`.
 - **Default capabilities** — The set of capabilities a host is pre-authorized to grant its agents without additional user approval.
 - **Registration** — The process by which a host creates or re-establishes an agent identity on a server. A successful registration results in an `agent_id`, a mode, and an initial permission set.
@@ -136,7 +136,7 @@ Public keys for both hosts and agents can be provided to servers in two ways:
 - **(F)** Agent requests a signed JWT from the client (`sign_jwt`).
 - **(G)** Client signs a short-lived agent JWT (§5.3) with the agent's private key and returns it.
 - **(H)** Agent presents the signed JWT to the resource server.
-- **(I)** Resource server calls the authorization server's introspect endpoint (§6.11) with the agent JWT.
+- **(I)** Resource server calls the authorization server's introspect endpoint (§6.12) with the agent JWT.
 - **(J)** Authorization server validates the JWT and returns the agent's status and granted capabilities.
 - **(K)** Resource server checks the introspection response and returns the protected resource.
 
@@ -145,7 +145,7 @@ Resource servers that are co-located with the authorization server MAY verify th
 **Notes:**
 
 - **Discovery is a pre-step for generic clients.** Multi-provider clients MAY call `list_providers` (§7.1.1), `search_providers` (§7.1.2), and `discover_provider` (§7.1.3) before step (A). Single-service clients skip discovery.
-- **Agents execute capabilities using their own tools.** The protocol does not define a built-in execute tool. The agent reads the capability's execution metadata and uses whatever tools it has available (HTTP clients, browser tools, code execution) to make the call with the signed JWT.
+- **Capabilities are executed through a standard endpoint.** The agent calls `execute_capability` (§7.9), which sends the capability ID and arguments to `POST /capabilities/execute` (§6.11). The server validates the agent JWT, executes the capability, and returns the result. Servers MAY also expose direct execution metadata on capabilities for clients that prefer to call service endpoints directly (§4.2).
 - **Capability escalation.** An active agent that needs additional capabilities calls `request_capability` (§7.5), which may trigger another approval flow (D) for the new capabilities.
 - **Reactivation.** An expired agent can be reactivated via `reactivate_agent` (§7.7), which calls `POST /agent/reactivate` (§6.6). Capabilities decay to host defaults; escalated capabilities must be re-requested.
 
@@ -281,6 +281,7 @@ The same capability ID can appear in different parts of the protocol for differe
 - `id` (`string`, required): Stable machine-readable capability identifier. Used in registration, grants, and JWT restriction.
 - `title` (`string`, optional): Human-readable short label for the capability. Recommended for UIs and agent selection.
 - `description` (`string`, required): What this capability does and when to use it.
+- `input` (`object`, optional): A JSON Schema describing the shape of the `arguments` object accepted by `POST /capabilities/execute` (§6.11). Servers SHOULD include this so agents know what arguments to provide. When omitted, the capability takes no arguments.
 - `grant_status` (`string`, optional): `"granted"` or `"not_granted"`. Present on every returned capability when using agent JWT auth. Omitted otherwise.
 
 **Example capability:**
@@ -290,17 +291,60 @@ The same capability ID can appear in different parts of the protocol for differe
   "id": "check_balance",
   "title": "Check balance",
   "description": "Check the balance of a bank account",
+  "input": {
+    "type": "object",
+    "required": ["account_id"],
+    "properties": {
+      "account_id": {
+        "type": "string",
+        "description": "The bank account ID to check"
+      }
+    }
+  },
   "grant_status": "granted"
 }
 ```
 
-Servers typically include additional fields describing how the capability is executed (e.g. an HTTP endpoint, an MCP tool name). These are covered in §4.1.
+**Example with no arguments:**
 
-### 4.1 Execution Metadata
+```json
+{
+  "id": "list_accounts",
+  "title": "List accounts",
+  "description": "List all bank accounts for the linked user"
+}
+```
 
-Servers MAY include additional fields on a capability object beyond the core fields to describe how the capability is executed. These fields are server-defined — the core protocol does not constrain their shape or require any particular execution model.
+### 4.1 Execution
 
-The agent reads whatever execution metadata the server provides and uses its available tools (HTTP clients, browser tools, code execution, etc.) to fulfill the capability with a signed JWT. Clients SHOULD pass all fields through unchanged when listing capabilities to the agent. Clients MAY provide helper tools for execution profiles they recognize (e.g. an HTTP request tool).
+The standard way to execute a capability is through `POST /capabilities/execute` (§6.11). The agent calls the client's `execute_capability` tool (§7.9) with a `capability_id` and `arguments`. The client signs an agent JWT and forwards the request to the server. The server validates the JWT, checks that the agent has been granted the capability, executes it, and returns the result.
+
+This model has a key advantage for adoption: the server acts as a gateway. A service with an existing REST API, GraphQL endpoint, or any other backend can add Agent Auth by deploying the auth server as a proxy — there is no need to add JWT validation to every service endpoint. The auth server handles identity, authorization, and audit in one place, then calls the backend on the agent's behalf.
+
+**Request flow:**
+
+```
+Agent → Client (execute_capability) → Server (POST /capabilities/execute) → Backend service
+                                   ← result ←                             ← response
+```
+
+**Interaction modes:**
+
+Capabilities may operate in different modes, controlled by the server:
+
+- **Sync** (default) — the server executes the capability and returns the result in the response body.
+- **Stream** — the server returns a streaming response (e.g. Server-Sent Events). The client SHOULD expose the stream to the agent when the transport supports it.
+- **Async** — the server returns `202 Accepted` with a `status_url` for polling. The response MUST include a `status` field (`"pending"`, `"completed"`, or `"failed"`). When `"completed"`, the response SHOULD include a `result` field. When `"failed"`, the response SHOULD include an `error` field per §6.13. The server MAY include a `Retry-After` header or `retry_after` field (in seconds).
+
+The server determines the interaction mode for each capability. The agent does not need to know — the client and server handle it.
+
+### 4.2 Direct Execution
+
+Servers MAY include additional metadata on capability objects to let clients call service endpoints directly, bypassing the execute endpoint. This is useful for low-latency use cases, streaming over long-lived connections, or services that already validate agent JWTs at their own endpoints.
+
+When a capability includes direct execution metadata, clients MAY use it instead of `POST /capabilities/execute`. Clients that support direct execution SHOULD still prefer the execute endpoint unless the agent or user explicitly opts for direct calls, or the server does not support the execute endpoint.
+
+Direct execution metadata is server-defined — the core protocol does not constrain its shape. Clients SHOULD pass all fields through unchanged when listing capabilities to the agent. Clients MAY provide helper tools for execution profiles they recognize (e.g. an HTTP request tool).
 
 **Examples:**
 
@@ -347,18 +391,6 @@ A capability with a GraphQL descriptor:
 }
 ```
 
-A capability pointing to documentation:
-
-```json
-{
-  "id": "send_email",
-  "description": "Send an email",
-  "docs": {
-    "url": "https://docs.example.com/api/send-email"
-  }
-}
-```
-
 A capability with a custom / proprietary descriptor:
 
 ```json
@@ -372,11 +404,11 @@ A capability with a custom / proprietary descriptor:
 }
 ```
 
-All of these are valid. The core protocol only requires `id` and `description`. Everything else is execution metadata that the server provides and the client passes through.
+The core protocol only requires `id` and `description`. Everything else is optional execution metadata for direct callers.
 
-### 4.2 Recommended HTTP Profile
+### 4.3 HTTP Profile for Direct Execution
 
-To improve interoperability across generic clients, this spec defines a recommended execution profile for HTTP/REST-style capabilities. Servers that want their capabilities to work out of the box across generic Agent Auth clients SHOULD expose a usable baseline using this profile. Generic clients SHOULD provide a built-in HTTP request tool or equivalent adapter for this profile.
+For clients that support direct execution, this spec defines an optional HTTP profile. Servers that want their capabilities to work with direct-calling clients SHOULD use this profile. Clients that support direct execution SHOULD recognize the `http` field and provide a built-in HTTP request tool or equivalent adapter.
 
 An HTTP capability includes an `http` field with the following shape:
 
@@ -412,7 +444,7 @@ Each entry in `content` follows this subset:
 
 For the initial profile, servers SHOULD use `application/json` as the media type key with a JSON Schema under `content["application/json"].schema`. Clients SHOULD use the media type key as the `Content-Type` header when sending the request.
 
-**Execution rules:**
+**Direct execution rules:**
 
 1. The client SHOULD send the current signed JWT as `Authorization: Bearer <token>` when executing the capability.
 2. If `input` is present, the client SHOULD construct the request according to that schema:
@@ -426,11 +458,9 @@ For the initial profile, servers SHOULD use `application/json` as the media type
    - remaining arguments are sent as a JSON body for body-bearing requests
 4. If `interaction_mode` is `"sync"` or omitted, the client waits for the HTTP response and returns it directly.
 5. If `interaction_mode` is `"stream"`, the client SHOULD expose the response as a stream when the transport supports streaming.
-6. If `interaction_mode` is `"async"`, the server returns HTTP `202 Accepted` with a JSON body that MUST include a `status_url` field (absolute URL) for polling. The client SHOULD poll the `status_url` until the operation completes. The polling response MUST include a `status` field with one of `"pending"`, `"completed"`, or `"failed"`. When `status` is `"completed"`, the response SHOULD include a `result` field. When `status` is `"failed"`, the response SHOULD include an `error` field following the error format in §6.12. The server MAY include a `Retry-After` header or a `retry_after` field (in seconds) to suggest a polling interval.
+6. If `interaction_mode` is `"async"`, the server returns HTTP `202 Accepted` with a JSON body that MUST include a `status_url` field (absolute URL) for polling. The client SHOULD poll the `status_url` until the operation completes. The polling response MUST include a `status` field with one of `"pending"`, `"completed"`, or `"failed"`. When `status` is `"completed"`, the response SHOULD include a `result` field. When `status` is `"failed"`, the response SHOULD include an `error` field following the error format in §6.13. The server MAY include a `Retry-After` header or a `retry_after` field (in seconds) to suggest a polling interval.
 
-This profile is a recommended interoperability baseline. Servers MAY use any execution metadata shape they want, and clients MAY support additional profiles beyond HTTP.
-
-### 4.3 General Notes
+### 4.4 General Notes
 
 Capability IDs are opaque strings. The protocol does not define a required naming format — servers MAY use any stable string. Clients and agents MUST treat capability IDs as uninterpreted identifiers.
 
@@ -519,8 +549,9 @@ The Server API is organized into four groups:
 - **Discovery** (§6.1) — how clients find the server's configuration
 - **Capabilities and registration flow** (§6.2–§6.4) — capability discovery, registration, and capability requests
 - **Lifecycle operations** (§6.5–§6.10) — status, reactivation, revocation, and key rotation
-- **Introspection** (§6.11) — token introspection for resource servers
-- **Error format** (§6.12) — standard error responses
+- **Execute capability** (§6.11) — standard capability execution endpoint
+- **Introspection** (§6.12) — token introspection for resource servers
+- **Error format** (§6.13) — standard error responses
 
 ---
 
@@ -549,6 +580,7 @@ This endpoint enables generic clients to work with any Agent Auth server. Purpos
   "endpoints": {
     "register": "/agent/register",
     "capabilities": "/capabilities",
+    "execute": "/capabilities/execute",
     "request_capability": "/agent/request-capability",
     "status": "/agent/status",
     "reactivate": "/agent/reactivate",
@@ -574,10 +606,10 @@ This endpoint enables generic clients to work with any Agent Auth server. Purpos
 | `modes` | string[] | Yes | Supported registration modes: `"delegated"`, `"autonomous"`, or both |
 | `approval_methods` | string[] | Yes | How user approval works. Defined values: `"device_authorization"` (RFC 8628), `"ciba"` (Client Initiated Backchannel Authentication). Servers MAY include additional custom methods (see §9.4). Clients SHOULD ignore methods they don't recognize. |
 | `endpoints` | object | Yes | Server API endpoint paths, relative to `issuer` |
-| `capabilities` | object[]? | No | Optional lightweight capability summaries (for example `id`, `title`, `description`). Full execution metadata remains on `/capabilities`. |
+| `capabilities` | object[]? | No | Optional lightweight capability summaries (for example `id`, `title`, `description`). Full capability details (including optional direct execution metadata) remain on `/capabilities`. |
 | `jwks_uri` | string | No | URL to the server's JWKS (JSON Web Key Set). Enables clients to verify server-signed responses in future protocol extensions. Servers that plan to sign responses SHOULD include this. |
 
-Execution metadata (HTTP URLs, MCP endpoints, etc.) is described per-capability in the `/capabilities` response (§4). The discovery document covers identity and authorization configuration.
+Capability details are in the `/capabilities` response (§4). Capabilities are executed through `POST /capabilities/execute` (§6.11). The discovery document covers identity and authorization configuration.
 
 #### 6.1.1 Versioning
 
@@ -1116,7 +1148,83 @@ Authorization: Bearer <host_jwt>
 
 ---
 
-### 6.11 Introspect
+### 6.11 Execute Capability
+
+```
+POST /capabilities/execute
+```
+
+Executes a granted capability on behalf of the agent. The server validates the agent JWT, checks that the agent has an active grant for the requested capability, executes the capability against the backend, and returns the result. This is the standard execution path — it lets the server act as a gateway so service endpoints do not need to validate agent JWTs themselves.
+
+**Authorization:** Agent JWT.
+
+**Request headers:**
+
+```
+Authorization: Bearer <agent_jwt>
+Content-Type: application/json
+```
+
+**Request body:**
+
+```json
+{
+  "capability_id": "check_balance",
+  "arguments": {
+    "account_id": "acc_123"
+  }
+}
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `capability_id` | string | Yes | The capability to execute. The agent MUST have an active grant for this capability. |
+| `arguments` | object | No | Arguments for the capability. Shape is defined by the capability's input schema. |
+
+**Response (sync — default):**
+
+```json
+{
+  "data": {
+    "account_id": "acc_123",
+    "balance": 4280.13,
+    "currency": "USD"
+  }
+}
+```
+
+**Response (async):**
+
+```json
+{
+  "status": "pending",
+  "status_url": "https://auth.bank.com/capabilities/status/job_xyz"
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `data` | any | The capability's result. Present for sync responses. Shape is capability-defined. |
+| `status` | string | `"pending"`, `"completed"`, or `"failed"`. Present for async responses. |
+| `status_url` | string | Absolute URL for polling async results. Present when `status` is `"pending"`. |
+| `result` | any | Async result payload. Present when `status` is `"completed"`. |
+| `error` | object | Error details per §6.13. Present when `status` is `"failed"`. |
+
+For streaming capabilities, the server returns a `200` response with `Content-Type: text/event-stream` and streams Server-Sent Events. The client SHOULD expose the stream to the agent when the transport supports it.
+
+**Error responses:**
+
+| Status | Code | When |
+|---|---|---|
+| 400 | `invalid_request` | Missing or malformed `capability_id` |
+| 403 | `capability_not_granted` | Agent does not have an active grant for this capability |
+| 403 | `agent_revoked` | Agent has been revoked |
+| 403 | `agent_expired` | Agent session has expired |
+| 404 | `capability_not_found` | Capability ID does not exist |
+
+---
+
+### 6.12 Introspect
 
 ```
 POST /agent/introspect
@@ -1179,7 +1287,7 @@ Content-Type: application/json
 
 The auth server performs the full verification flow (§5.5) and returns an active/inactive response.
 
-### 6.12 Error Format
+### 6.13 Error Format
 
 All endpoints use a standard error response format:
 
@@ -1256,7 +1364,7 @@ WWW-Authenticate: AgentAuth discovery="https://auth.example.com/.well-known/agen
 
 - Resource servers that accept Agent Auth JWTs MAY include this challenge on `401` responses alongside any other `WWW-Authenticate` schemes they support (e.g. `Bearer` for OAuth). Multiple challenges coexist per [RFC 7235](https://datatracker.ietf.org/doc/html/rfc7235) — human-facing clients ignore the `AgentAuth` scheme, and agent-aware clients can act on it.
 - Clients that receive an `AgentAuth` challenge SHOULD fetch the discovery URL if no active agent exists for that server, then proceed through registration (§6.3) before retrying the original request.
-- If the agent JWT is present but the agent lacks the required capability, the resource server SHOULD return `403` with the `capability_not_granted` error code (§6.12) instead of a `401` challenge.
+- If the agent JWT is present but the agent lacks the required capability, the resource server SHOULD return `403` with the `capability_not_granted` error code (§6.13) instead of a `401` challenge.
 
 This mechanism is OPTIONAL. Agents SHOULD prefer proactive discovery via `/.well-known/agent-configuration` or registry search (`search_providers`, §7.1.2) when possible. The challenge header exists as a fallback for cases where the agent has no prior knowledge of the service's auth configuration.
 
@@ -1352,7 +1460,7 @@ Returns available capabilities. All parameters are optional — a bare `list_cap
 **Behavior:**
 
 1. Call `GET /capabilities` (§6.2) with a host JWT, or an agent JWT if `agent_id` is provided.
-2. Return capabilities to the agent, including execution metadata the client does not itself support.
+2. Return capabilities to the agent, including any direct execution metadata the server provides.
 
 **Response shape:**
 
@@ -1409,7 +1517,7 @@ Connects an agent to a service. This generates a keypair, registers the agent on
 
 ### 7.4 sign_jwt
 
-Returns a signed agent JWT for authenticating capability invocations. The agent does not hold its own private key — the client does (§5.1). This tool lets the client remain the gatekeeper while giving the agent a short-lived token it can use with whatever tools it has (HTTP clients, browser tools, code execution, etc.).
+Returns a signed agent JWT for authenticating requests. The agent does not hold its own private key — the client does (§5.1). Most agents use `execute_capability` (§7.9) instead of requesting a raw JWT. This tool exists for agents that need direct access to a signed token — for example, to make direct HTTP calls to service endpoints that accept agent JWTs (§4.2).
 
 **Input:**
 
@@ -1528,26 +1636,26 @@ Checks the health and status of an existing agent connection.
 2. Sign a host JWT and call `GET /agent/status` with `?agent_id=...`
 3. Return agent status, granted capabilities, and connection health
 
-### 7.9 http_request
+### 7.9 execute_capability
 
-Executes a capability that has an `http` execution profile (§4.2) on behalf of the agent. The client looks up the capability's `http` metadata, constructs the HTTP request per §4.2, signs the JWT, and makes the call.
-
-Clients MAY omit this tool. Agents with their own HTTP tools can use `sign_jwt` (§7.4) and make requests directly.
+Executes a granted capability through the server's execute endpoint (§6.11). The client signs an agent JWT and sends the capability ID and arguments to `POST /capabilities/execute`. The server validates the JWT, checks grants, executes the capability, and returns the result.
 
 **Input:**
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `agent_id` | string | Yes | The agent's ID |
-| `capability_id` | string | Yes | The capability to execute (must have an `http` field) |
-| `arguments` | object | No | Arguments mapped onto the request per the capability's `http.input` descriptor |
+| `capability_id` | string | Yes | The capability to execute |
+| `arguments` | object | No | Arguments for the capability, conforming to the capability's `input` schema |
 
 **Behavior:**
 
-1. Look up the capability from the cached capabilities. Reject if it does not have an `http` field.
-2. Construct the HTTP request per §4.2 execution rules (substitute path parameters, build query string, set headers, format body)
-3. Sign an agent JWT scoped to this capability and set `Authorization: Bearer <agent_jwt>`
-4. Make the request and return the response
+1. Sign an agent JWT scoped to this capability
+2. Call `POST /capabilities/execute` (§6.11) with the agent JWT, `capability_id`, and `arguments`
+3. Return the result to the agent
+4. For async responses (`status: "pending"`), poll the `status_url` until completion and return the final result
+
+Clients MAY also support direct execution for capabilities that include execution metadata (§4.2). When a capability has an `http` field, the client MAY construct and send the HTTP request directly per §4.3 instead of going through the execute endpoint. Clients SHOULD prefer the execute endpoint unless there is a specific reason to use direct execution (e.g. streaming, low latency).
 
 ### 7.10 Registry
 
@@ -1879,7 +1987,7 @@ Servers MUST implement rate limiting. Agents can generate high request volumes �
 
 Servers decide which dimensions to enforce and at what thresholds. High-risk capabilities (e.g. financial transfers) SHOULD have tighter per-capability limits than read-only capabilities.
 
-**Response:** When rate limited, the server MUST return `429` with the `rate_limited` error code (§6.12) and SHOULD include a `Retry-After` header (seconds until the client can retry):
+**Response:** When rate limited, the server MUST return `429` with the `rate_limited` error code (§6.13) and SHOULD include a `Retry-After` header (seconds until the client can retry):
 
 ```
 HTTP/1.1 429 Too Many Requests
@@ -1910,11 +2018,11 @@ Agent Auth builds on existing standards for cryptography, key formats, user cons
 
 #### MCP
 
-Services with MCP servers can expose Agent Auth-backed capabilities through an MCP adapter or gateway. Agent Auth does not standardize MCP execution in the core protocol; MCP remains an implementation layer that can sit in front of or behind Agent Auth HTTP execution.
+Services with MCP servers can expose Agent Auth-backed capabilities through an MCP adapter or gateway. The execute endpoint (`POST /capabilities/execute`) can proxy requests to MCP tools internally. MCP remains an implementation layer — the server may use MCP to fulfill capabilities behind the execute endpoint.
 
 #### OpenAPI
 
-Services with OpenAPI documents can derive capability definitions from existing API operations. An adapter maps OpenAPI operations to Agent Auth capabilities.
+Services with OpenAPI documents can derive capability definitions from existing API operations. An adapter maps OpenAPI operations to Agent Auth capabilities. The execute endpoint can proxy to these operations, so existing APIs don't need to validate agent JWTs themselves. Services MAY also expose the HTTP profile (§4.3) on capabilities for clients that prefer direct execution.
 
 #### OAuth 2.0
 
@@ -2066,7 +2174,7 @@ The `metadata` field on agents and the `reason` field on registration and capabi
 ## 16. What This Protocol Does Not Define
 
 - **Internal authorization policy** — the server decides how granted capabilities map to backend roles, policies, or other internal checks
-- **Execution** — the protocol defines the capability envelope and allows servers to attach execution metadata, but does not standardize how capabilities are executed. How the agent calls a capability — HTTP, code execution, browser tools, MCP, or any other mechanism — is outside this specification.
+- **Backend implementation** — the protocol defines a standard execution endpoint (`POST /capabilities/execute`) and capability model, but does not constrain how the server fulfills a capability internally. The server may call an internal API, a third-party service, execute code, or any other mechanism — that is an implementation detail.
 - **Logging format / audit schema** — the protocol provides the data (JWT claims, agent state); how to log and query it is up to the server
 - **Webhook notifications** — lifecycle events (agent created, revoked, expired) are server-side concerns
 - **Agent-to-agent delegation** — each agent authenticates and authorizes independently. In multi-agent systems, coordination happens at the client/orchestrator layer: the orchestrator holds keys for multiple agents, routes work between them, and signs JWTs for each independently. Cross-client delegation (delegation chains, capability intersection, trust transitivity) may be addressed in future versions.
@@ -2074,7 +2182,7 @@ The `metadata` field on agents and the `reason` field on registration and capabi
 - **Billing** — how autonomous agents pay for access
 - **User signup** — how new user accounts are created
 - **Internal routing** — how the server routes capability calls to backends
-- **MCP server implementation** — a server may include MCP-related execution metadata on capabilities, but the protocol does not define MCP servers. Services that expose MCP capabilities implement their MCP server independently.
+- **MCP server implementation** — a server may include MCP-related metadata on capabilities for direct execution, but the protocol does not define MCP servers. Services that expose MCP capabilities implement their MCP server independently.
 
 ---
 
@@ -2113,16 +2221,15 @@ Agent                    Client                   Server
   │  agent_id + capability_ids│<───────────────────────│
   │<───────────────────────│                        │
   │                        │                        │
-  │ sign_jwt(agent_id)     │                        │
-  │───────────────────────>│                        │
-  │  { token }             │                        │
+  │  execute_capability     │                        │
+  │  (agent_id, "a", args) │                        │
+  │───────────────────────>│  POST /capabilities/    │
+  │                        │  execute (agent JWT)    │
+  │                        │───────────────────────>│
+  │                        │  { result }            │
+  │                        │<───────────────────────│
+  │  { result }             │                        │
   │<───────────────────────│                        │
-  │                        │                        │
-  │  (agent executes capability "a" directly         │
-  │   using execution metadata + signed JWT)     │
-  │─────────────────────────────────────────────────>│
-  │  { result }                                     │
-  │<─────────────────────────────────────────────────│
 ```
 
 ### A.2 Unknown Host, User Approval Required
@@ -2202,11 +2309,15 @@ Agent                    Client                   Server
   │  agent_id + capability_ids│<───────────────────────│
   │<───────────────────────│                        │
   │                        │                        │
-  │ sign_jwt(agent_id)     │                        │
-  │───────────────────────>│                        │
-  │  { token }             │                        │
+  │                        │                        │
+  │  execute_capability     │                        │
+  │───────────────────────>│  POST /capabilities/    │
+  │                        │  execute                │
+  │                        │───────────────────────>│
+  │                        │  { result }            │
+  │                        │<───────────────────────│
+  │  { result }             │                        │
   │<───────────────────────│                        │
-  │  (agent executes capabilities directly)          │
 ```
 
 ### A.4 Dynamic Capabilities (Unknown at Discovery)
@@ -2283,15 +2394,13 @@ An active agent discovers it needs more permissions while working.
 ```
 Agent                    Client                   Server              User
   │                        │                        │                   │
-  │ sign_jwt(agent_id)     │                        │                   │
-  │───────────────────────>│                        │                   │
-  │  { token }             │                        │                   │
-  │<───────────────────────│                        │                   │
-  │                        │                        │                   │
-  │  (agent executes capability "x" with JWT)        │                   │
-  │─────────────────────────────────────────────────>│                   │
+  │  execute_capability     │                        │                   │
+  │  (agent_id, "x", args) │                        │                   │
+  │───────────────────────>│ POST /capabilities/    │                   │
+  │                        │ execute                │                   │
+  │                        │───────────────────────>│                   │
   │                        │ 403: capability not granted│                │
-  │  "I need capability x" │<───────────────────────────────────────────│
+  │  "I need capability x" │<───────────────────────│                   │
   │                        │                        │                   │
   │                        │                        │                   │
   │ request_capability(   │                        │                   │
@@ -2318,10 +2427,15 @@ Agent                    Client                   Server              User
   │  "capability x granted"│                        │                   │
   │<───────────────────────│                        │                   │
   │                        │                        │                   │
-  │  (agent executes capability "x" again with JWT)   │                   │
-  │─────────────────────────────────────────────────>│                   │
-  │  { result }            │                        │                   │
-  │<─────────────────────────────────────────────────│                   │
+  │  execute_capability     │                        │                   │
+  │  (agent_id, "x", args) │                        │                   │
+  │───────────────────────>│ POST /capabilities/    │                   │
+  │                        │ execute                │                   │
+  │                        │───────────────────────>│                   │
+  │                        │  { result }            │                   │
+  │                        │<───────────────────────│                   │
+  │  { result }             │                        │                   │
+  │<───────────────────────│                        │                   │
 ```
 
 ### A.6 Host Linking Claims Autonomous Agents
