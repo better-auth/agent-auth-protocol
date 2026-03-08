@@ -15,6 +15,7 @@
   --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, monospace;
   --font-serif: "Lora", ui-serif, Georgia, serif;
+  --font-spec: "Source Serif 4", ui-serif, Georgia, serif;
 
   --color-bg: #ffffff;
   --color-fg: #0a0a0a;
@@ -229,18 +230,18 @@
 }
 
 .spec-content p {
-  font-family: var(--font-serif);
+  font-family: var(--font-spec);
   font-size: 15px;
-  line-height: 1.9;
+  line-height: 1.85;
   color: var(--color-body);
   margin-bottom: 1rem;
 }
 
 .spec-content ul,
 .spec-content ol {
-  font-family: var(--font-serif);
+  font-family: var(--font-spec);
   font-size: 15px;
-  line-height: 1.9;
+  line-height: 1.85;
   color: var(--color-body);
   margin-bottom: 1rem;
   padding-left: 1.5rem;

@@ -29,18 +29,11 @@ This gap is especially acute for autonomous agents. They may discover capabiliti
 
 Agent Auth makes the runtime agent a first-class principal. Instead of borrowing a user's session or a shared application token, each agent gets its own identity, its own granted capabilities, and its own lifecycle. That gives the server something existing auth models are missing: a durable way to reason about which specific agent is acting, what it is allowed to do, and how to suspend, expire, or revoke it without affecting everything else.
 
-The mechanism is simple: each agent has its own cryptographic identity (Ed25519 keypair), and the client also has its own registered host identity. The host creates and manages agents; the agent authenticates its requests with short-lived signed JWTs. This lets the server attribute every call to a concrete chain of trust: which host created the agent, whether it was `delegated` or `autonomous`, which capabilities were granted, and which capability is being used.
+A **client** (an MCP server, a CLI tool, an SDK) sits between the AI and the server. It holds a persistent identity called a **host** — a keypair that the client registers with each server it connects to. AI tools like Claude Code, ChatGPT, or any LLM harness connect through a client.
 
-In other words, the protocol separates identity (who is this agent?), authorization (what can it do?), and execution (how does it call the service?) so services can safely support both user-linked agents and autonomous agents with the same model.
+When the AI needs to act, the client creates an **agent** — a session-scoped identity with its own Ed25519 keypair, its own granted capabilities, and its own lifecycle. An agent is not the AI tool itself; it is a specific session, background job, or pipeline run. The client registers many agents under the same host over time.
 
-Agent Auth is intentionally practical and product-shaped. It is closer in spirit to MCP than to OAuth core: it specifies the pieces an implementation needs to interoperate today, including capability discovery, registration, approval flows, and lifecycle management.
-
-The protocol defines two layers:
-
-- **Server API** — how a service registers agents, manages capabilities, and verifies identity
-- **Client interface** — standardized tools that agents call to discover services, register, and execute capabilities. The client has its own registered identity (host keypair) on each server.
-
-The protocol separates identity (who is this agent?) from authorization (what can it do?). Execution — how the agent actually calls a capability — is left to the server and client.
+Each agent authenticates with short-lived signed JWTs. The server can trace every call back to the specific agent, the host it was registered under, what mode it runs in, and which capabilities it holds.
 
 ### 1.3 Conformance
 
@@ -50,9 +43,9 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "S
 
 - **Principal** — An identity the server can authenticate, authorize, audit, and revoke independently. In this protocol, both hosts and agents are principals.
 - **Agent** — The runtime AI actor that needs to call services. Each agent has its own server-side `agent_id`, its own keypair, its own granted capabilities, and its own lifecycle.
-- **Client** — The tool layer the agent calls (MCP tools, CLI, SDK, IDE integration). It manages host and agent keys, talks to servers, and signs JWTs. A client is a running process.
+- **Client** — The process that runs on a host and exposes protocol tools to AI systems (MCP server, CLI, SDK). It manages host and agent keys, talks to servers, and signs JWTs. AI tools like Claude Code or Cursor connect to a client.
 - **Server** — The service's authorization server. It manages discovery, host and agent registrations, approvals, capability grants, and JWT verification. Also called the auth server.
-- **Host** — A stable identity representing the environment or device that creates agents (e.g. "ChatGPT," "Claude Code," "MacBook-Pro"). A host is a keypair plus metadata — not a running process. It may be linked to a user or unlinked.
+- **Host** — A stable identity representing the environment where keys are managed (e.g. a laptop, a cloud server, a CI runner). A host is a keypair plus metadata — not a running process. It may be linked to a user or unlinked.
 - **Capability** — A server-offered action or function. Each capability has an `id` and a human-readable description. Servers MAY include additional fields describing how to execute the capability (e.g. HTTP endpoint details, MCP tool metadata).
 - **Agent Capability Grant** — A stored grant of one capability to one agent. Carries per-capability state and metadata such as `status`, `granted_by`, and `expires_at`.
 - **Default capabilities** — The set of capabilities a host is pre-authorized to grant its agents without additional user approval.
@@ -75,9 +68,9 @@ The protocol defines three runtime participants and two identity types:
 | Kind | Name | Role |
 |---|---|---|
 | Participant | **Agent** | The AI that needs to act. Has an agent ID and calls client tools. |
-| Participant | **Client** | The tool layer the agent calls (MCP tools, CLI, SDK). Communicates with servers, manages keys, and signs requests. |
+| Participant | **Client** | The process that exposes protocol tools to AI systems (MCP server, CLI, SDK). Runs on a host, manages keys, and signs requests. |
 | Participant | **Server** | The service's authorization server. Manages registrations, capabilities, approvals, and verification. |
-| Identity type | **Host** | A stable identity a client uses to create and manage agents on a server. The server associates default capabilities, trust, and optionally a `user_id` with it. |
+| Identity type | **Host** | A stable identity representing the environment where keys are managed (laptop, cloud server, CI runner). The server associates default capabilities, trust, and optionally a `user_id` with it. |
 | Identity type | **Agent** | A per-agent identity used for authenticated capability execution after registration. |
 
 The host is an identity record and credential set, not a running process. A client uses a host identity when registering agents, checking status, or performing host-authenticated operations.
@@ -203,7 +196,7 @@ Three independent clocks govern agent lifetimes. The durations are server policy
 
 ### 2.5 Reactivation
 
-An expired agent can be reactivated, but reactivation is a security checkpoint. The agent returns to its baseline capabilities — any previously escalated capabilities are lost and must be re-requested. This ensures that after a period of inactivity or prolonged use, the agent does not silently retain elevated access.
+An expired agent can be reactivated, but reactivation is a security checkpoint. The agent returns to its baseline capabilities — any previously escalated capabilities are lost and must be re-requested.
 
 The session TTL and max lifetime clocks reset on reactivation. The absolute lifetime clock does NOT reset — if the agent's absolute lifetime has elapsed, reactivation MUST fail with `absolute_lifetime_exceeded`.
 
@@ -256,7 +249,7 @@ When a host becomes linked, all active autonomous agents under that host MUST be
 
 This is analogous to anonymous-to-authenticated user linking: everything the agent did before a user was in the picture becomes the user's. Servers MAY use a system account or anonymous placeholder to hold autonomous agent ownership until a real user claims it.
 
-Claiming is automatic — it is a direct consequence of host linking, not a separate decision. Once claimed, the autonomous agent is terminal. If the user wants to continue using the service, the host registers a new delegated agent.
+Claiming is automatic — it is a direct consequence of host linking. Once claimed, the autonomous agent is terminal. If the user wants to continue using the service, the host registers a new delegated agent.
 
 ### 3.5 Host States
 
@@ -393,7 +386,7 @@ An HTTP capability includes an `http` field with the following shape:
 - `interaction_mode` (`string`, optional): Execution hint: `"sync"`, `"stream"`, or `"async"`.
 - `input` (`object`, optional): OpenAPI-inspired input description for parameters and request body.
 
-The `input` object is an optional OpenAPI-compatible subset that lets a capability describe how arguments map onto an HTTP request. This spec intentionally keeps the subset small so servers can generate it easily and clients can implement it consistently.
+The `input` object is an optional OpenAPI-compatible subset that lets a capability describe how arguments map onto an HTTP request. The subset is small so servers can generate it easily and clients can implement it consistently.
 
 **`input` fields:**
 
@@ -491,12 +484,12 @@ Agents authenticate by signing short-lived JWTs per [RFC 7519](https://datatrack
 
 ### 5.4 Proof of Possession (Optional)
 
+The base security model is short-lived JWTs over TLS. This is sufficient for most applications.
+
 For higher-security deployments, servers MAY require a standard proof-of-possession profile:
 
 - **DPoP ([RFC 9449](https://datatracker.ietf.org/doc/html/rfc9449))** — the client sends the agent JWT as the access token and a separate DPoP proof JWT in the `DPoP` header on each request. The agent JWT SHOULD include `cnf.jkt` (the JWK thumbprint of the DPoP proof key).
 - **mTLS ([RFC 8705](https://datatracker.ietf.org/doc/html/rfc8705))** — the client authenticates with a TLS client certificate. The agent JWT SHOULD include `cnf.x5t#S256` to bind it to that certificate.
-
-Servers that require proof of possession SHOULD use one of these standard profiles rather than placing `htm`, `htu`, or `ath` directly inside the agent JWT.
 
 ### 5.5 Verification
 
@@ -584,7 +577,7 @@ This endpoint enables generic clients to work with any Agent Auth server. Purpos
 | `capabilities` | object[]? | No | Optional lightweight capability summaries (for example `id`, `title`, `description`). Full execution metadata remains on `/capabilities`. |
 | `jwks_uri` | string | No | URL to the server's JWKS (JSON Web Key Set). Enables clients to verify server-signed responses in future protocol extensions. Servers that plan to sign responses SHOULD include this. |
 
-Execution metadata (HTTP URLs, MCP endpoints, etc.) is not part of the discovery document. It is described per-capability in the `/capabilities` response (§4). The discovery document is strictly for identity and authorization configuration.
+Execution metadata (HTTP URLs, MCP endpoints, etc.) is described per-capability in the `/capabilities` response (§4). The discovery document covers identity and authorization configuration.
 
 #### 6.1.1 Versioning
 
@@ -935,7 +928,7 @@ The `agent_capability_grants` array is the single source of truth for capability
 POST /agent/reactivate
 ```
 
-Reactivates an expired agent. Reactivation is a security checkpoint: the agent's capabilities decay to its host's default capability set. Any previously escalated capabilities are lost and must be re-requested through `POST /agent/request-capability` (§6.4). This prevents an agent from silently retaining elevated access after a period of inactivity or prolonged use.
+Reactivates an expired agent. Reactivation is a security checkpoint: the agent's capabilities decay to its host's default capability set. Any previously escalated capabilities are lost and must be re-requested through `POST /agent/request-capability` (§6.4).
 
 **Authorization:** Host JWT. The server MUST verify the agent was created through this host.
 
@@ -1605,7 +1598,7 @@ How services are added to a registry is implementation-specific. A registry MAY 
 
 ## 8. Data Model
 
-This section defines the logical fields the protocol operates on. These are not a mandated database schema — implementations MAY store these fields however they choose, as long as the protocol-facing behavior is preserved.
+This section defines the logical fields the protocol operates on. Implementations MAY store these fields however they choose, as long as the protocol-facing behavior is preserved.
 
 ### 8.1 Host
 
@@ -1697,7 +1690,7 @@ The baseline approval method. Every conformant server MUST support this. Used wh
 
 **Agent Auth-specific behavior:**
 
-- **Agent ID is reusable after timeout only.** A timed-out pending agent stays in `pending` state. The client MAY retry by calling `POST /agent/register` with the same agent keypair — the server SHOULD recognize the existing agent and issue a new approval flow rather than creating a duplicate.
+- **Agent ID is reusable after timeout only.** A timed-out pending agent stays in `pending` state. The client MAY retry by calling `POST /agent/register` with the same agent keypair — the server SHOULD recognize the existing agent and reuse it with a new approval flow.
 - **User denial is terminal for that attempt.** If the approval flow returns `access_denied`, the server SHOULD transition the agent to `rejected` (not `pending`). The client MUST NOT automatically retry a denied registration.
 - **Pending agent cleanup.** Servers SHOULD periodically clean up agents that remain in `pending` state beyond a server-defined threshold (e.g. 24 hours, 7 days). Cleaned-up pending agents are deleted, not revoked — they never became active.
 
@@ -1836,14 +1829,14 @@ Agents often run with access to the user's browser or session (via browser tools
 This is not a concern in traditional OAuth because the client requesting authorization doesn't control the user's browser. In Agent Auth, it often does.
 
 Mitigations, from least to most restrictive:
-- **Fresh authentication.** Require the user to have authenticated within a short window (e.g. 5 minutes). Stale sessions — where the user logged in hours or days ago — SHOULD NOT be sufficient to approve an agent. This is the minimum bar.
+- **Fresh authentication.** Require the user to have authenticated within a short window (e.g. 5 minutes). Stale sessions SHOULD NOT be sufficient to approve an agent.
 - **Biometric passkeys** (WebAuthn with `userVerification: "required"`) — proves a human is physically present
 - **Hardware security keys** — physical interaction required
 - **TOTP/OTP from a separate device** — ensures the approver has a second factor the agent can't access
 
-The approval page SHOULD NOT be completable with only a long-lived session cookie. A session cookie proves the user logged in at some point — not that they are present now and intending to approve this specific agent.
+Approval pages SHOULD require fresh user authentication — a long-lived session cookie alone is not sufficient.
 
-This applies equally to [CIBA](https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html) approvals. An agent with access to the user's notification channel (email tools, push notifications) could intercept the approval request and approve itself. CIBA approval endpoints SHOULD require fresh authentication before completing the approval — receiving the notification alone is not proof of user intent.
+The same applies to [CIBA](https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html) approvals. An agent with access to the user's notification channel (email tools, push notifications) could intercept the approval request. CIBA approval endpoints SHOULD require fresh authentication before completing the approval.
 
 ### 10.12 URL Fetch Protection
 
@@ -1921,11 +1914,11 @@ Services with MCP servers can expose Agent Auth-backed capabilities through an M
 
 #### OpenAPI
 
-Services with OpenAPI documents can derive capability definitions from existing API operations. OpenAPI is descriptive input to an adapter, not a required execution profile in Agent Auth itself.
+Services with OpenAPI documents can derive capability definitions from existing API operations. An adapter maps OpenAPI operations to Agent Auth capabilities.
 
 #### OAuth 2.0
 
-Agent Auth is not an OAuth extension — it's a standalone protocol. It reuses specific OAuth mechanisms where they fit:
+Agent Auth is a standalone protocol that reuses specific OAuth mechanisms where they fit:
 
 - **Device Authorization ([RFC 8628](https://datatracker.ietf.org/doc/html/rfc8628))** — the primary user consent flow. When agent registration requires approval, the server returns a `verification_uri` and `user_code` following RFC 8628. The client polls `GET /agent/status` for the result instead of a token endpoint.
 - **CIBA ([OpenID CIBA Core](https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html))** — backchannel consent for autonomous agents that need user authorization without a browser.
@@ -2041,8 +2034,7 @@ Autonomous agents (`mode: "autonomous"`) can register and operate without a user
 
 The capabilities an agent requests reveal intent. A request for `transfer_international` tells the server the user is planning an international transfer, even if the transfer never happens. Pending capability requests (user hasn't approved yet) are also stored server-side.
 
-- Servers SHOULD treat pending capability requests with the same data protection as granted capabilities.
-- Servers SHOULD NOT use pending or denied capability requests for profiling or marketing purposes.
+- Servers SHOULD treat pending and denied capability requests with the same data protection as granted capabilities.
 
 ### 14.5 Metadata and Reason Fields
 
@@ -2077,8 +2069,8 @@ The `metadata` field on agents and the `reason` field on registration and capabi
 - **Execution** — the protocol defines the capability envelope and allows servers to attach execution metadata, but does not standardize how capabilities are executed. How the agent calls a capability — HTTP, code execution, browser tools, MCP, or any other mechanism — is outside this specification.
 - **Logging format / audit schema** — the protocol provides the data (JWT claims, agent state); how to log and query it is up to the server
 - **Webhook notifications** — lifecycle events (agent created, revoked, expired) are server-side concerns
-- **Agent-to-agent delegation** — Agent A cannot delegate granted capabilities to Agent B at the protocol level. In multi-agent systems, coordination happens at the client/orchestrator layer: the orchestrator holds keys for multiple agents, routes work between them, and signs JWTs for each independently. The protocol doesn't need to know about agent relationships — each agent authenticates and authorizes independently. Cross-client delegation (Agent A on Client 1 delegating to Agent B on Client 2) would require delegation chains, capability intersection, and trust transitivity — these are future protocol extensions, not v1 concerns.
-- **Cross-client agent coordination** — agents registered on the same server can coordinate through server-defined capabilities (task assignment, messaging, shared state). The server mediates — it decides which agents can interact and how. Both agents authenticate independently with their own JWTs; the server enforces coordination policy. Direct agent-to-agent delegation (Agent A granting Agent B its capabilities) is not part of v1.
+- **Agent-to-agent delegation** — each agent authenticates and authorizes independently. In multi-agent systems, coordination happens at the client/orchestrator layer: the orchestrator holds keys for multiple agents, routes work between them, and signs JWTs for each independently. Cross-client delegation (delegation chains, capability intersection, trust transitivity) may be addressed in future versions.
+- **Cross-client agent coordination** — agents registered on the same server can coordinate through server-defined capabilities (task assignment, messaging, shared state). The server mediates — it decides which agents can interact and how. Both agents authenticate independently with their own JWTs; the server enforces coordination policy.
 - **Billing** — how autonomous agents pay for access
 - **User signup** — how new user accounts are created
 - **Internal routing** — how the server routes capability calls to backends
