@@ -343,7 +343,7 @@ Servers MAY include additional metadata on capability objects to let clients cal
 
 When a capability includes direct execution metadata, clients MAY use it instead of `POST /capability/execute`. Clients that support direct execution SHOULD still prefer the execute endpoint unless the agent or user explicitly opts for direct calls, or the server does not support the execute endpoint.
 
-Direct execution metadata is server-defined — the core protocol does not constrain its shape. Clients SHOULD pass all fields through unchanged when listing capabilities to the agent. Clients MAY provide helper tools for execution profiles they recognize (e.g. an HTTP request tool).
+Direct execution metadata is server-defined — the core protocol does not constrain its shape. Clients SHOULD pass all fields through unchanged when describing capabilities or returning grant details to the agent. Clients MAY provide helper tools for execution profiles they recognize (e.g. an HTTP request tool).
 
 **Examples:**
 
@@ -526,6 +526,7 @@ This endpoint enables generic clients to work with any Agent Auth server. Purpos
   "endpoints": {
     "register": "/agent/register",
     "capabilities": "/capability/list",
+    "describe_capability": "/capability/describe",
     "execute": "/capability/execute",
     "request_capability": "/agent/request-capability",
     "status": "/agent/status",
@@ -554,7 +555,7 @@ This endpoint enables generic clients to work with any Agent Auth server. Purpos
 | `endpoints` | object | Yes | Server API endpoint paths, relative to `issuer` |
 | `jwks_uri` | string | No | URL to the server's JWKS (JSON Web Key Set). Enables clients to verify server-signed responses in future protocol extensions. Servers that plan to sign responses SHOULD include this. |
 
-Capabilities are listed via `/capability/list` (§6.2) and executed through `POST /capability/execute` (§6.11). The discovery document covers identity and authorization configuration only.
+Capabilities are listed via `/capability/list` (§6.2), described in detail via `/capability/describe` (§6.2.1), and executed through `POST /capability/execute` (§6.11). The discovery document covers identity and authorization configuration only.
 
 #### 6.1.1 Versioning
 
@@ -565,13 +566,13 @@ The `version` field identifies the draft version of the protocol, using the form
 - Draft versions MAY introduce breaking changes between releases.
 - Clients SHOULD ignore unrecognized fields in responses where possible.
 
-### 6.2 Capabilities
+### 6.2 List Capabilities
 
 ```
 GET /capability/list
 ```
 
-Returns capabilities the server offers. Each capability has the protocol-level core defined in §4. When the request is authenticated with an agent JWT, each returned capability also includes its per-agent `grant_status`.
+Returns a lightweight listing of capabilities the server offers. Each entry includes only `name`, `description`, and (when authenticated with an agent JWT) `grant_status`. For full capability details including `input` schemas and execution metadata, use `GET /capability/describe` (§6.2.1).
 
 Supports three authentication modes:
 
@@ -589,122 +590,46 @@ Supports three authentication modes:
 | `cursor` | string | No | Opaque pagination cursor from a previous response's `next_cursor` |
 | `limit` | number | No | Maximum capabilities to return. Server MAY enforce a cap (e.g. 100). Default is server-defined. |
 
-**Example response (HTTP capabilities):**
+**Example response (with agent JWT):**
 
 ```json
 {
   "capabilities": [
     {
       "name": "check_balance",
-
       "description": "Check account balance",
-      "http": {
-        "method": "GET",
-        "url": "https://api.bank.com/v1/accounts/{account_id}/balance",
-        "input": {
-          "parameters": [
-            {
-              "name": "account_id",
-              "in": "path",
-              "required": true,
-              "schema": { "type": "string" }
-            }
-          ]
-        }
-      },
       "grant_status": "granted"
     },
     {
       "name": "transfer_domestic",
-
       "description": "Transfer funds domestically",
-      "http": {
-        "method": "POST",
-        "url": "https://api.bank.com/v1/transfers/domestic",
-        "input": {
-          "requestBody": {
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": ["amount", "currency", "destination_account"],
-                  "properties": {
-                    "amount": { "type": "number" },
-                    "currency": { "type": "string" },
-                    "destination_account": { "type": "string" }
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
       "grant_status": "granted"
     },
     {
       "name": "transfer_international",
-
       "description": "International wire transfer",
-      "http": {
-        "method": "POST",
-        "url": "https://api.bank.com/v1/transfers/international"
-      },
       "grant_status": "not_granted"
     }
   ]
 }
 ```
 
-**Example response (custom execution metadata):**
+**Example response (without auth or with host JWT):**
 
 ```json
 {
   "capabilities": [
     {
-      "name": "get_transactions",
-
-      "description": "Get recent transactions",
-      "acme.stream": {
-        "channel": "deployments"
-      },
-      "grant_status": "granted"
+      "name": "check_balance",
+      "description": "Check account balance"
     },
     {
-      "name": "create_payment",
-
-      "description": "Create a new payment",
-      "http": {
-        "method": "POST",
-        "url": "https://api.bank.com/v1/payments"
-      },
-      "grant_status": "granted"
-    }
-  ]
-}
-```
-
-**Example response (mixed standard and custom execution metadata):**
-
-```json
-{
-  "capabilities": [
-    {
-      "name": "list_issues",
-
-      "description": "List GitHub issues",
-      "http": {
-        "method": "GET",
-        "url": "https://api.github.com/repos/{owner}/{repo}/issues"
-      }
+      "name": "transfer_domestic",
+      "description": "Transfer funds domestically"
     },
     {
-      "name": "get_repo",
-
-      "description": "Get repository details",
-      "github.custom-tool": {
-        "tool_name": "get_repo"
-      }
+      "name": "transfer_international",
+      "description": "International wire transfer"
     }
   ]
 }
@@ -718,6 +643,104 @@ Supports three authentication modes:
 | `has_more` | boolean | `true` if more capabilities exist beyond this page. |
 
 Pagination is optional — servers with a small capability set MAY return all capabilities in a single response with `has_more: false`. Clients MUST handle both paginated and non-paginated responses.
+
+### 6.2.1 Describe Capability
+
+```
+GET /capability/describe?name={capability_name}
+```
+
+Returns the full detail for a single capability, including `input` schema and any execution metadata. This is the complement to the lightweight list endpoint (§6.2) — agents call it when they need to know a capability's input shape or direct execution details.
+
+**Authorization:** Same three modes as `GET /capability/list` (§6.2). When authenticated with an agent JWT, the response includes `grant_status`.
+
+**Query parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | Yes | The capability name to describe |
+
+**Example response (standard capability with input schema):**
+
+```json
+{
+  "name": "check_balance",
+  "description": "Check account balance",
+  "input": {
+    "type": "object",
+    "required": ["account_id"],
+    "properties": {
+      "account_id": {
+        "type": "string",
+        "description": "The bank account ID to check"
+      }
+    }
+  },
+  "grant_status": "granted"
+}
+```
+
+**Example response (HTTP execution metadata):**
+
+```json
+{
+  "name": "transfer_domestic",
+  "description": "Transfer funds domestically",
+  "input": {
+    "type": "object",
+    "required": ["amount", "currency", "destination_account"],
+    "properties": {
+      "amount": { "type": "number" },
+      "currency": { "type": "string" },
+      "destination_account": { "type": "string" }
+    }
+  },
+  "http": {
+    "method": "POST",
+    "url": "https://api.bank.com/v1/transfers/domestic",
+    "input": {
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": ["amount", "currency", "destination_account"],
+              "properties": {
+                "amount": { "type": "number" },
+                "currency": { "type": "string" },
+                "destination_account": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "grant_status": "granted"
+}
+```
+
+**Example response (custom execution metadata):**
+
+```json
+{
+  "name": "get_transactions",
+  "description": "Get recent transactions",
+  "input": {
+    "type": "object",
+    "properties": {
+      "limit": { "type": "number", "description": "Max transactions to return" }
+    }
+  },
+  "acme.stream": {
+    "channel": "deployments"
+  },
+  "grant_status": "granted"
+}
+```
+
+If the capability name does not exist, the server MUST return `404` with error code `capability_not_found`.
 
 ### 6.3 Agent Registration
 
@@ -761,11 +784,40 @@ Registers a new agent through a host.
   "mode": "delegated",
   "status": "active",
   "agent_capability_grants": [
-    { "capability": "check_balance", "status": "active" },
-    { "capability": "transfer_domestic", "status": "active" }
+    {
+      "capability": "check_balance",
+      "status": "active",
+      "description": "Check account balance",
+      "input": {
+        "type": "object",
+        "required": ["account_id"],
+        "properties": {
+          "account_id": {
+            "type": "string",
+            "description": "The bank account ID to check"
+          }
+        }
+      }
+    },
+    {
+      "capability": "transfer_domestic",
+      "status": "active",
+      "description": "Transfer funds domestically",
+      "input": {
+        "type": "object",
+        "required": ["amount", "currency", "destination_account"],
+        "properties": {
+          "amount": { "type": "number" },
+          "currency": { "type": "string" },
+          "destination_account": { "type": "string" }
+        }
+      }
+    }
   ]
 }
 ```
+
+When `status` is `"active"`, `agent_capability_grants` MUST include full capability details (`description`, `input`, and any execution metadata) on each grant.
 
 **Response (approval required):**
 
@@ -832,7 +884,20 @@ Content-Type: application/json
   "agent_id": "agt_abc123",
   "status": "granted",
   "agent_capability_grants": [
-    { "capability": "transfer_international", "status": "active" }
+    {
+      "capability": "transfer_international",
+      "status": "active",
+      "description": "International wire transfer",
+      "input": {
+        "type": "object",
+        "required": ["amount", "currency", "destination_iban"],
+        "properties": {
+          "amount": { "type": "number" },
+          "currency": { "type": "string" },
+          "destination_iban": { "type": "string" }
+        }
+      }
+    }
   ]
 }
 ```
@@ -857,7 +922,7 @@ Content-Type: application/json
 }
 ```
 
-The client polls `GET /agent/status` (§6.5) at the `interval` rate to track pending capability requests. When a capability grant's status changes from `"pending"` to `"active"`, it was approved. When it changes to `"denied"`, it was denied.
+The client polls `GET /agent/status` (§6.5) at the `interval` rate to track pending capability requests. When a capability grant's status changes from `"pending"` to `"active"`, it was approved and the status response includes full capability details. When it changes to `"denied"`, it was denied.
 
 ### 6.5 Status
 
@@ -887,8 +952,34 @@ Authorization: Bearer <host_jwt>
   "host_id": "hst_xyz789",
   "status": "active",
   "agent_capability_grants": [
-    { "capability": "check_balance", "status": "active", "granted_by": "user_alice" },
-    { "capability": "transfer_domestic", "status": "active", "granted_by": "user_alice" }
+    {
+      "capability": "check_balance",
+      "status": "active",
+      "granted_by": "user_alice",
+      "description": "Check account balance",
+      "input": {
+        "type": "object",
+        "required": ["account_id"],
+        "properties": {
+          "account_id": { "type": "string", "description": "The bank account ID to check" }
+        }
+      }
+    },
+    {
+      "capability": "transfer_domestic",
+      "status": "active",
+      "granted_by": "user_alice",
+      "description": "Transfer funds domestically",
+      "input": {
+        "type": "object",
+        "required": ["amount", "currency", "destination_account"],
+        "properties": {
+          "amount": { "type": "number" },
+          "currency": { "type": "string" },
+          "destination_account": { "type": "string" }
+        }
+      }
+    }
   ],
   "mode": "delegated",
   "user_id": "user_alice",
@@ -898,7 +989,7 @@ Authorization: Bearer <host_jwt>
 }
 ```
 
-The `agent_capability_grants` array is the single source of truth for capability state. Each grant has a `status` field: `"active"` (granted and usable), `"pending"` (awaiting approval), or `"denied"` (user rejected).
+The `agent_capability_grants` array is the single source of truth for capability state. Each grant has a `status` field: `"active"` (granted and usable), `"pending"` (awaiting approval), or `"denied"` (user rejected). Active grants include full capability details (`description`, `input`, and any execution metadata). Pending and denied grants include only `capability` and `status`.
 
 ### 6.6 Reactivate
 
@@ -943,8 +1034,32 @@ Reactivates an expired agent. Reactivation is a security checkpoint: the agent's
   "agent_id": "agt_abc123",
   "status": "active",
   "agent_capability_grants": [
-    { "capability": "check_balance", "status": "active" },
-    { "capability": "transfer_domestic", "status": "active" }
+    {
+      "capability": "check_balance",
+      "status": "active",
+      "description": "Check account balance",
+      "input": {
+        "type": "object",
+        "required": ["account_id"],
+        "properties": {
+          "account_id": { "type": "string", "description": "The bank account ID to check" }
+        }
+      }
+    },
+    {
+      "capability": "transfer_domestic",
+      "status": "active",
+      "description": "Transfer funds domestically",
+      "input": {
+        "type": "object",
+        "required": ["amount", "currency", "destination_account"],
+        "properties": {
+          "amount": { "type": "number" },
+          "currency": { "type": "string" },
+          "destination_account": { "type": "string" }
+        }
+      }
+    }
   ],
   "activated_at": "2026-03-07T12:00:00Z",
   "expires_at": "2026-03-08T12:00:00Z"
@@ -1291,6 +1406,7 @@ The `error` field is a machine-readable code (snake_case string). The `message` 
 | `POST /agent/rotate-key` | 400 | `unsupported_algorithm` | New key's algorithm is not supported |
 | `POST /host/rotate-key` | 400 | `unsupported_algorithm` | New key's algorithm is not supported |
 | `GET /agent/status` | 404 | `agent_not_found` | Agent ID doesn't exist |
+| `GET /capability/describe` | 404 | `capability_not_found` | Capability name doesn't exist |
 
 Servers MAY return additional error codes beyond those listed. Clients SHOULD handle unknown error codes gracefully by falling back to the HTTP status code.
 
@@ -1401,7 +1517,7 @@ Fetches a provider's discovery document from a direct service URL. Clients SHOUL
 
 ### 7.2 list_capabilities
 
-Returns available capabilities. All parameters are optional — a bare `list_capabilities()` returns everything the server offers.
+Returns a lightweight listing of available capabilities — names, descriptions, and grant status. All parameters are optional — a bare `list_capabilities()` returns everything the server offers. For full capability details including input schemas and execution metadata, use `describe_capability` (§7.2.1).
 
 **Input:**
 
@@ -1413,7 +1529,7 @@ Returns available capabilities. All parameters are optional — a bare `list_cap
 **Behavior:**
 
 1. Call `GET /capability/list` (§6.2) with a host JWT, or an agent JWT if `agent_id` is provided.
-2. Return capabilities to the agent, including any direct execution metadata the server provides.
+2. Return the lightweight capability listing to the agent.
 
 **Response shape:**
 
@@ -1422,29 +1538,55 @@ Returns available capabilities. All parameters are optional — a bare `list_cap
   "capabilities": [
     {
       "name": "transfer_domestic",
-
       "description": "Transfer funds domestically",
-      "grant_status": "not_granted",
-      "http": {
-        "method": "POST",
-        "url": "https://api.bank.com/v1/transfers/domestic"
-      }
+      "grant_status": "not_granted"
     },
     {
       "name": "check_balance",
-
       "description": "Check account balance",
-      "grant_status": "granted",
-      "http": {
-        "method": "GET",
-        "url": "https://api.bank.com/v1/accounts/balance"
-      }
+      "grant_status": "granted"
     }
   ]
 }
 ```
 
 The `grant_status` field is present when the request is authenticated with an agent JWT. It indicates whether the agent has already been granted this capability.
+
+### 7.2.1 describe_capability
+
+Returns the full detail for a single capability, including its `input` schema and any execution metadata. Agents call this when they need to know a capability's input shape before executing it, or to re-fetch details that are no longer in context.
+
+**Input:**
+
+- `provider` (`string`, optional): Provider name from `list_providers`. Required for multi-provider clients.
+- `name` (`string`, required): The capability name to describe.
+- `agent_id` (`string`, optional): If provided, response includes grant status.
+
+**Behavior:**
+
+1. Call `GET /capability/describe?name=...` (§6.2.1) with a host JWT, or an agent JWT if `agent_id` is provided.
+2. Return the full capability object to the agent.
+
+**Response shape:**
+
+```json
+{
+  "name": "transfer_domestic",
+  "description": "Transfer funds domestically",
+  "grant_status": "granted",
+  "input": {
+    "type": "object",
+    "required": ["amount", "currency", "destination_account"],
+    "properties": {
+      "amount": { "type": "number" },
+      "currency": { "type": "string" },
+      "destination_account": { "type": "string" }
+    }
+  }
+}
+```
+
+If the capability does not exist, the client SHOULD return an error indicating the name was not found.
 
 ### 7.3 connect_agent
 
@@ -1467,8 +1609,8 @@ Connects an agent to a service. This generates a keypair, registers the agent on
 2. Generate an agent keypair
 3. Sign a host JWT containing the agent's public key (see §5.2 for JWT construction)
 4. Call `POST /agent/register` (§6.3) with the host JWT, capabilities, and mode
-5. If `status: "active"` → store the agent connection and return agent_id + granted capabilities
-6. If `status: "pending"` → initiate the approval flow returned by the server (§9). Poll for status until the agent is approved, rejected, or the approval expires. On approval, store the connection and return agent_id + granted capabilities. On rejection or timeout, report the outcome to the agent.
+5. If `status: "active"` → store the agent connection and return agent_id + granted capabilities (including full capability details from the grant response)
+6. If `status: "pending"` → initiate the approval flow returned by the server (§9). Poll for status until the agent is approved, rejected, or the approval expires. On approval, store the connection and return agent_id + granted capabilities (including full capability details). On rejection or timeout, report the outcome to the agent.
 7. If the server returns `invalid_capabilities` → return an error to the agent indicating which capability names were not recognized. The client SHOULD include the list of available capabilities (from the most recent `list_capabilities` or `discover_provider` result) so the agent can self-correct without an extra round trip.
 
 ### 7.4 sign_jwt
@@ -1515,8 +1657,8 @@ Requests additional capabilities for an already-connected agent. This is how an 
 **Behavior:**
 
 1. Sign an agent JWT and call `POST /agent/request-capability` (§6.4)
-2. If `status: "granted"` → return the newly granted capabilities
-3. If `status: "pending"` → initiate the approval flow returned by the server (§9). Poll for status until approved or denied.
+2. If `status: "granted"` → return the newly granted capabilities with full capability details from the grant response
+3. If `status: "pending"` → initiate the approval flow returned by the server (§9). Poll for status until approved or denied. On approval, return full capability details.
 4. If the server returns `invalid_capabilities` → return an error to the agent indicating which capability names were not recognized. The client SHOULD include the list of available capabilities so the agent can self-correct.
 5. Return the outcome to the agent
 
@@ -1524,7 +1666,31 @@ Requests additional capabilities for an already-connected agent. This is how an 
 
 ```json
 {
-  "granted": ["write_document", "delete_document"],
+  "granted": [
+    {
+      "name": "write_document",
+      "description": "Write or update a document",
+      "input": {
+        "type": "object",
+        "required": ["document_id", "content"],
+        "properties": {
+          "document_id": { "type": "string" },
+          "content": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "delete_document",
+      "description": "Delete a document",
+      "input": {
+        "type": "object",
+        "required": ["document_id"],
+        "properties": {
+          "document_id": { "type": "string" }
+        }
+      }
+    }
+  ],
   "pending": [],
   "denied": []
 }
@@ -1561,8 +1727,8 @@ Reactivates an expired agent connection. The agent keeps its identity (`agent_id
 
 1. Look up the host identity associated with this agent connection
 2. Sign a host JWT and call `POST /agent/reactivate` (§6.6) with the `agent_id`
-3. If `status: "active"` → update the locally stored grants and return agent_id + granted capabilities
-4. If `status: "pending"` → initiate the approval flow returned by the server (§9). Poll for status until the agent is approved or the approval expires. On approval, update stored grants and return agent_id + granted capabilities. On rejection or timeout, report the outcome to the agent.
+3. If `status: "active"` → update the locally stored grants and return agent_id + granted capabilities (including full capability details from the reactivation response)
+4. If `status: "pending"` → initiate the approval flow returned by the server (§9). Poll for status until the agent is approved or the approval expires. On approval, update stored grants and return agent_id + granted capabilities (including full details). On rejection or timeout, report the outcome to the agent.
 
 **Response shape:**
 
@@ -1571,8 +1737,32 @@ Reactivates an expired agent connection. The agent keeps its identity (`agent_id
   "agent_id": "agt_abc123",
   "status": "active",
   "agent_capability_grants": [
-    { "capability": "check_balance", "status": "active" },
-    { "capability": "transfer_domestic", "status": "active" }
+    {
+      "capability": "check_balance",
+      "status": "active",
+      "description": "Check account balance",
+      "input": {
+        "type": "object",
+        "required": ["account_id"],
+        "properties": {
+          "account_id": { "type": "string", "description": "The bank account ID to check" }
+        }
+      }
+    },
+    {
+      "capability": "transfer_domestic",
+      "status": "active",
+      "description": "Transfer funds domestically",
+      "input": {
+        "type": "object",
+        "required": ["amount", "currency", "destination_account"],
+        "properties": {
+          "amount": { "type": "number" },
+          "currency": { "type": "string" },
+          "destination_account": { "type": "string" }
+        }
+      }
+    }
   ]
 }
 ```
