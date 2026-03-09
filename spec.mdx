@@ -586,7 +586,7 @@ Supports three authentication modes:
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `intent` | string | No | Natural language intent for server-side filtering (e.g. `"send money"`) |
+| `query` | string | No | Search query to filter capabilities (e.g. `"send money"`, `"balance"`). Server-side matching — the server decides how to search (full-text, fuzzy, semantic, etc.). |
 | `cursor` | string | No | Opaque pagination cursor from a previous response's `next_cursor` |
 | `limit` | number | No | Maximum capabilities to return. Server MAY enforce a cap (e.g. 100). Default is server-defined. |
 
