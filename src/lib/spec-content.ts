@@ -8,6 +8,14 @@ export interface SpecTocEntry {
   level: number;
 }
 
+export interface SpecSection {
+  slug: string;
+  number: string;
+  title: string;
+  html: string;
+  toc: SpecTocEntry[];
+}
+
 function slugify(text: string): string {
   return text
     .toLowerCase()
@@ -134,10 +142,16 @@ function renderSpec(rawMd: string): string {
   return marked.parse(rawMd) as string;
 }
 
-export function getSpecContent(sourcePath = "spec.mdx") {
+function readSpec(sourcePath = "spec.mdx"): string {
   const filePath = path.join(process.cwd(), sourcePath);
   const raw = fs.readFileSync(filePath, "utf-8");
-  const markdown = raw.replace(/^---[\s\S]*?---\s*/, "");
+  return raw.replace(/^---[\s\S]*?---\s*/, "");
+}
+
+// --- Full spec (original behavior) ---
+
+export function getSpecContent(sourcePath = "spec.mdx") {
+  const markdown = readSpec(sourcePath);
   const toc = buildToc(markdown);
   const linkedMarkdown = linkSectionReferences(markdown, buildSectionRefMap(toc));
 
@@ -145,4 +159,121 @@ export function getSpecContent(sourcePath = "spec.mdx") {
     html: renderSpec(linkedMarkdown),
     toc,
   };
+}
+
+// --- Section-based spec ---
+
+const SECTION_SLUGS: Record<string, string> = {
+  "1": "introduction",
+  "2": "agent",
+  "3": "host",
+  "4": "capabilities",
+  "5": "authentication",
+  "6": "server",
+  "7": "client",
+  "8": "data-model",
+  "9": "approval-methods",
+  "10": "security",
+  "11": "related-specs",
+  "12": "observability",
+  "13": "implementation",
+  "14": "privacy",
+  "15": "references",
+  "16": "non-goals",
+  "A": "appendix",
+};
+
+function sectionSlug(title: string): string {
+  const num = title.match(/^(\d+)[\.\:]/)?.[1];
+  if (num && SECTION_SLUGS[num]) return SECTION_SLUGS[num];
+  if (/^Appendix\s+[A-Z]/i.test(title)) return "appendix";
+  return slugify(title);
+}
+
+function splitMarkdownSections(markdown: string): { preamble: string; sections: { title: string; body: string }[] } {
+  const lines = markdown.split("\n");
+  let preamble = "";
+  const sections: { title: string; body: string }[] = [];
+  let currentTitle = "";
+  let currentLines: string[] = [];
+  let foundFirstH2 = false;
+
+  for (const line of lines) {
+    const h2Match = line.match(/^## (.+)$/);
+    if (h2Match) {
+      if (foundFirstH2) {
+        sections.push({ title: currentTitle, body: currentLines.join("\n") });
+      } else {
+        preamble = currentLines.join("\n");
+        foundFirstH2 = true;
+      }
+      currentTitle = h2Match[1].replace(/\*\*/g, "").replace(/`/g, "").trim();
+      currentLines = [line];
+    } else {
+      currentLines.push(line);
+    }
+  }
+
+  if (foundFirstH2) {
+    sections.push({ title: currentTitle, body: currentLines.join("\n") });
+  }
+
+  return { preamble, sections };
+}
+
+let cachedSections: SpecSection[] | null = null;
+
+export function getSpecSections(sourcePath = "spec.mdx"): SpecSection[] {
+  if (cachedSections) return cachedSections;
+
+  const markdown = readSpec(sourcePath);
+  const fullToc = buildToc(markdown);
+  const refMap = buildSectionRefMap(fullToc);
+
+  const { preamble, sections: rawSections } = splitMarkdownSections(markdown);
+
+  cachedSections = rawSections.map((sec, i) => {
+    const slug = sectionSlug(sec.title);
+    const numMatch = sec.title.match(/^(\d+)\.\s/);
+    const isAppendix = /^Appendix\s+[A-Z]/i.test(sec.title);
+    const num = numMatch ? numMatch[1] : (isAppendix ? "A" : "");
+    const shortTitle = sec.title.replace(/^\d+\.\s*/, "").replace(/^Appendix\s+[A-Z]:\s*/i, "");
+
+    let sectionMd = sec.body;
+    if (i === 0 && preamble.trim()) {
+      sectionMd = preamble + "\n\n" + sectionMd;
+    }
+
+    const linkedMd = linkSectionReferences(sectionMd, refMap);
+    const html = renderSpec(linkedMd);
+    const toc = buildToc(sectionMd);
+
+    return {
+      slug,
+      number: num,
+      title: shortTitle,
+      html,
+      toc,
+    };
+  });
+
+  return cachedSections;
+}
+
+export function getSpecSectionBySlug(slug: string, sourcePath = "spec.mdx"): SpecSection | undefined {
+  return getSpecSections(sourcePath).find((s) => s.slug === slug);
+}
+
+export function getSectionSlugs(sourcePath = "spec.mdx"): string[] {
+  return getSpecSections(sourcePath).map((s) => s.slug);
+}
+
+export function buildHashToSectionMap(sourcePath = "spec.mdx"): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const section of getSpecSections(sourcePath)) {
+    for (const entry of section.toc) {
+      map.set(entry.id, section.slug);
+    }
+  }
+  return map;
 }
