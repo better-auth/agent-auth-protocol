@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://agentauth.dev/sitemap-index.xml
+
+# AI agent entry points
+# See https://llmstxt.org for the llms.txt convention
+LLMs-Txt: https://agentauth.dev/llms.txt
+LLMs-Full-Txt: https://agentauth.dev/llms-full.txt
