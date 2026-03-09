@@ -46,7 +46,7 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "S
 - **Client** — The process that runs on a host and exposes protocol tools to AI systems (MCP server, CLI, SDK). It manages host and agent keys, talks to servers, and signs JWTs. AI tools like Claude Code or Cursor connect to a client.
 - **Server** — The service's authorization server. It manages discovery, host and agent registrations, approvals, capability grants, and JWT verification. Also called the auth server.
 - **Host** — A stable identity representing the environment where keys are managed (e.g. a laptop, a cloud server, a CI runner). A host is a keypair plus metadata — not a running process. It may be linked to a user or unlinked.
-- **Capability** — A server-offered action or function. Each capability has an `id` and a human-readable description. Capabilities are executed through the server's execute endpoint (`POST /capability/execute`). Servers MAY also include additional metadata for direct execution by clients (e.g. HTTP endpoint details, MCP tool metadata).
+- **Capability** — A server-offered action or function. Each capability has a `name` and a human-readable description. Capabilities are executed through the server's execute endpoint (`POST /capability/execute`). Servers MAY also include additional metadata for direct execution by clients (e.g. HTTP endpoint details, MCP tool metadata).
 - **Agent Capability Grant** — A stored grant of one capability to one agent. Carries per-capability state and metadata such as `status`, `granted_by`, and `expires_at`.
 - **Default capabilities** — The set of capabilities a host is pre-authorized to grant its agents without additional user approval.
 - **Registration** — The process by which a host creates or re-establishes an agent identity on a server. A successful registration results in an `agent_id`, a mode, and an initial permission set.
@@ -145,7 +145,7 @@ Resource servers that are co-located with the authorization server MAY verify th
 **Notes:**
 
 - **Discovery is a pre-step for generic clients.** Multi-provider clients MAY call `list_providers` (§7.1.1), `search_providers` (§7.1.2), and `discover_provider` (§7.1.3) before step (A). Single-service clients skip discovery.
-- **Capabilities are executed through a standard endpoint.** The agent calls `execute_capability` (§7.9), which sends the capability ID and arguments to `POST /capability/execute` (§6.11). The server validates the agent JWT, executes the capability, and returns the result. Servers MAY also expose direct execution metadata on capabilities for clients that prefer to call service endpoints directly (§4.2).
+- **Capabilities are executed through a standard endpoint.** The agent calls `execute_capability` (§7.9), which sends the capability name and arguments to `POST /capability/execute` (§6.11). The server validates the agent JWT, executes the capability, and returns the result. Servers MAY also expose direct execution metadata on capabilities for clients that prefer to call service endpoints directly (§4.2).
 - **Capability escalation.** An active agent that needs additional capabilities calls `request_capability` (§7.5), which may trigger another approval flow (D) for the new capabilities.
 - **Reactivation.** An expired agent can be reactivated via `reactivate_agent` (§7.7), which calls `POST /agent/reactivate` (§6.6). Capabilities decay to host defaults; escalated capabilities must be re-requested.
 
@@ -265,7 +265,7 @@ Every host is in exactly one state at any time. Only `active` hosts can create a
 
 ## 4. Capabilities
 
-Capabilities are the protocol's unit of authorization. A capability is a server-offered action described by a stable identifier and a human-readable description. Registration requests, capability grants, and JWT restriction all operate on capability IDs.
+Capabilities are the protocol's unit of authorization. A capability is a server-offered action described by a stable identifier and a human-readable description. Registration requests, capability grants, and JWT restriction all operate on capability names.
 
 This section defines the capability model itself: what a capability is and what fields it carries. The server endpoint used to list capabilities is defined later in §6.2.
 
@@ -274,12 +274,11 @@ It is useful to distinguish two related concepts:
 - **Capability** — what the server offers
 - **Capability grant** — whether a specific agent is allowed to use that capability
 
-The same capability ID can appear in different parts of the protocol for different reasons. It can be requested by an agent, granted by the server, included in a host's defaults, or used to limit a specific JWT. The capability ID identifies the action itself; the surrounding context determines how it is being used.
+The same capability name can appear in different parts of the protocol for different reasons. It can be requested by an agent, granted by the server, included in a host's defaults, or used to limit a specific JWT. The capability name identifies the action itself; the surrounding context determines how it is being used.
 
 **Core fields** (protocol-level):
 
-- `id` (`string`, required): Stable machine-readable capability identifier. Used in registration, grants, and JWT restriction.
-- `title` (`string`, optional): Human-readable short label for the capability. Recommended for UIs and agent selection.
+- `name` (`string`, required): Stable machine-readable capability identifier. Used in registration, grants, and JWT restriction.
 - `description` (`string`, required): What this capability does and when to use it.
 - `input` (`object`, optional): A JSON Schema describing the shape of the `arguments` object accepted by `POST /capability/execute` (§6.11). Servers SHOULD include this so agents know what arguments to provide. When omitted, the capability takes no arguments.
 - `grant_status` (`string`, optional): `"granted"` or `"not_granted"`. Present on every returned capability when using agent JWT auth. Omitted otherwise.
@@ -288,8 +287,8 @@ The same capability ID can appear in different parts of the protocol for differe
 
 ```json
 {
-  "id": "check_balance",
-  "title": "Check balance",
+  "name": "check_balance",
+
   "description": "Check the balance of a bank account",
   "input": {
     "type": "object",
@@ -309,15 +308,15 @@ The same capability ID can appear in different parts of the protocol for differe
 
 ```json
 {
-  "id": "list_accounts",
-  "title": "List accounts",
+  "name": "list_accounts",
+
   "description": "List all bank accounts for the linked user"
 }
 ```
 
 ### 4.1 Execution
 
-The standard way to execute a capability is through `POST /capability/execute` (§6.11). The agent calls the client's `execute_capability` tool (§7.9) with a `capability_id` and `arguments`. The client signs an agent JWT and forwards the request to the server. The server validates the JWT, checks that the agent has been granted the capability, executes it, and returns the result.
+The standard way to execute a capability is through `POST /capability/execute` (§6.11). The agent calls the client's `execute_capability` tool (§7.9) with a `capability` and `arguments`. The client signs an agent JWT and forwards the request to the server. The server validates the JWT, checks that the agent has been granted the capability, executes it, and returns the result.
 
 This model has a key advantage for adoption: the server acts as a gateway. A service with an existing REST API, GraphQL endpoint, or any other backend can add Agent Auth by deploying the auth server as a proxy — there is no need to add JWT validation to every service endpoint. The auth server handles identity, authorization, and audit in one place, then calls the backend on the agent's behalf.
 
@@ -352,7 +351,7 @@ A capability with HTTP execution metadata:
 
 ```json
 {
-  "id": "create_payment",
+  "name": "create_payment",
   "description": "Create a new payment",
   "http": {
     "method": "POST",
@@ -382,7 +381,7 @@ A capability with a GraphQL descriptor:
 
 ```json
 {
-  "id": "get_user",
+  "name": "get_user",
   "description": "Look up a user by ID",
   "graphql": {
     "endpoint": "https://api.example.com/graphql",
@@ -395,7 +394,7 @@ A capability with a custom / proprietary descriptor:
 
 ```json
 {
-  "id": "deploy_service",
+  "name": "deploy_service",
   "description": "Deploy a service to production",
   "acme.deploy": {
     "cluster": "us-east-1",
@@ -462,11 +461,11 @@ For the initial profile, servers SHOULD use `application/json` as the media type
 
 ### 4.4 General Notes
 
-Capability IDs are opaque strings. The protocol does not define a required naming format — servers MAY use any stable string. Clients and agents MUST treat capability IDs as uninterpreted identifiers.
+Capability names are opaque strings. The protocol does not define a required naming format — servers MAY use any stable string. Clients and agents MUST treat capability names as uninterpreted identifiers.
 
 Servers MAY include additional fields on capability objects beyond those defined above. Clients SHOULD pass through unrecognized fields without dropping them.
 
-For generic clients that support multiple providers, the client MAY prefix capability IDs with the provider name when presenting them to the agent (e.g. `list_issues` → `github.list_issues`) to avoid naming collisions. This is a **client-local convention only**. The client MUST map prefixed capability IDs back to the original capability objects before execution. The server never sees prefixed client-local identifiers.
+For generic clients that support multiple providers, the client MAY prefix capability names with the provider name when presenting them to the agent (e.g. `list_issues` → `github.list_issues`) to avoid naming collisions. This is a **client-local convention only**. The client MUST map prefixed names back to the original capability objects before execution. The server never sees prefixed client-local identifiers.
 
 ## 5. Authentication
 
@@ -509,7 +508,7 @@ Agents authenticate by signing short-lived JWTs per [RFC 7519](https://datatrack
 
 | Claim | Required | Description |
 |---|---|---|
-| `capability_ids` | No | String array of capability IDs this JWT is authorized for. If present, the server MUST reject requests for capabilities not in this list — even if the agent has them granted. If absent, the JWT is valid for all the agent's granted capabilities. |
+| `capabilities` | No | String array of capability names this JWT is authorized for. If present, the server MUST reject requests for capabilities not in this list — even if the agent has them granted. If absent, the JWT is valid for all the agent's granted capabilities. |
 | `cnf` | No | Optional confirmation claim for proof-of-possession profiles. When present, it binds the JWT to a proof key or client certificate, following [RFC 7800](https://datatracker.ietf.org/doc/html/rfc7800). |
 
 ### 5.4 Proof of Possession (Optional)
@@ -531,7 +530,7 @@ For higher-security deployments, servers MAY require a standard proof-of-possess
 6. Check `exp`, `iat`, `jti` replay
 7. If proof of possession is required by server policy, validate the DPoP proof or mTLS binding and ensure it matches the JWT's `cnf` claim
 8. Resolve agent's granted capabilities
-9. If `capability_ids` claim present in JWT, intersect with granted capabilities — reject if the requested operation is not in the JWT's `capability_ids` list
+9. If `capabilities` claim present in JWT, intersect with granted capabilities — reject if the requested operation is not in the JWT's `capabilities` list
 10. Process the request
 
 The server MUST ensure that revocation takes effect within a bounded window.
@@ -606,7 +605,7 @@ This endpoint enables generic clients to work with any Agent Auth server. Purpos
 | `modes` | string[] | Yes | Supported registration modes: `"delegated"`, `"autonomous"`, or both |
 | `approval_methods` | string[] | Yes | How user approval works. Defined values: `"device_authorization"` (RFC 8628), `"ciba"` (Client Initiated Backchannel Authentication). Servers MAY include additional custom methods (see §9.4). Clients SHOULD ignore methods they don't recognize. |
 | `endpoints` | object | Yes | Server API endpoint paths, relative to `issuer` |
-| `capabilities` | object[]? | No | Optional lightweight capability summaries (for example `id`, `title`, `description`). Full capability details (including optional direct execution metadata) remain on `/capability/list`. |
+| `capabilities` | object[]? | No | Optional lightweight capability summaries (for example `name`, `description`). Full capability details (including optional direct execution metadata) remain on `/capability/list`. |
 | `jwks_uri` | string | No | URL to the server's JWKS (JSON Web Key Set). Enables clients to verify server-signed responses in future protocol extensions. Servers that plan to sign responses SHOULD include this. |
 
 Capability details are in the `/capability/list` response (§4). Capabilities are executed through `POST /capability/execute` (§6.11). The discovery document covers identity and authorization configuration.
@@ -650,8 +649,8 @@ Supports three authentication modes:
 {
   "capabilities": [
     {
-      "id": "check_balance",
-      "title": "Check balance",
+      "name": "check_balance",
+
       "description": "Check account balance",
       "http": {
         "method": "GET",
@@ -670,8 +669,8 @@ Supports three authentication modes:
       "grant_status": "granted"
     },
     {
-      "id": "transfer_domestic",
-      "title": "Transfer funds domestically",
+      "name": "transfer_domestic",
+
       "description": "Transfer funds domestically",
       "http": {
         "method": "POST",
@@ -698,8 +697,8 @@ Supports three authentication modes:
       "grant_status": "granted"
     },
     {
-      "id": "transfer_international",
-      "title": "International wire transfer",
+      "name": "transfer_international",
+
       "description": "International wire transfer",
       "http": {
         "method": "POST",
@@ -717,8 +716,8 @@ Supports three authentication modes:
 {
   "capabilities": [
     {
-      "id": "get_transactions",
-      "title": "Get recent transactions",
+      "name": "get_transactions",
+
       "description": "Get recent transactions",
       "acme.stream": {
         "channel": "deployments"
@@ -726,8 +725,8 @@ Supports three authentication modes:
       "grant_status": "granted"
     },
     {
-      "id": "create_payment",
-      "title": "Create payment",
+      "name": "create_payment",
+
       "description": "Create a new payment",
       "http": {
         "method": "POST",
@@ -745,8 +744,8 @@ Supports three authentication modes:
 {
   "capabilities": [
     {
-      "id": "list_issues",
-      "title": "List issues",
+      "name": "list_issues",
+
       "description": "List GitHub issues",
       "http": {
         "method": "GET",
@@ -754,8 +753,8 @@ Supports three authentication modes:
       }
     },
     {
-      "id": "get_repo",
-      "title": "Get repository",
+      "name": "get_repo",
+
       "description": "Get repository details",
       "github.custom-tool": {
         "tool_name": "get_repo"
@@ -789,7 +788,7 @@ Registers a new agent through a host.
 ```json
 {
   "name": "Bank balance checker",
-  "capability_ids": ["check_balance", "transfer_domestic"],
+  "capabilities": ["check_balance", "transfer_domestic"],
   "mode": "delegated",
   "reason": "User asked to check account balances and make a domestic transfer",
   "preferred_method": "device_authorization"
@@ -799,7 +798,7 @@ Registers a new agent through a host.
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `name` | string | Yes | Human-readable name for the agent. Displayed in dashboards, approval screens, and audit logs. |
-| `capability_ids` | string[] | No | Requested capability IDs. If omitted, the server grants the host's default capabilities. |
+| `capabilities` | string[] | No | Requested capability names. If omitted, the server grants the host's default capabilities. |
 | `mode` | string | No | `"delegated"` (default) or `"autonomous"` |
 | `reason` | string | No | Human-readable reason for the request. Displayed to the user on the approval screen. |
 | `preferred_method` | string | No | Preferred approval method (e.g. `"device_authorization"`, `"ciba"`). This is a hint — the server makes the final decision and returns the chosen method in the `approval` object (§9.5). Values correspond to the `approval_methods` array in the discovery response (§6.1). |
@@ -814,8 +813,8 @@ Registers a new agent through a host.
   "mode": "delegated",
   "status": "active",
   "agent_capability_grants": [
-    { "capability_id": "check_balance", "status": "active" },
-    { "capability_id": "transfer_domestic", "status": "active" }
+    { "capability": "check_balance", "status": "active" },
+    { "capability": "transfer_domestic", "status": "active" }
   ]
 }
 ```
@@ -830,8 +829,8 @@ Registers a new agent through a host.
   "mode": "delegated",
   "status": "pending",
   "agent_capability_grants": [
-    { "capability_id": "check_balance", "status": "pending" },
-    { "capability_id": "transfer_domestic", "status": "pending" }
+    { "capability": "check_balance", "status": "pending" },
+    { "capability": "transfer_domestic", "status": "pending" }
   ],
   "approval": {
     "method": "device_authorization",
@@ -866,7 +865,7 @@ Content-Type: application/json
 
 ```json
 {
-  "capability_ids": ["transfer_international"],
+  "capabilities": ["transfer_international"],
   "reason": "User requested an international wire transfer",
   "preferred_method": "ciba"
 }
@@ -874,7 +873,7 @@ Content-Type: application/json
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `capability_ids` | string[] | Yes | Additional capability IDs to request for this agent |
+| `capabilities` | string[] | Yes | Additional capability names to request for this agent |
 | `reason` | string | No | Human-readable explanation for why the agent is requesting these capabilities. Servers SHOULD store this on the resulting grant records for auditability. |
 | `preferred_method` | string | No | Preferred approval method (e.g. `"device_authorization"`, `"ciba"`). This is a hint — the server makes the final decision and returns the chosen method in the `approval` object (§9.5). Values correspond to the `approval_methods` array in the discovery response (§6.1). |
 
@@ -885,7 +884,7 @@ Content-Type: application/json
   "agent_id": "agt_abc123",
   "status": "granted",
   "agent_capability_grants": [
-    { "capability_id": "transfer_international", "status": "active" }
+    { "capability": "transfer_international", "status": "active" }
   ]
 }
 ```
@@ -897,7 +896,7 @@ Content-Type: application/json
   "agent_id": "agt_abc123",
   "status": "pending",
   "agent_capability_grants": [
-    { "capability_id": "transfer_international", "status": "pending" }
+    { "capability": "transfer_international", "status": "pending" }
   ],
   "approval": {
     "method": "device_authorization",
@@ -941,8 +940,8 @@ Content-Type: application/json
   "host_id": "hst_xyz789",
   "status": "active",
   "agent_capability_grants": [
-    { "capability_id": "check_balance", "status": "active", "granted_by": "user_alice" },
-    { "capability_id": "transfer_domestic", "status": "active", "granted_by": "user_alice" }
+    { "capability": "check_balance", "status": "active", "granted_by": "user_alice" },
+    { "capability": "transfer_domestic", "status": "active", "granted_by": "user_alice" }
   ],
   "mode": "delegated",
   "user_id": "user_alice",
@@ -997,8 +996,8 @@ Reactivates an expired agent. Reactivation is a security checkpoint: the agent's
   "agent_id": "agt_abc123",
   "status": "active",
   "agent_capability_grants": [
-    { "capability_id": "check_balance", "status": "active" },
-    { "capability_id": "transfer_domestic", "status": "active" }
+    { "capability": "check_balance", "status": "active" },
+    { "capability": "transfer_domestic", "status": "active" }
   ],
   "activated_at": "2026-03-07T12:00:00Z",
   "expires_at": "2026-03-08T12:00:00Z"
@@ -1012,8 +1011,8 @@ Reactivates an expired agent. Reactivation is a security checkpoint: the agent's
   "agent_id": "agt_abc123",
   "status": "pending",
   "agent_capability_grants": [
-    { "capability_id": "check_balance", "status": "pending" },
-    { "capability_id": "transfer_domestic", "status": "pending" }
+    { "capability": "check_balance", "status": "pending" },
+    { "capability": "transfer_domestic", "status": "pending" }
   ],
   "approval": {
     "method": "device_authorization",
@@ -1169,7 +1168,7 @@ Content-Type: application/json
 
 ```json
 {
-  "capability_id": "check_balance",
+  "capability": "check_balance",
   "arguments": {
     "account_id": "acc_123"
   }
@@ -1178,7 +1177,7 @@ Content-Type: application/json
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `capability_id` | string | Yes | The capability to execute. The agent MUST have an active grant for this capability. |
+| `capability` | string | Yes | The capability to execute. The agent MUST have an active grant for this capability. |
 | `arguments` | object | No | Arguments for the capability. Shape is defined by the capability's input schema. |
 
 **Response (sync — default):**
@@ -1216,7 +1215,7 @@ For streaming capabilities, the server returns a `200` response with `Content-Ty
 
 | Status | Code | When |
 |---|---|---|
-| 400 | `invalid_request` | Missing or malformed `capability_id` |
+| 400 | `invalid_request` | Missing or malformed `capability` |
 | 403 | `capability_not_granted` | Agent does not have an active grant for this capability |
 | 403 | `agent_revoked` | Agent has been revoked |
 | 403 | `agent_expired` | Agent session has expired |
@@ -1259,8 +1258,8 @@ Content-Type: application/json
   "host_id": "hst_xyz789",
   "user_id": "user_alice",
   "agent_capability_grants": [
-    { "capability_id": "check_balance", "status": "active" },
-    { "capability_id": "transfer_domestic", "status": "active" }
+    { "capability": "check_balance", "status": "active" },
+    { "capability": "transfer_domestic", "status": "active" }
   ],
   "mode": "delegated",
   "expires_at": "2026-02-28T14:30:00Z"
@@ -1281,7 +1280,7 @@ Content-Type: application/json
 | `agent_id` | string | Agent ID (from JWT `sub` claim). Only present when `active: true`. |
 | `host_id` | string | Host that created this agent. Only present when `active: true`. |
 | `user_id` | string? | Linked user, if any. Only present when `active: true`. |
-| `agent_capability_grants` | array | Per-capability grant status. If the JWT contained a `capability_ids` claim, only capabilities in that claim are included. Only present when `active: true`. |
+| `agent_capability_grants` | array | Per-capability grant status. If the JWT contained a `capabilities` claim, only capabilities in that claim are included. Only present when `active: true`. |
 | `mode` | string | `"delegated"` or `"autonomous"`. Only present when `active: true`. |
 | `expires_at` | string? | Agent session expiry (ISO 8601). Only present when `active: true`. |
 
@@ -1322,9 +1321,9 @@ The `error` field is a machine-readable code (snake_case string). The `message` 
 |---|---|---|---|
 | `POST /agent/register` | 400 | `unsupported_mode` | Requested mode (`delegated`/`autonomous`) is not supported by this server |
 | `POST /agent/register` | 400 | `unsupported_algorithm` | Agent's key algorithm is not in the server's supported set |
-| `POST /agent/register` | 400 | `invalid_capabilities` | One or more requested capability IDs don't exist or are blocked |
+| `POST /agent/register` | 400 | `invalid_capabilities` | One or more requested capability names don't exist or are blocked |
 | `POST /agent/register` | 409 | `agent_exists` | An agent with this public key is already registered |
-| `POST /agent/request-capability` | 400 | `invalid_capabilities` | One or more requested capability IDs don't exist or are blocked |
+| `POST /agent/request-capability` | 400 | `invalid_capabilities` | One or more requested capability names don't exist or are blocked |
 | `POST /agent/request-capability` | 409 | `already_granted` | All requested capabilities are already granted |
 | Any agent-authenticated | 403 | `capability_not_granted` | The agent does not have this capability |
 | Any agent-authenticated | 403 | `limit_exceeded` | The agent has this capability but the request exceeds its limits |
@@ -1468,8 +1467,8 @@ Returns available capabilities. All parameters are optional — a bare `list_cap
 {
   "capabilities": [
     {
-      "id": "transfer_domestic",
-      "title": "Transfer funds domestically",
+      "name": "transfer_domestic",
+
       "description": "Transfer funds domestically",
       "grant_status": "not_granted",
       "http": {
@@ -1478,8 +1477,8 @@ Returns available capabilities. All parameters are optional — a bare `list_cap
       }
     },
     {
-      "id": "check_balance",
-      "title": "Check balance",
+      "name": "check_balance",
+
       "description": "Check account balance",
       "grant_status": "granted",
       "http": {
@@ -1502,7 +1501,7 @@ Connects an agent to a service. This generates a keypair, registers the agent on
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `provider` | string | Yes | Provider name (from `list_providers`) or service URL |
-| `capability_ids` | string[] | No | Capability IDs to request. If omitted, the server decides which capabilities to grant based on its own policy. |
+| `capabilities` | string[] | No | Capability IDs to request. If omitted, the server decides which capabilities to grant based on its own policy. |
 | `mode` | string | No | `"delegated"` (default) or `"autonomous"` |
 | `preferred_method` | string | No | Preferred approval method hint (e.g. `"device_authorization"`, `"ciba"`). Passed through to the server on `POST /agent/register` (§6.3). |
 
@@ -1511,7 +1510,7 @@ Connects an agent to a service. This generates a keypair, registers the agent on
 1. Look up the provider's configuration (trigger `discover_provider` first if the input is a direct service URL and no retained configuration exists)
 2. Generate an agent keypair
 3. Sign a host JWT containing the agent's public key (see §5.2 for JWT construction)
-4. Call `POST /agent/register` (§6.3) with the host JWT, capability IDs, and mode
+4. Call `POST /agent/register` (§6.3) with the host JWT, capabilities, and mode
 5. If `status: "active"` → store the agent connection and return agent_id + granted capabilities
 6. If `status: "pending"` → initiate the approval flow returned by the server (§9). Poll for status until the agent is approved, rejected, or the approval expires. On approval, store the connection and return agent_id + granted capabilities. On rejection or timeout, report the outcome to the agent.
 
@@ -1524,11 +1523,11 @@ Returns a signed agent JWT for authenticating requests. The agent does not hold 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `agent_id` | string | Yes | The agent's ID |
-| `capability_ids` | string[] | No | Restrict this JWT to specific capabilities. If omitted, the JWT is valid for all the agent's granted capabilities. |
+| `capabilities` | string[] | No | Restrict this JWT to specific capabilities. If omitted, the JWT is valid for all the agent's granted capabilities. |
 
 **Behavior:**
 
-1. If `capability_ids` is provided, verify all requested capabilities are within the agent's granted set — reject if any are not
+1. If `capabilities` is provided, verify all requested capabilities are within the agent's granted set — reject if any are not
 2. Sign an agent JWT (see §5.3 for claims and construction). The JWT SHOULD expire within 60 seconds.
 3. Return the signed JWT string
 
@@ -1552,7 +1551,7 @@ Requests additional capabilities for an already-connected agent. This is how an 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `agent_id` | string | Yes | The agent's ID |
-| `capability_ids` | string[] | Yes | Additional capability IDs to request |
+| `capabilities` | string[] | Yes | Additional capability names to request |
 | `reason` | string | No | Why the agent needs these capabilities |
 | `preferred_method` | string | No | Preferred approval method hint (e.g. `"device_authorization"`, `"ciba"`). Passed through to the server on `POST /agent/request-capability` (§6.4). |
 
@@ -1614,8 +1613,8 @@ Reactivates an expired agent connection. The agent keeps its identity (`agent_id
   "agent_id": "agt_abc123",
   "status": "active",
   "agent_capability_grants": [
-    { "capability_id": "check_balance", "status": "active" },
-    { "capability_id": "transfer_domestic", "status": "active" }
+    { "capability": "check_balance", "status": "active" },
+    { "capability": "transfer_domestic", "status": "active" }
   ]
 }
 ```
@@ -1638,20 +1637,20 @@ Checks the health and status of an existing agent connection.
 
 ### 7.9 execute_capability
 
-Executes a granted capability through the server's execute endpoint (§6.11). The client signs an agent JWT and sends the capability ID and arguments to `POST /capability/execute`. The server validates the JWT, checks grants, executes the capability, and returns the result.
+Executes a granted capability through the server's execute endpoint (§6.11). The client signs an agent JWT and sends the capability name and arguments to `POST /capability/execute`. The server validates the JWT, checks grants, executes the capability, and returns the result.
 
 **Input:**
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `agent_id` | string | Yes | The agent's ID |
-| `capability_id` | string | Yes | The capability to execute |
+| `capability` | string | Yes | The capability to execute |
 | `arguments` | object | No | Arguments for the capability, conforming to the capability's `input` schema |
 
 **Behavior:**
 
 1. Sign an agent JWT scoped to this capability
-2. Call `POST /capability/execute` (§6.11) with the agent JWT, `capability_id`, and `arguments`
+2. Call `POST /capability/execute` (§6.11) with the agent JWT, `capability`, and `arguments`
 3. Return the result to the agent
 4. For async responses (`status: "pending"`), poll the `status_url` until completion and return the final result
 
@@ -1717,7 +1716,7 @@ This section defines the logical fields the protocol operates on. Implementation
 | `public_key` | JWK? | Ed25519 public key (see §5.1). Present when inline key registration is used. |
 | `jwks_url` | string? | JWKS endpoint URL. Present when JWKS-based registration is used. |
 | `user_id` | string? | ID of the owning user in the server's auth system. Set when a user approves and trusts the host. Drives authorization (revocation, management). |
-| `default_capability_ids` | string[] | Default capabilities for agents created through this host |
+| `default_capabilities` | string[] | Default capabilities for agents created through this host |
 | `status` | enum | active, pending, revoked, rejected |
 | `activated_at` | datetime? | Last activation |
 | `expires_at` | datetime? | TTL deadline |
@@ -1753,7 +1752,7 @@ Agent capabilities are stored as individual agent capability grant records rathe
 |---|---|---|
 | `id` | string | Unique identifier |
 | `agent_id` | string (FK) | The agent this capability grant belongs to |
-| `capability_id` | string | The granted capability identifier |
+| `capability` | string | The granted capability identifier |
 | `status` | enum | `active` or `pending` |
 | `granted_by` | string? (FK) | User who granted this permission |
 | `reason` | string? | Why this permission was granted or requested |
@@ -1771,7 +1770,7 @@ Different users can grant different capabilities to the same agent. Each agent c
 
 **Example:** A single agent with three grants from three different users:
 
-| capability_id | granted_by | Use case |
+| capability | granted_by | Use case |
 |---|---|---|
 | `read_emails` | `user_alice` | Alice granted access to her emails |
 | `create_issue` | `user_bob` | Bob granted access to his repository |
@@ -1806,7 +1805,7 @@ The baseline approval method. Every conformant server MUST support this. Used wh
 
 Used when the server can reach the user directly (e.g. mobile app, email, in-app notification). Servers SHOULD implement CIBA — it provides a better experience than device authorization when the server already knows the user's identity, since the user doesn't need to navigate to a URL.
 
-1. Client calls `POST /agent/ciba/authorize` with `login_hint` (email, phone, user ID) and optional `capability_ids`, `binding_message`
+1. Client calls `POST /agent/ciba/authorize` with `login_hint` (email, phone, user ID) and optional `capabilities`, `binding_message`
 2. Server creates a pending CIBA request and returns `expires_in`, `interval`
 3. Server notifies the user through its notification channel (push notification, email, SMS, in-app)
 4. User approves or denies on their device via `POST /agent/ciba/approve` or `POST /agent/ciba/deny`
@@ -1889,7 +1888,7 @@ Revoking a host MUST cascade to all agents under it.
 
 ### 10.6 Capability Validation
 
-Servers SHOULD validate requested capability IDs against a known set. Servers MAY maintain a blocked capability list.
+Servers SHOULD validate requested capability names against a known set. Servers MAY maintain a blocked capability list.
 
 ### 10.7 Host Key Rotation
 
@@ -2074,7 +2073,7 @@ Every authenticated request contains a JWT with:
 
 Combined with the agent's `host_id` and `user_id` (from stored state), the server can reconstruct the full chain: **which user** → **which host** → **which agent** → **which capability** → **when**.
 
-Servers SHOULD log at least: agent ID, capability ID, timestamp, and result (success/error) for each capability call. How to store, query, export, or alert on these logs is an implementation concern.
+Servers SHOULD log at least: agent ID, capability name, timestamp, and result (success/error) for each capability call. How to store, query, export, or alert on these logs is an implementation concern.
 
 ## 13. Implementation Considerations
 
@@ -2207,7 +2206,7 @@ Agent                    Client                   Server
   │<───────────────────────│                        │
   │                        │                        │
   │ connect_agent(        │                        │
-  │   capability_ids: [a,b],│                        │
+  │   capabilities: [a,b],│                        │
   │   mode: "delegated"    │                        │
   │ )                      │                        │
   │───────────────────────>│                        │
@@ -2217,8 +2216,8 @@ Agent                    Client                   Server
   │                        │                        │ host known ✓
   │                        │                        │ capabilities in defaults ✓
   │                        │  { status: "active",   │
-  │                        │    agent_id, capability_ids }│
-  │  agent_id + capability_ids│<───────────────────────│
+  │                        │    agent_id, capabilities }│
+  │  agent_id + capabilities│<───────────────────────│
   │<───────────────────────│                        │
   │                        │                        │
   │  execute_capability     │                        │
@@ -2250,7 +2249,7 @@ Agent                    Client                   Server              User
   │<───────────────────────│                        │                   │
   │                        │                        │                   │
   │ connect_agent(        │                        │                   │
-  │   capability_ids:[a,b],│                        │                   │
+  │   capabilities:[a,b],│                        │                   │
   │   mode: "delegated"   │                        │                   │
   │ )                      │                        │                   │
   │───────────────────────>│                        │                   │
@@ -2292,7 +2291,7 @@ An agent registers itself for its own purposes. No user in the loop.
 Agent                    Client                   Server
   │                        │                        │
   │ connect_agent(        │                        │
-  │   capability_ids:[a,b],│                        │
+  │   capabilities:[a,b],│                        │
   │   mode: "autonomous"  │                        │
   │ )                      │                        │
   │───────────────────────>│                        │
@@ -2305,8 +2304,8 @@ Agent                    Client                   Server
   │                        │                        │  payment? open reg?)
   │                        │                        │
   │                        │ { status: "active",    │
-  │                        │   agent_id, capability_ids }│
-  │  agent_id + capability_ids│<───────────────────────│
+  │                        │   agent_id, capabilities }│
+  │  agent_id + capabilities│<───────────────────────│
   │<───────────────────────│                        │
   │                        │                        │
   │                        │                        │
@@ -2349,7 +2348,7 @@ Agent                    Client                   Server              User
   │<───────────────────────│                        │                   │
   │                        │                        │                   │
   │ connect_agent(        │                        │                   │
-  │   capability_ids: [],  │  (register with no     │                   │
+  │   capabilities: [],  │  (register with no     │                   │
   │   mode: "delegated"   │   capabilities to trigger│                  │
   │ )                      │   user approval)       │                   │
   │───────────────────────>│                        │                   │
@@ -2405,7 +2404,7 @@ Agent                    Client                   Server              User
   │                        │                        │                   │
   │ request_capability(   │                        │                   │
   │   agent_id,            │                        │                   │
-  │   capability_ids:["x"],│                        │                   │
+  │   capabilities:["x"],│                        │                   │
   │   reason: "need x to  │                        │                   │
   │     complete task"     │                        │                   │
   │ )                      │                        │                   │
@@ -2499,7 +2498,7 @@ Agent                    Client                   Registry        bank.com
   │                        │                        │                │
   │ connect_agent(         │                        │                │
   │   provider: "bank",    │                        │                │
-  │   capability_ids:[a,b])│                        │                │
+  │   capabilities:[a,b])│                        │                │
   │───────────────────────>│                        │                │
   │                        │ POST /agent/register   │                │
   │                        │────────────────────────────────────────>│
@@ -2542,7 +2541,7 @@ Agent                    Client                   github.com      bank.com
   │                        │                        │                │
   │ connect_agent(         │                        │                │
   │   provider: "github",  │                        │                │
-  │   capability_ids:      │                        │                │
+  │   capabilities:      │                        │                │
   │     [list_issues])     │                        │                │
   │───────────────────────>│                        │                │
   │                        │ POST /agent/register   │                │
@@ -2553,7 +2552,7 @@ Agent                    Client                   github.com      bank.com
   │                        │                        │                │
   │ connect_agent(         │                        │                │
   │   provider: "bank",    │                        │                │
-  │   capability_ids:      │                        │                │
+  │   capabilities:      │                        │                │
   │     [check_balance])   │                        │                │
   │───────────────────────>│                        │                │
   │                        │ POST /agent/register   │                │
