@@ -35,13 +35,13 @@ import Footer from "@/components/Footer.astro";
             <div class="text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] mt-0.5 shrink-0 w-5 text-right">1</div>
             <div class="flex-1">
               <div class="flex items-center gap-1.5 mb-1">
-                <span class="text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">host</span>
+                <span class="text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">client</span>
                 <svg class="h-2.5 w-2.5 text-[var(--color-muted)] opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                 <span class="text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">server</span>
               </div>
-              <div class="text-[13px] font-medium">Host sends agent creation request</div>
-              <div class="text-[11px] text-[var(--color-muted)] mt-1 leading-relaxed">Includes host public key, agent public key, requested capabilities.</div>
-              <div class="text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] mt-2 bg-[var(--color-surface)] px-2 py-1.5 border border-[var(--color-border)]">POST /agent/register {"{"} publicKey, hostKey, name, capabilities {"}"}</div>
+              <div class="text-[13px] font-medium">Client sends registration request with Host JWT</div>
+              <div class="text-[11px] text-[var(--color-muted)] mt-1 leading-relaxed">Host and agent public keys are carried in the signed Host JWT, not the body.</div>
+              <div class="text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] mt-2 bg-[var(--color-surface)] px-2 py-1.5 border border-[var(--color-border)]">POST /agent/register {"{"} name, capabilities, mode: "delegated" {"}"}</div>
             </div>
           </div>
           <div class="flex gap-3 items-start border border-[var(--color-border)] p-4">
@@ -50,11 +50,11 @@ import Footer from "@/components/Footer.astro";
               <div class="flex items-center gap-1.5 mb-1">
                 <span class="text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">server</span>
                 <svg class="h-2.5 w-2.5 text-[var(--color-muted)] opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-                <span class="text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">host</span>
+                <span class="text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">client</span>
               </div>
-              <div class="text-[13px] font-medium">Server triggers device authorization flow</div>
-              <div class="text-[11px] text-[var(--color-muted)] mt-1 leading-relaxed">Returns verification URL and device code. User must approve.</div>
-              <div class="text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] mt-2 bg-[var(--color-surface)] px-2 py-1.5 border border-[var(--color-border)]">→ {"{"} device_code, user_code, verification_uri {"}"}</div>
+              <div class="text-[13px] font-medium">Server returns pending status with approval flow</div>
+              <div class="text-[11px] text-[var(--color-muted)] mt-1 leading-relaxed">Returns agent ID, pending capability grants, and a verification URL for user approval.</div>
+              <div class="text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] mt-2 bg-[var(--color-surface)] px-2 py-1.5 border border-[var(--color-border)]">→ {"{"} agent_id, status: "pending", approval: {"{"} verification_uri, user_code {"}"} {"}"}</div>
             </div>
           </div>
           <div class="flex gap-3 items-start border border-[var(--color-border)] p-4">
@@ -73,13 +73,13 @@ import Footer from "@/components/Footer.astro";
             <div class="text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] mt-0.5 shrink-0 w-5 text-right">4</div>
             <div class="flex-1">
               <div class="flex items-center gap-1.5 mb-1">
-                <span class="text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">host</span>
+                <span class="text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">client</span>
                 <svg class="h-2.5 w-2.5 text-[var(--color-muted)] opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                 <span class="text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">server</span>
               </div>
-              <div class="text-[13px] font-medium">Host polls, receives agent ID</div>
-              <div class="text-[11px] text-[var(--color-muted)] mt-1 leading-relaxed">Host is registered. Agent is created. On future requests, the host is recognized.</div>
-              <div class="text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] mt-2 bg-[var(--color-surface)] px-2 py-1.5 border border-[var(--color-border)]">→ {"{"} agentId, hostId, capabilities: [...] {"}"}</div>
+              <div class="text-[13px] font-medium">Client polls status, receives active agent</div>
+              <div class="text-[11px] text-[var(--color-muted)] mt-1 leading-relaxed">Host is registered. Agent is active with granted capabilities. On future requests, the host is recognized.</div>
+              <div class="text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] mt-2 bg-[var(--color-surface)] px-2 py-1.5 border border-[var(--color-border)]">→ {"{"} agent_id, host_id, status: "active", agent_capability_grants: [...] {"}"}</div>
             </div>
           </div>
         </div>
@@ -94,21 +94,20 @@ import Footer from "@/components/Footer.astro";
       <div class="max-w-3xl mb-16">
         <h2 class="text-lg font-semibold tracking-tight mb-4">Cryptographically signed agent request</h2>
         <p class="text-[15px] text-[var(--color-muted)] leading-[1.85] font-[family-name:var(--font-serif)] mb-6">
-          Every agent request carries a short-lived JWT (60s TTL) with DPoP-style request binding. The server verifies the signature, checks the binding, and resolves the agent's capabilities.
+          Every agent request carries a short-lived JWT (60s TTL) signed with the agent's Ed25519 private key. The server verifies the signature, checks the agent's status, and resolves its granted capabilities.
         </p>
 
         <div class="border border-[var(--color-border)] mb-8">
           <div class="flex border-b border-[var(--color-border)] bg-[var(--color-surface)]">
-            <div class="px-4 py-2.5 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)]">JWT payload</div>
+            <div class="px-4 py-2.5 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)]">Agent JWT payload</div>
           </div>
           <pre class="p-5 sm:p-6 text-[12.5px] font-[family-name:var(--font-mono)] leading-[1.7] text-[var(--color-muted)] overflow-x-auto bg-[var(--color-surface)]">{"{"}
   "sub": "agt_k7x9m2...",       <span class="opacity-50">// agent ID</span>
+  "aud": "https://auth.bank.com",<span class="opacity-50">// server issuer URL</span>
   "iat": 1709736000,            <span class="opacity-50">// issued at</span>
   "exp": 1709736060,            <span class="opacity-50">// expires in 60s</span>
   "jti": "unique-request-id",   <span class="opacity-50">// replay protection</span>
-  "htm": "POST",                <span class="opacity-50">// HTTP method binding</span>
-  "htu": "/api/reports",        <span class="opacity-50">// HTTP URI binding</span>
-  "ath": "sha256(body)"         <span class="opacity-50">// body hash binding</span>
+  "capabilities": ["check_balance"]<span class="opacity-50">// optional scope restriction</span>
 {"}"}</pre>
         </div>
 
@@ -116,12 +115,12 @@ import Footer from "@/components/Footer.astro";
           <div class="flex border-b border-[var(--color-border)] bg-[var(--color-surface)]">
             <div class="px-4 py-2.5 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)]">HTTP request</div>
           </div>
-          <pre class="p-5 sm:p-6 text-[12.5px] font-[family-name:var(--font-mono)] leading-[1.7] text-[var(--color-muted)] overflow-x-auto bg-[var(--color-surface)]">POST /api/reports HTTP/1.1
-Host: api.example.com
+          <pre class="p-5 sm:p-6 text-[12.5px] font-[family-name:var(--font-mono)] leading-[1.7] text-[var(--color-muted)] overflow-x-auto bg-[var(--color-surface)]">POST /capability/execute HTTP/1.1
+Host: auth.bank.com
 Authorization: Bearer eyJhbGciOiJFZERTQSIsInR5cCI6...
 Content-Type: application/json
 
-{"{"} "query": "monthly summary" {"}"}</pre>
+{"{"} "capability": "check_balance", "arguments": {"{"} "account_id": "acc_123" {"}"} {"}"}</pre>
         </div>
       </div>
 
@@ -134,20 +133,20 @@ Content-Type: application/json
       <div class="max-w-3xl mb-16">
         <h2 class="text-lg font-semibold tracking-tight mb-4">Requesting additional capabilities at runtime</h2>
         <p class="text-[15px] text-[var(--color-muted)] leading-[1.85] font-[family-name:var(--font-serif)] mb-6">
-          Capabilities are separated from agent identity. When an agent needs more access, it requests "pending" capability grants. Users approve or deny each one independently.
+          Capabilities are separated from agent identity. When an agent needs more access, it requests additional capability grants via the server. Users approve through the same device authorization or CIBA flow used for registration.
         </p>
 
         <div class="border border-[var(--color-border)]">
           <div class="flex border-b border-[var(--color-border)] bg-[var(--color-surface)]">
-            <div class="px-4 py-2.5 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)]">Escalation flow</div>
+            <div class="px-4 py-2.5 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)]">Capability escalation flow</div>
           </div>
           <div class="p-5 sm:p-6 text-[12.5px] font-[family-name:var(--font-mono)] leading-[1.8] text-[var(--color-muted)] space-y-2">
-            <div><span class="text-[var(--color-fg)]">1.</span> Agent requests additional capabilities</div>
-            <div class="pl-4 text-[11px] bg-[var(--color-surface)] border border-[var(--color-border)] px-2 py-1">POST /agent/request-scope {"{"} capabilities: ["github.push", "slack.send"] {"}"}</div>
-            <div class="pt-2"><span class="text-[var(--color-fg)]">2.</span> Server creates "pending" capability grants, returns verification URL</div>
-            <div class="pl-4 text-[11px] bg-[var(--color-surface)] border border-[var(--color-border)] px-2 py-1">→ {"{"} requestId, status: "pending", verificationUrl {"}"}</div>
-            <div class="pt-2"><span class="text-[var(--color-fg)]">3.</span> User approves or denies each capability independently</div>
-            <div class="pl-4 text-[11px] bg-[var(--color-surface)] border border-[var(--color-border)] px-2 py-1">POST /agent/approve-scope {"{"} requestId, action: "approve", capabilities: ["github.push"] {"}"}</div>
+            <div><span class="text-[var(--color-fg)]">1.</span> Agent requests additional capabilities (authenticated with Agent JWT)</div>
+            <div class="pl-4 text-[11px] bg-[var(--color-surface)] border border-[var(--color-border)] px-2 py-1">POST /agent/request-capability {"{"} capabilities: ["transfer_international"], reason: "..." {"}"}</div>
+            <div class="pt-2"><span class="text-[var(--color-fg)]">2.</span> Server creates pending capability grants, returns approval flow</div>
+            <div class="pl-4 text-[11px] bg-[var(--color-surface)] border border-[var(--color-border)] px-2 py-1">→ {"{"} agent_id, status: "pending", approval: {"{"} verification_uri, user_code {"}"} {"}"}</div>
+            <div class="pt-2"><span class="text-[var(--color-fg)]">3.</span> User approves via device flow. Client polls GET /agent/status until granted.</div>
+            <div class="pl-4 text-[11px] bg-[var(--color-surface)] border border-[var(--color-border)] px-2 py-1">→ {"{"} agent_id, status: "active", agent_capability_grants: [{"{"} capability: "transfer_international", status: "active" {"}"}] {"}"}</div>
           </div>
         </div>
       </div>
@@ -161,7 +160,7 @@ Content-Type: application/json
       <div class="max-w-3xl">
         <h2 class="text-lg font-semibold tracking-tight mb-4">Verifying agent requests on the server</h2>
         <p class="text-[15px] text-[var(--color-muted)] leading-[1.85] font-[family-name:var(--font-serif)] mb-6">
-          On the server, extract the JWT, verify the signature against the agent's stored public key, check request binding, and resolve the agent's active capabilities.
+          On the server, extract the JWT, verify the Ed25519 signature against the agent's stored public key, check the agent's status, and resolve its granted capabilities.
         </p>
 
         <div class="border border-[var(--color-border)] mb-6">
@@ -170,21 +169,21 @@ Content-Type: application/json
           </div>
           <pre class="p-5 sm:p-6 text-[12.5px] font-[family-name:var(--font-mono)] leading-[1.7] text-[var(--color-muted)] overflow-x-auto bg-[var(--color-surface)]"><span class="text-[var(--color-fg)]">const</span> session = <span class="text-[var(--color-fg)]">await</span> auth.api.getAgentSession({"{"} headers {"}"});
 
-<span class="text-[var(--color-fg)]">if</span> (session) {"{"}{"\n"}  <span class="text-[var(--color-fg)]">const</span> {"{"} agent, user {"}"} = session;{"\n"}  <span class="opacity-50">// agent.id        → "agt_k7x9m2..."</span>{"\n"}  <span class="opacity-50">// agent.capabilities → [{"{"}id, status, grantedBy{"}"}]</span>{"\n"}  <span class="opacity-50">// user.id         → "user_xyz"</span>{"\n"}{"}"}</pre>
+<span class="text-[var(--color-fg)]">if</span> (session) {"{"}{"\n"}  <span class="text-[var(--color-fg)]">const</span> {"{"} agent, user {"}"} = session;{"\n"}  <span class="opacity-50">// agent.id                    → "agt_k7x9m2..."</span>{"\n"}  <span class="opacity-50">// agent.agentCapabilityGrants  → [{"{"}capability, status, grantedBy{"}"}]</span>{"\n"}  <span class="opacity-50">// user.id                     → "user_xyz"</span>{"\n"}{"}"}</pre>
         </div>
 
         <div class="border border-[var(--color-border)]">
           <div class="flex border-b border-[var(--color-border)] bg-[var(--color-surface)]">
-            <div class="px-4 py-2.5 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)]">Raw protocol</div>
+            <div class="px-4 py-2.5 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)]">Raw protocol (§5.5)</div>
           </div>
           <div class="p-5 sm:p-6 text-[12.5px] font-[family-name:var(--font-mono)] leading-[1.8] text-[var(--color-muted)]">
             <div><span class="text-[var(--color-fg)]">1.</span> Extract JWT from Authorization header</div>
-            <div><span class="text-[var(--color-fg)]">2.</span> Look up agent by <code class="text-[11px] bg-[var(--color-surface)] px-1 border border-[var(--color-border)]">sub</code> claim</div>
-            <div><span class="text-[var(--color-fg)]">3.</span> Verify Ed25519 signature with stored public key</div>
-            <div><span class="text-[var(--color-fg)]">4.</span> Verify request binding (<code class="text-[11px] bg-[var(--color-surface)] px-1 border border-[var(--color-border)]">htm</code>, <code class="text-[11px] bg-[var(--color-surface)] px-1 border border-[var(--color-border)]">htu</code>, <code class="text-[11px] bg-[var(--color-surface)] px-1 border border-[var(--color-border)]">ath</code>)</div>
-            <div><span class="text-[var(--color-fg)]">5.</span> Check JTI replay, expiry, lifecycle state</div>
-            <div><span class="text-[var(--color-fg)]">6.</span> Resolve active capabilities from database</div>
-            <div><span class="text-[var(--color-fg)]">7.</span> Return AgentSession {"{"} agent, capabilities, user {"}"}</div>
+            <div><span class="text-[var(--color-fg)]">2.</span> Extract <code class="text-[11px] bg-[var(--color-surface)] px-1 border border-[var(--color-border)]">sub</code> (agent ID), verify <code class="text-[11px] bg-[var(--color-surface)] px-1 border border-[var(--color-border)]">aud</code> matches server issuer</div>
+            <div><span class="text-[var(--color-fg)]">3.</span> Look up agent, check status (active only)</div>
+            <div><span class="text-[var(--color-fg)]">4.</span> Verify Ed25519 signature with stored public key</div>
+            <div><span class="text-[var(--color-fg)]">5.</span> Check <code class="text-[11px] bg-[var(--color-surface)] px-1 border border-[var(--color-border)]">exp</code>, <code class="text-[11px] bg-[var(--color-surface)] px-1 border border-[var(--color-border)]">iat</code>, <code class="text-[11px] bg-[var(--color-surface)] px-1 border border-[var(--color-border)]">jti</code> replay</div>
+            <div><span class="text-[var(--color-fg)]">6.</span> Resolve granted capabilities, intersect with JWT <code class="text-[11px] bg-[var(--color-surface)] px-1 border border-[var(--color-border)]">capabilities</code> claim if present</div>
+            <div><span class="text-[var(--color-fg)]">7.</span> Process the request</div>
           </div>
         </div>
       </div>

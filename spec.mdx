@@ -49,7 +49,7 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "S
 - **Capability** — A server-offered action or function. Each capability has a `name` and a human-readable description. Capabilities are executed through the server's execute endpoint (`POST /capability/execute`). Servers MAY also include additional metadata for direct execution by clients (e.g. HTTP endpoint details, MCP tool metadata).
 - **Agent Capability Grant** — A stored grant of one capability to one agent. Carries per-capability state and metadata such as `status`, `granted_by`, and `expires_at`.
 - **Default capabilities** — The set of capabilities a host is pre-authorized to grant its agents without additional user approval.
-- **Registration** — The process by which a client registers an agent identity under a host on a server. A successful registration results in an `agent_id`, a mode, and an initial permission set.
+- **Registration** — The process by which a client registers an agent identity under a host on a server. A successful registration results in an `agent_id`, a mode, and an initial capability set.
 - **Reactivation** — Bringing an expired agent back to `active` state. A security checkpoint: capabilities decay to host defaults and lifetime clocks reset.
 - **Approval** — User consent for registration, trust establishment, account linking, or capability escalation. Required when server policy does not allow the request to be auto-approved.
 - **Mode** — How an agent was registered: `"delegated"` (acting on behalf of a user) or `"autonomous"` (operating without a user in the loop). Mode is immutable after creation.
@@ -489,7 +489,7 @@ All JWTs MUST include `jti`. The server MUST cache seen values and reject duplic
 
 Clients obtain the server configuration from discovery (§6.1). That configuration includes the server's `issuer` URL. All endpoint paths in this section are relative to that `issuer`.
 
-The Server API is organized into four groups:
+The Server API is organized into the following groups:
 
 - **Discovery** (§6.1) — how clients find the server's configuration
 - **Capabilities and registration flow** (§6.2–§6.4) — capability discovery, registration, and capability requests
@@ -932,7 +932,7 @@ GET /agent/status
 
 Returns the current status of an agent and its granted capabilities.
 
-**Authorization:** Host JWT. Requires `?agent_id=...` query param. The server MUST verify the agent is registered under this host.
+**Authorization:** Host JWT. The server MUST verify the agent is registered under this host.
 
 **Request headers:**
 
@@ -940,7 +940,9 @@ Returns the current status of an agent and its granted capabilities.
 Authorization: Bearer <host_jwt>
 ```
 
-| Field | Type | Required | Description |
+**Query parameters:**
+
+| Parameter | Type | Required | Description |
 |---|---|---|---|
 | `agent_id` | string | Yes | The agent's ID |
 
@@ -1902,9 +1904,9 @@ Agent capabilities are stored as individual agent capability grant records rathe
 | `agent_id` | string (FK) | The agent this capability grant belongs to |
 | `capability` | string | The granted capability identifier |
 | `status` | enum | `active`, `pending`, or `denied` |
-| `granted_by` | string? (FK) | User who granted this permission |
-| `reason` | string? | Why this permission was granted or requested |
-| `expires_at` | datetime? | When this specific permission expires (independent of agent TTL) |
+| `granted_by` | string? (FK) | User who granted this capability |
+| `reason` | string? | Why this capability was granted or requested |
+| `expires_at` | datetime? | When this specific capability grant expires (independent of agent TTL) |
 | `created_at` | datetime | Created |
 | `updated_at` | datetime | Last modified |
 
@@ -2533,7 +2535,7 @@ Agent                    Client                   Server              User
 
 ### A.5 Capability Escalation Mid-Task
 
-An active agent discovers it needs more permissions while working.
+An active agent discovers it needs more capabilities while working.
 
 ```
 Agent                    Client                   Server              User
