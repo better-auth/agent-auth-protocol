@@ -134,7 +134,7 @@ function renderSpec(rawMd: string): string {
   return marked.parse(rawMd) as string;
 }
 
-export function getSpecContent(sourcePath = "spec.mdx") {
+export function getSpecContent(sourcePath = "src/specs/v1.0-draft.mdx") {
   const filePath = path.join(process.cwd(), sourcePath);
   const raw = fs.readFileSync(filePath, "utf-8");
   const markdown = raw.replace(/^---[\s\S]*?---\s*/, "");

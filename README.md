@@ -26,7 +26,7 @@ The build runs Astro, generates a Pagefind search index, and copies it into `pub
 
 | Path | Description |
 | --- | --- |
-| `spec.mdx` | The full protocol specification (v1.0-draft) |
+| `src/specs/v1.0-draft.mdx` | The full protocol specification (v1.0-draft) |
 | `src/pages/` | Astro pages — landing, specification viewer, examples, implementations |
 | `src/pages/api/chat.ts` | Streaming chat endpoint (Anthropic) for the "Ask" feature |
 | `src/components/` | Nav, Footer, Search, SearchModal |

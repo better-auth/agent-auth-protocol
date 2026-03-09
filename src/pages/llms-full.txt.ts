@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 export const prerender = true;
 
 export const GET: APIRoute = async () => {
-  const raw = readFileSync(resolve(process.cwd(), "spec.mdx"), "utf-8");
+  const raw = readFileSync(resolve(process.cwd(), "src/specs/v1.0-draft.mdx"), "utf-8");
   const markdown = raw.replace(/^---[\s\S]*?---\n*/, "");
 
   const body = `# Agent Auth Protocol — Full Specification

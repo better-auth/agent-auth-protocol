@@ -6,7 +6,7 @@ let specContent: string | null = null;
 
 function getSpec(): string {
   if (specContent) return specContent;
-  const raw = readFileSync(resolve(process.cwd(), "spec.mdx"), "utf-8");
+  const raw = readFileSync(resolve(process.cwd(), "src/specs/v1.0-draft.mdx"), "utf-8");
   specContent = raw.replace(/^---[\s\S]*?---\n*/, "");
   return specContent;
 }
