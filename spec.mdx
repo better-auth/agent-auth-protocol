@@ -734,6 +734,7 @@ Registers a new agent through a host.
 ```json
 {
   "name": "Bank balance checker",
+  "host_name": "MacBook-Pro",
   "capabilities": ["check_balance", "transfer_domestic"],
   "mode": "delegated",
   "reason": "User asked to check account balances and make a domestic transfer",
@@ -744,6 +745,7 @@ Registers a new agent through a host.
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `name` | string | Yes | Human-readable name for the agent. Displayed in dashboards, approval screens, and audit logs. |
+| `host_name` | string | No | Human-readable name for the host (e.g. `"MacBook-Pro"`, `"CI Server"`). Used when the server creates a new host during dynamic registration. Clients SHOULD auto-detect this from available context (e.g. device hostname, client name). For known hosts, the server MAY use this to update the display name. Informational only — servers MUST NOT use it for authorization. |
 | `capabilities` | string[] | No | Requested capability names. If omitted, the agent is created with no capabilities — the agent can request them later via `POST /agent/request-capability` (§6.4). |
 | `mode` | string | No | `"delegated"` (default) or `"autonomous"` |
 | `reason` | string | No | Human-readable reason for the request. Displayed to the user on the approval screen. |
@@ -1242,7 +1244,15 @@ All endpoints use a standard error response format:
 }
 ```
 
-The `error` field is a machine-readable code (snake_case string). The `message` field is a human-readable explanation for debugging — clients SHOULD NOT parse it programmatically.
+The `error` field is a machine-readable code (snake_case string). The `message` field is a human-readable explanation for debugging — clients SHOULD NOT parse it programmatically. Error responses MAY include additional structured fields beyond `error` and `message` to help clients recover. For example, `invalid_capabilities` errors SHOULD include an `invalid_capabilities` field listing the unrecognized capability names:
+
+```json
+{
+  "error": "invalid_capabilities",
+  "message": "One or more requested capability names don't exist",
+  "invalid_capabilities": ["nonexistent_cap", "also_not_real"]
+}
+```
 
 **Common error codes** (apply to all endpoints):
 
@@ -1459,6 +1469,7 @@ Connects an agent to a service. This generates a keypair, registers the agent on
 4. Call `POST /agent/register` (§6.3) with the host JWT, capabilities, and mode
 5. If `status: "active"` → store the agent connection and return agent_id + granted capabilities
 6. If `status: "pending"` → initiate the approval flow returned by the server (§9). Poll for status until the agent is approved, rejected, or the approval expires. On approval, store the connection and return agent_id + granted capabilities. On rejection or timeout, report the outcome to the agent.
+7. If the server returns `invalid_capabilities` → return an error to the agent indicating which capability names were not recognized. The client SHOULD include the list of available capabilities (from the most recent `list_capabilities` or `discover_provider` result) so the agent can self-correct without an extra round trip.
 
 ### 7.4 sign_jwt
 
@@ -1506,7 +1517,8 @@ Requests additional capabilities for an already-connected agent. This is how an 
 1. Sign an agent JWT and call `POST /agent/request-capability` (§6.4)
 2. If `status: "granted"` → return the newly granted capabilities
 3. If `status: "pending"` → initiate the approval flow returned by the server (§9). Poll for status until approved or denied.
-4. Return the outcome to the agent
+4. If the server returns `invalid_capabilities` → return an error to the agent indicating which capability names were not recognized. The client SHOULD include the list of available capabilities so the agent can self-correct.
+5. Return the outcome to the agent
 
 **Response shape:**
 
@@ -1670,7 +1682,7 @@ This section defines the logical fields the protocol operates on. Implementation
 | `created_at` | datetime | Created |
 | `updated_at` | datetime | Last modified |
 
-Clients SHOULD auto-detect the `name` from available context (e.g. device hostname, client name).
+Clients SHOULD auto-detect the `name` from available context (e.g. device hostname, client name) and pass it as `host_name` during agent registration (§6.3).
 
 ### 8.2 Agent
 
