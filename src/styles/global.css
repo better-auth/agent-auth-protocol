@@ -14,8 +14,8 @@
   --font-pixel: "Geist Pixel Square", monospace;
   --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, monospace;
-  --font-serif: "Lora", ui-serif, Georgia, serif;
-  --font-spec: "Source Serif 4", ui-serif, Georgia, serif;
+  --font-serif: "Noto Serif", ui-serif, Georgia, serif;
+  --font-spec: "Noto Serif", ui-serif, Georgia, serif;
 
   --color-bg: #ffffff;
   --color-fg: #0a0a0a;

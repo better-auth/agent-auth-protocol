@@ -70,14 +70,14 @@ The protocol defines three runtime participants and two identity types:
 | Participant | **Agent** | The AI that needs to act. Has an agent ID and calls client tools. |
 | Participant | **Client** | The process that exposes protocol tools to AI systems (MCP server, CLI, SDK). Holds a host identity, manages keys, and signs requests. |
 | Participant | **Server** | The service's authorization server. Manages registrations, capabilities, approvals, and verification. |
-| Identity type | **Host** | The client's persistent identity on a server: a keypair plus metadata. The server associates default capabilities, trust, and optionally a `user_id` with it. |
+| Identity type | **Host** | The client's persistent identity on a server: a keypair plus metadata. The server associates default capabilities, trust, and optionally a linked user with it. |
 | Identity type | **Agent** | A per-agent identity used for authenticated capability execution after registration. |
 
 The host is an identity record and credential set, not a running process. A client uses a host identity when registering agents, checking status, or performing host-authenticated operations.
 
 In practice, a host is usually backed by a keypair whose private key is available to the client. The client uses that key to sign host-authenticated JWTs. The server stores or resolves only the corresponding public key.
 
-On each server, the host's public key identifies the host. The server MAY associate default capabilities and a `user_id` with that host. When a client signs a registration request with the host's private key, the server recognizes the host and can auto-approve delegated agents within that host's default capability set when the host is already linked to a user.
+On each server, the host's public key identifies the host. The server MAY associate default capabilities and a linked user with that host. When a client signs a registration request with the host's private key, the server recognizes the host and can auto-approve delegated agents within that host's default capability set when the host is already linked to a user.
 
 Public keys for both hosts and agents can be provided to servers in two ways:
 - **Inline (JWK)** — sent directly during registration. Simplest case.
@@ -178,7 +178,7 @@ Every agent is in exactly one state at any time. Only `active` agents can authen
 | `expired` | Session TTL or max lifetime elapsed. Re-approval required to reactivate. |
 | `revoked` | Permanent. Cannot be reactivated. |
 | `rejected` | User denied the registration. |
-| `claimed` | Autonomous agent claimed when its host acquired a `user_id` (§3.4). Capabilities revoked, agent archived. Activity history attributed to the user. Terminal state. |
+| `claimed` | Autonomous agent claimed when its host was linked to a user (§3.4). Capabilities revoked, agent archived. Activity history attributed to the user. Terminal state. |
 
 ### 2.4 Lifetime Clocks
 
@@ -225,7 +225,7 @@ Hosts are established in one of two ways:
 1. **Dynamic registration** — the host is first seen as part of agent registration (§6.3). If the host is unknown, the server creates it in `pending` state and waits for user approval.
 2. **Pre-registration** — the host is registered before any agent exists. The user provides the host's public key directly via the server's dashboard, admin API, or any other server-specific mechanism.
 
-In both cases, the result is the same host record: a host keypair (or JWKS URL), an optional linked user via `user_id`, and a set of default capabilities for delegated agents. A host without a linked user MAY provision autonomous agents.
+In both cases, the result is the same host record: a host keypair (or JWKS URL), an optional linked user, and a set of default capabilities for delegated agents. A host without a linked user MAY provision autonomous agents.
 
 ### 3.3 Host Linking
 
