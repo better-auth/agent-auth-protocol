@@ -113,14 +113,7 @@ function isSubChild(parentText: string, childText: string): boolean {
       localStorage.setItem("theme", isDark ? "dark" : "light");
     });
 
-    requestAnimationFrame(function() {
-      requestAnimationFrame(function() {
-        var nav = document.getElementById("spec-nav");
-        var shell = document.getElementById("spec-shell");
-        if (nav) nav.classList.add("collapsed");
-        if (shell) shell.classList.add("expanded");
-      });
-    });
+    // Nav stays visible for navigation back to home
   </script>
 
   <script is:inline>

@@ -96,12 +96,7 @@
 .spec-nav-collapsible {
   overflow: hidden;
   max-height: 44px;
-  transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
   opacity: 1;
-}
-.spec-nav-collapsible.collapsed {
-  max-height: 0;
-  opacity: 0;
 }
 
 .spec-shell {
@@ -110,10 +105,6 @@
   min-height: 0;
   height: calc(100vh - 44px);
   overflow: hidden;
-  transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.spec-shell.expanded {
-  height: 100vh;
 }
 
 .spec-reader-content {
