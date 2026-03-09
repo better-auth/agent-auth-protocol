@@ -552,10 +552,9 @@ This endpoint enables generic clients to work with any Agent Auth server. Purpos
 | `modes` | string[] | Yes | Supported registration modes: `"delegated"`, `"autonomous"`, or both |
 | `approval_methods` | string[] | Yes | How user approval works. Defined values: `"device_authorization"` (RFC 8628), `"ciba"` (Client Initiated Backchannel Authentication). Servers MAY include additional custom methods (see §9.4). Clients SHOULD ignore methods they don't recognize. |
 | `endpoints` | object | Yes | Server API endpoint paths, relative to `issuer` |
-| `capabilities` | object[]? | No | Optional lightweight capability summaries (for example `name`, `description`). Full capability details (including optional direct execution metadata) remain on `/capability/list`. |
 | `jwks_uri` | string | No | URL to the server's JWKS (JSON Web Key Set). Enables clients to verify server-signed responses in future protocol extensions. Servers that plan to sign responses SHOULD include this. |
 
-Capability details are in the `/capability/list` response (§4). Capabilities are executed through `POST /capability/execute` (§6.11). The discovery document covers identity and authorization configuration.
+Capabilities are listed via `/capability/list` (§6.2) and executed through `POST /capability/execute` (§6.11). The discovery document covers identity and authorization configuration only.
 
 #### 6.1.1 Versioning
 
@@ -745,7 +744,7 @@ Registers a new agent through a host.
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `name` | string | Yes | Human-readable name for the agent. Displayed in dashboards, approval screens, and audit logs. |
-| `capabilities` | string[] | No | Requested capability names. If omitted, the server grants the host's default capabilities. |
+| `capabilities` | string[] | No | Requested capability names. If omitted, the agent is created with no capabilities — the agent can request them later via `POST /agent/request-capability` (§6.4). |
 | `mode` | string | No | `"delegated"` (default) or `"autonomous"` |
 | `reason` | string | No | Human-readable reason for the request. Displayed to the user on the approval screen. |
 | `preferred_method` | string | No | Preferred approval method (e.g. `"device_authorization"`, `"ciba"`). This is a hint — the server makes the final decision and returns the chosen method in the `approval` object (§9.5). Values correspond to the `approval_methods` array in the discovery response (§6.1). |
@@ -756,7 +755,7 @@ Registers a new agent through a host.
 {
   "agent_id": "agt_abc123",
   "host_id": "hst_xyz789",
-  "name": "Bank Balance Checker",
+  "name": "Bank balance checker",
   "mode": "delegated",
   "status": "active",
   "agent_capability_grants": [
@@ -772,7 +771,7 @@ Registers a new agent through a host.
 {
   "agent_id": "agt_abc123",
   "host_id": "hst_xyz789",
-  "name": "Bank Balance Checker",
+  "name": "Bank balance checker",
   "mode": "delegated",
   "status": "pending",
   "agent_capability_grants": [
@@ -872,7 +871,6 @@ Returns the current status of an agent and its granted capabilities.
 
 ```
 Authorization: Bearer <host_jwt>
-Content-Type: application/json
 ```
 
 | Field | Type | Required | Description |
@@ -1283,8 +1281,6 @@ The `error` field is a machine-readable code (snake_case string). The `message` 
 | `POST /agent/rotate-key` | 400 | `unsupported_algorithm` | New key's algorithm is not supported |
 | `POST /host/rotate-key` | 400 | `unsupported_algorithm` | New key's algorithm is not supported |
 | `GET /agent/status` | 404 | `agent_not_found` | Agent ID doesn't exist |
-| `POST /agent/introspect` | 404 | `agent_not_found` | Agent ID doesn't exist |
-| `POST /agent/introspect` | 404 | `host_not_found` | Host ID doesn't exist |
 
 Servers MAY return additional error codes beyond those listed. Clients SHOULD handle unknown error codes gracefully by falling back to the HTTP status code.
 
@@ -1400,7 +1396,7 @@ Returns available capabilities. All parameters are optional — a bare `list_cap
 **Input:**
 
 - `provider` (`string`, optional): Provider name from `list_providers`. Required for multi-provider clients.
-- `intent` (`string`, optional): Natural language intent for server-side filtering (e.g. `"send money"`).
+- `query` (`string`, optional): Search query for server-side filtering (e.g. `"send money"`).
 - `agent_id` (`string`, optional): If provided, response includes grant status per capability.
 - `cursor` (`string`, optional): Pagination cursor from a previous response.
 
@@ -1449,8 +1445,10 @@ Connects an agent to a service. This generates a keypair, registers the agent on
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `provider` | string | Yes | Provider name (from `list_providers`) or service URL |
-| `capabilities` | string[] | No | Capability names to request. If omitted, the server decides which capabilities to grant based on its own policy. |
+| `name` | string | Yes | Human-readable name for the agent. Displayed in dashboards, approval screens, and audit logs. Clients MAY auto-generate this from context if the agent doesn't provide one. |
+| `capabilities` | string[] | No | Capability names to request. If omitted, the agent is created with no capabilities — the agent can request them later via `request_capability` (§7.5). |
 | `mode` | string | No | `"delegated"` (default) or `"autonomous"` |
+| `reason` | string | No | Human-readable reason for the request. Displayed to the user on the approval screen. |
 | `preferred_method` | string | No | Preferred approval method hint (e.g. `"device_authorization"`, `"ciba"`). Passed through to the server on `POST /agent/register` (§6.3). |
 
 **Behavior:**
@@ -1633,7 +1631,7 @@ To be compatible with generic clients, a registry MUST implement the following e
       "provider_name": "example",
       "description": "Example service",
       "issuer": "https://example.com",
-      "algorithms": ["EdDSA"],
+      "algorithms": ["Ed25519"],
       "modes": ["delegated", "autonomous"],
       "approval_methods": ["device_authorization"],
       "endpoints": { ... },
@@ -1701,7 +1699,7 @@ Agent capabilities are stored as individual agent capability grant records rathe
 | `id` | string | Unique identifier |
 | `agent_id` | string (FK) | The agent this capability grant belongs to |
 | `capability` | string | The granted capability identifier |
-| `status` | enum | `active` or `pending` |
+| `status` | enum | `active`, `pending`, or `denied` |
 | `granted_by` | string? (FK) | User who granted this permission |
 | `reason` | string? | Why this permission was granted or requested |
 | `expires_at` | datetime? | When this specific permission expires (independent of agent TTL) |
@@ -1756,17 +1754,16 @@ Used when the server can reach the user directly (e.g. mobile app, email, in-app
 1. Client calls `POST /agent/ciba/authorize` with `login_hint` (email, phone, user ID) and optional `capabilities`, `binding_message`
 2. Server creates a pending CIBA request and returns `expires_in`, `interval`
 3. Server notifies the user through its notification channel (push notification, email, SMS, in-app)
-4. User approves or denies on their device via `POST /agent/ciba/approve` or `POST /agent/ciba/deny`
+4. User approves or denies on their device (implementation-specific — the server provides its own approval UI or endpoints)
 5. Client polls `GET /agent/status` (§6.5) at the `interval` rate until the agent's status changes
 
-**CIBA endpoints:**
+**Protocol endpoint:**
 
 | Endpoint | Method | Description |
 |---|---|---|
 | `/agent/ciba/authorize` | POST | Initiate a CIBA authentication request |
-| `/agent/ciba/approve` | POST | Approve a pending CIBA request (user-facing) |
-| `/agent/ciba/deny` | POST | Deny a pending CIBA request (user-facing) |
-| `/agent/ciba/pending` | GET | List pending CIBA requests for the current user |
+
+The user-facing approval surface (approve, deny, list pending requests) is an implementation concern — the server provides whatever UI or endpoints are appropriate for its platform. These are not protocol endpoints.
 
 Approval result is observed through `GET /agent/status` (§6.5), not a separate token endpoint. The client polls the status endpoint at the `interval` rate.
 
