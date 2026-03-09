@@ -1,6 +1,4 @@
 ---
-import Search from "@/components/Search.astro";
-
 interface Props {
   active?: string;
   showThemeToggle?: boolean;
@@ -40,9 +38,6 @@ const links = [
           )}
         </a>
       ))}
-      <div class="shrink-0 border-l border-[var(--color-border)] ml-1 pl-1">
-        <Search />
-      </div>
       {showThemeToggle && (
         <div class="shrink-0 pl-1">
           <button
