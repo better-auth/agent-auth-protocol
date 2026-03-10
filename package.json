@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build && pagefind --site dist/client && cp -r dist/client/pagefind public/pagefind",
+    "build": "astro build && pagefind --site .vercel/output/static",
     "preview": "astro preview"
   },
   "dependencies": {

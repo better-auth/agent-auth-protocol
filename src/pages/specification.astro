@@ -4,6 +4,8 @@ import Nav from "@/components/Nav.astro";
 import Footer from "@/components/Footer.astro";
 import { getSpecContent, type SpecTocEntry } from "@/lib/spec-content";
 
+export const prerender = true;
+
 const { html, toc } = getSpecContent();
 
 const topLevel = toc.filter((e: SpecTocEntry) => e.level === 2);
