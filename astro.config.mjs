@@ -1,11 +1,12 @@
 import { defineConfig } from 'astro/config';
 import tailwindcss from '@tailwindcss/vite';
-import node from '@astrojs/node';
 import sitemap from '@astrojs/sitemap';
+import vercel from '@astrojs/vercel';
 
 export default defineConfig({
   site: 'https://agentauth.dev',
-  adapter: node({ mode: 'standalone' }),
+  output: 'server',
+  adapter: vercel(),
   integrations: [sitemap()],
   devToolbar: { enabled: false },
   vite: {
