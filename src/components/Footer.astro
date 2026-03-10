@@ -22,8 +22,51 @@ const { showThemeToggle = false } = Astro.props;
             class="inline-flex items-center justify-center h-7 w-7 text-[var(--color-muted)] hover:text-[var(--color-fg)] transition-colors cursor-pointer"
             aria-label="Toggle theme"
           >
-            <svg class="h-4 w-4 block dark:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-            <svg class="h-4 w-4 hidden dark:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              class="h-5 w-5 block dark:hidden"
+              aria-hidden="true"
+            >
+              <g
+                fill="none"
+                stroke="#888888"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+              >
+                <path
+                  stroke-dasharray="2"
+                  stroke-dashoffset="0"
+                  d="M12 21v1M21 12h1M12 3v-1M3 12h-1"
+                />
+                <path
+                  stroke-dasharray="2"
+                  stroke-dashoffset="0"
+                  d="M18.5 18.5l0.5 0.5M18.5 5.5l0.5 -0.5M5.5 5.5l-0.5 -0.5M5.5 18.5l-0.5 0.5"
+                />
+                <animateTransform
+                  attributeName="transform"
+                  dur="30s"
+                  repeatCount="indefinite"
+                  type="rotate"
+                  values="0 12 12;360 12 12"
+                />
+              </g>
+              <circle cx="12" cy="12" r="6" fill="#424242" />
+            </svg>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 32 32"
+              class="h-5 w-5 hidden dark:block"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M16 2.66667V29.3333C19.5362 29.3333 22.9276 27.9286 25.4281 25.4281C27.9286 22.9276 29.3333 19.5362 29.3333 16C29.3333 12.4638 27.9286 9.07239 25.4281 6.57191C22.9276 4.07142 19.5362 2.66667 16 2.66667Z"
+                fill="#fff"
+              />
+            </svg>
           </button>
         )}
       </div>

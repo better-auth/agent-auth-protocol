@@ -394,11 +394,11 @@ const cards = [
     </div>
   </section>
 
-  <!-- Ask trigger — iOS home indicator style -->
-  <div class="fixed bottom-0 left-1/2 z-40 flex flex-col items-center" id="ask-trigger-wrap" style="translate: -50% 100%; opacity: 0; transition: translate .5s cubic-bezier(.32,.72,0,1), opacity .4s ease;">
+  <!-- Ask trigger -->
+  <div class="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 flex flex-col items-end" id="ask-trigger-wrap" style="translate: 0 120%; opacity: 0; transition: translate .5s cubic-bezier(.32,.72,0,1), opacity .4s ease;">
     <button
       id="ask-trigger"
-      class="flex flex-col items-center gap-2.5 cursor-pointer group px-6 pt-3 pb-5 backdrop-blur-md bg-[var(--color-bg)]/80 rounded-t-lg"
+      class="flex items-center gap-3 cursor-pointer group px-4 py-3 border border-[color-mix(in_oklch,var(--color-fg)_10%,transparent)] backdrop-blur-md bg-[var(--color-bg)]/88 rounded-lg shadow-[0_8px_24px_color-mix(in_oklch,var(--color-fg)_6%,transparent)]"
     >
       <span class="flex items-center gap-2">
         <svg class="w-3.5 h-3.5 text-[var(--color-muted)] group-hover:text-[var(--color-fg)] transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -410,7 +410,6 @@ const cards = [
         </svg>
         <span class="text-[10px] font-[family-name:var(--font-mono)] font-medium uppercase tracking-widest text-[color-mix(in_oklch,var(--color-fg)_55%,transparent)] group-hover:text-[var(--color-fg)] transition-colors">Learn about the protocol</span>
       </span>
-      <span id="ask-wave" class="block w-10 h-[3px] rounded-full bg-[var(--color-fg)] opacity-80 group-hover:opacity-100 transition-opacity"></span>
     </button>
   </div>
 
@@ -509,15 +508,6 @@ const cards = [
       animation: agent-blink 3s ease-in-out infinite;
       animation-delay: 1.8s;
     }
-    @keyframes indicator-pulse {
-      0%, 100% { opacity: 0.8; }
-      50% { opacity: 1; }
-    }
-    #ask-wave {
-      animation: indicator-pulse 2.5s ease-in-out infinite;
-      animation-delay: 2s;
-    }
-
     #ask-sheet {
       visibility: hidden;
       opacity: 0;
@@ -995,7 +985,6 @@ const cards = [
   (function() {
     var triggerWrap = document.getElementById("ask-trigger-wrap");
     var trigger = document.getElementById("ask-trigger");
-    var wave = document.getElementById("ask-wave");
     var sheet = document.getElementById("ask-sheet");
     var closeBtn = document.getElementById("ask-close");
     var backdrop = document.getElementById("ask-backdrop");
@@ -1007,18 +996,15 @@ const cards = [
 
     var isStreaming = false;
 
-    // Intro: slide up to peek from bottom + wave
+    // Intro: slide in from bottom-right
     setTimeout(function() {
-      triggerWrap.style.translate = "-50% 30%";
+      triggerWrap.style.translate = "0 0";
       triggerWrap.style.opacity = "1";
-      setTimeout(function() {
-        wave.classList.add("waving");
-      }, 400);
     }, 600);
 
     function openSheet(query) {
       sheet.classList.add("open");
-      triggerWrap.style.translate = "-50% 100%";
+      triggerWrap.style.translate = "0 120%";
       triggerWrap.style.opacity = "0";
       document.body.style.overflow = "hidden";
       history.pushState({ askSheet: true }, "", "#ask");
@@ -1035,7 +1021,7 @@ const cards = [
     function closeSheet() {
       if (isStreaming) return;
       sheet.classList.remove("open");
-      triggerWrap.style.translate = "-50% 30%";
+      triggerWrap.style.translate = "0 0";
       triggerWrap.style.opacity = "1";
       document.body.style.overflow = "";
       if (location.hash === "#ask") {
@@ -1060,7 +1046,7 @@ const cards = [
       if (sheet.classList.contains("open") && location.hash !== "#ask") {
         if (isStreaming) return;
         sheet.classList.remove("open");
-        triggerWrap.style.translate = "-50% 30%";
+        triggerWrap.style.translate = "0 0";
         triggerWrap.style.opacity = "1";
         document.body.style.overflow = "";
       }
