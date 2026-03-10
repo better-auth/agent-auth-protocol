@@ -15,12 +15,13 @@ const links = [
 ];
 ---
 
-<nav class="sticky top-0 z-50 bg-[var(--color-bg)]/95 backdrop-blur-sm">
-  <div class="mx-auto flex items-center h-11 px-5 sm:px-6 max-w-[1400px]">
-    <a href="/" class="shrink-0 text-sm font-normal tracking-[0.08em] uppercase font-[family-name:var(--font-pixel)]">
+<nav class="sticky top-0 z-50 border-b border-[var(--color-border)] bg-[var(--color-bg)]/95 backdrop-blur-sm">
+  <div class="mx-auto flex min-h-11 items-center px-5 sm:px-6 max-w-[1400px]">
+    <a href="/" class="shrink-0 py-3 text-sm font-normal tracking-[0.08em] uppercase font-[family-name:var(--font-pixel)]">
       AGENT-AUTH.
     </a>
-    <div class="ml-auto flex items-center overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+
+    <div class="ml-auto hidden items-center md:flex">
       {links.map((link) => (
         <a
           href={link.href}
@@ -42,8 +43,8 @@ const links = [
       {showThemeToggle && (
         <div class="shrink-0 pl-1">
           <button
-            id="theme-toggle"
-            class="inline-flex items-center justify-center h-7 w-7 text-[var(--color-muted)] hover:text-[var(--color-fg)] transition-colors cursor-pointer"
+            class="theme-toggle inline-flex items-center justify-center h-7 w-7 text-[var(--color-muted)] hover:text-[var(--color-fg)] transition-colors cursor-pointer"
+            type="button"
             aria-label="Toggle theme"
           >
             <svg
@@ -95,14 +96,142 @@ const links = [
         </div>
       )}
     </div>
+
+    <div class="ml-auto flex items-center gap-1.5 md:hidden">
+      {showThemeToggle && (
+        <button
+          class="theme-toggle inline-flex items-center justify-center h-8 w-8 text-[var(--color-muted)] hover:text-[var(--color-fg)] transition-colors cursor-pointer"
+          type="button"
+          aria-label="Toggle theme"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            class="h-5 w-5 block dark:hidden"
+            aria-hidden="true"
+          >
+            <g
+              fill="none"
+              stroke="#888888"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+            >
+              <path
+                stroke-dasharray="2"
+                stroke-dashoffset="0"
+                d="M12 21v1M21 12h1M12 3v-1M3 12h-1"
+              />
+              <path
+                stroke-dasharray="2"
+                stroke-dashoffset="0"
+                d="M18.5 18.5l0.5 0.5M18.5 5.5l0.5 -0.5M5.5 5.5l-0.5 -0.5M5.5 18.5l-0.5 0.5"
+              />
+              <animateTransform
+                attributeName="transform"
+                dur="30s"
+                repeatCount="indefinite"
+                type="rotate"
+                values="0 12 12;360 12 12"
+              />
+            </g>
+            <circle cx="12" cy="12" r="6" fill="#424242" />
+          </svg>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 32 32"
+            class="h-5 w-5 hidden dark:block"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M16 2.66667V29.3333C19.5362 29.3333 22.9276 27.9286 25.4281 25.4281C27.9286 22.9276 29.3333 19.5362 29.3333 16C29.3333 12.4638 27.9286 9.07239 25.4281 6.57191C22.9276 4.07142 19.5362 2.66667 16 2.66667Z"
+                fill="#fff"
+              />
+            </svg>
+        </button>
+      )}
+      <button
+        id="nav-menu-toggle"
+        class="inline-flex h-8 w-8 items-center justify-center text-[var(--color-muted)] hover:text-[var(--color-fg)] transition-colors cursor-pointer"
+        type="button"
+        aria-label="Toggle navigation menu"
+        aria-controls="nav-mobile-menu"
+        aria-expanded="false"
+      >
+        <svg class="nav-menu-open-icon h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round">
+          <path d="M4 7h16" />
+          <path d="M4 12h16" />
+          <path d="M4 17h16" />
+        </svg>
+        <svg class="nav-menu-close-icon hidden h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round">
+          <path d="M6 6l12 12" />
+          <path d="M18 6 6 18" />
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div id="nav-mobile-menu" class="hidden border-t border-[var(--color-border)] bg-[var(--color-bg)] md:hidden">
+    <div class="mx-auto flex max-w-[1400px] flex-col px-5 py-2 sm:px-6">
+      {links.map((link) => (
+        <a
+          href={link.href}
+          target={link.external ? "_blank" : undefined}
+          rel={link.external ? "noopener noreferrer" : undefined}
+          class:list={[
+            "inline-flex items-center gap-1.5 py-3 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider transition-colors",
+            active === link.href
+              ? "text-[var(--color-fg)]"
+              : "text-[var(--color-muted)] hover:text-[var(--color-fg)]",
+          ]}
+        >
+          {link.label}
+          {link.external && (
+            <svg class="h-2.5 w-2.5 opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          )}
+        </a>
+      ))}
+    </div>
   </div>
 </nav>
 
 {showThemeToggle && (
   <script is:inline>
-    document.getElementById("theme-toggle")?.addEventListener("click", () => {
-      const isDark = document.documentElement.classList.toggle("dark");
-      localStorage.setItem("theme", isDark ? "dark" : "light");
+    document.querySelectorAll(".theme-toggle").forEach((button) => {
+      button.addEventListener("click", () => {
+        const isDark = document.documentElement.classList.toggle("dark");
+        localStorage.setItem("theme", isDark ? "dark" : "light");
+      });
     });
   </script>
 )}
+
+<script is:inline>
+  const navToggle = document.getElementById("nav-menu-toggle");
+  const navMenu = document.getElementById("nav-mobile-menu");
+  const navOpenIcon = navToggle?.querySelector(".nav-menu-open-icon");
+  const navCloseIcon = navToggle?.querySelector(".nav-menu-close-icon");
+
+  if (navToggle && navMenu) {
+    const setNavOpen = (isOpen) => {
+      navToggle.setAttribute("aria-expanded", String(isOpen));
+      navMenu.classList.toggle("hidden", !isOpen);
+      navOpenIcon?.classList.toggle("hidden", isOpen);
+      navCloseIcon?.classList.toggle("hidden", !isOpen);
+    };
+
+    navToggle.addEventListener("click", () => {
+      const isOpen = navToggle.getAttribute("aria-expanded") === "true";
+      setNavOpen(!isOpen);
+    });
+
+    navMenu.querySelectorAll("a").forEach((link) => {
+      link.addEventListener("click", () => setNavOpen(false));
+    });
+
+    window.addEventListener("resize", () => {
+      if (window.innerWidth >= 768) setNavOpen(false);
+    });
+  }
+</script>

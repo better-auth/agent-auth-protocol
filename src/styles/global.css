@@ -114,9 +114,17 @@
 }
 
 .spec-nav-collapsible {
-  overflow: hidden;
+  position: relative;
+  z-index: 60;
+  overflow: visible;
   max-height: 44px;
   opacity: 1;
+}
+
+@media (min-width: 48rem) {
+  .spec-nav-collapsible {
+    overflow: hidden;
+  }
 }
 
 .spec-shell {

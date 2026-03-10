@@ -37,237 +37,125 @@ const cards = [
   <Nav active="/" showThemeToggle={true} />
 
   <!-- Hero -->
-  <section class="relative overflow-hidden">
-    <div class="absolute inset-0 pointer-events-none select-none" aria-hidden="true" style="background: radial-gradient(ellipse 80% 60% at 50% 40%, var(--color-fg), transparent); opacity: 0.03;"></div>
-    <div class="relative mx-auto max-w-[1400px] px-5 sm:px-6 py-16 sm:py-20 lg:py-24">
-      <div class="flex flex-col lg:flex-row gap-10 lg:gap-12 xl:gap-16">
-        <!-- Left: copy + FAQ -->
-        <div class="lg:flex-1 lg:pt-8">
-          <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-[3.25rem] tracking-tight leading-[1.1] mb-6">
-            <span class="font-semibold">Agent Auth</span> <span class="font-light">Protocol</span>
-          </h1>
-          <p class="text-base sm:text-lg text-[var(--color-muted)] leading-relaxed max-w-lg mb-8">
-            An implementation-oriented protocol that gives AI agents their own identity, permissions, and lifecycle, so services can authenticate, authorize, and audit them independently.
-          </p>
-          <div class="flex flex-wrap gap-3 mt-8">
-            <a href="/overview" class="inline-flex items-center gap-2 px-4 py-2 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider border border-[var(--color-fg)] bg-[var(--color-fg)] text-[var(--color-bg)] hover:opacity-90 transition-opacity">
-              How it works
-            </a>
-            <a href="/specification" class="inline-flex items-center gap-2 px-4 py-2 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider border border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-fg)] hover:border-[var(--color-fg)] transition-colors">
-              Read the spec
-            </a>
-          </div>
-        </div>
+  <section class="relative overflow-hidden bg-[var(--color-bg)]">
 
-        <!-- Right: interactive demo — fixed height, no layout shift -->
-        <div class="lg:w-[520px] xl:w-[560px] shrink-0 w-full lg:pt-[2rem] relative">
-          <div class="border border-[var(--color-border)] bg-[var(--color-bg)] overflow-hidden" id="hero-demo">
-            <!-- Prompt area with typing -->
-            <div class="px-4 py-3 border-b border-[var(--color-border)]">
-              <div class="flex items-start gap-2.5">
-                <span class="text-[var(--color-muted)] text-[13px] mt-px select-none shrink-0">›</span>
-                <div class="flex-1 min-w-0">
-                  <span class="text-[13px] leading-snug" id="demo-prompt"></span><span id="demo-cursor" class="inline-block w-[1.5px] h-[15px] bg-[var(--color-fg)] align-middle ml-px" style="animation: blink 1s step-end infinite;"></span>
-                </div>
-              </div>
-            </div>
+    <div
+      class="absolute inset-0 hidden pointer-events-none select-none dark:block"
+      aria-hidden="true"
+      style="background:
+        radial-gradient(ellipse 80% 65% at 50% 25%, transparent 0%, rgba(0, 0, 0, 0.18) 58%, rgba(0, 0, 0, 0.5) 100%),
+        linear-gradient(to bottom, rgba(0, 0, 0, 0.18) 0%, rgba(0, 0, 0, 0.36) 100%);"
+    ></div>
 
-            <!-- Timeline — fixed height, content scrolls within -->
-            <div class="h-[370px] overflow-hidden relative" id="demo-timeline">
-              <div class="px-4 py-2 h-full overflow-y-auto" id="demo-scroll">
-                <div id="demo-steps"></div>
-              </div>
-            </div>
+    <div
+      class="absolute inset-0 hidden pointer-events-none select-none dark:block"
+      aria-hidden="true"
+      style="background: linear-gradient(to bottom, transparent 0%, var(--color-fg) 50%, transparent 100%); background-size: 100% 3px; background-repeat: repeat; opacity: 0.015;"
+    ></div>
 
-            <!-- Footer: replay / next -->
-            <div id="demo-footer" class="border-t border-[var(--color-border)] px-4 py-2 flex items-center justify-center" style="visibility:hidden;">
-              <button id="demo-replay-btn" class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)] hover:text-[var(--color-fg)] transition-colors cursor-pointer">↻ Replay</button>
-            </div>
-          </div>
+    <div
+      class="absolute -top-24 -right-20 hidden h-[26rem] w-[26rem] rounded-full pointer-events-none select-none dark:block"
+      aria-hidden="true"
+      style="background: radial-gradient(circle, var(--color-fg) 0%, transparent 70%); opacity: 0.035; filter: blur(70px);"
+    ></div>
+    <div
+      class="absolute -bottom-32 -left-24 hidden h-[30rem] w-[30rem] rounded-full pointer-events-none select-none dark:block"
+      aria-hidden="true"
+      style="background: radial-gradient(circle, var(--color-fg) 0%, transparent 70%); opacity: 0.03; filter: blur(90px);"
+    ></div>
+
+    <div class="absolute inset-0 pointer-events-none select-none overflow-hidden" aria-hidden="true">
+      <span class="absolute bottom-[1.15rem] right-9 text-[8px] font-[family-name:var(--font-mono)] uppercase tracking-[0.2em] text-[color:color-mix(in_oklch,var(--color-fg)_12%,transparent)] dark:text-[color:color-mix(in_oklch,var(--color-fg)_22%,transparent)]">
+        draft.v1
+      </span>
+    </div>
+
+    <div class="relative z-10 mx-auto max-w-[1400px] px-5 sm:px-6 py-12 sm:py-14 lg:py-16">
+      <div class="mx-auto flex max-w-5xl flex-col items-center text-center">
+        <h1 class="max-w-4xl text-balance text-4xl font-semibold tracking-[-0.04em] sm:text-5xl md:text-6xl lg:text-[4.15rem] lg:leading-[0.98]">
+          Agent Auth <span class="font-light text-[color:color-mix(in_oklch,var(--color-fg)_70%,transparent)]">Protocol</span>
+        </h1>
+
+        <p class="mt-4 max-w-2xl text-pretty text-base leading-relaxed text-[color:color-mix(in_oklch,var(--color-fg)_62%,transparent)] sm:text-lg">
+          An implementation-oriented protocol that gives AI agents their own identity, permissions, and lifecycle, so services can authenticate, authorize, and audit them independently.
+        </p>
+
+        <div class="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <a href="/overview" class="inline-flex items-center gap-2 border border-[var(--color-fg)] bg-[var(--color-fg)] px-4 py-2 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-bg)] transition-opacity hover:opacity-90">
+            How it works
+          </a>
+          <a href="/specification" class="inline-flex items-center gap-2 border border-[color:color-mix(in_oklch,var(--color-fg)_14%,transparent)] bg-[color:color-mix(in_oklch,var(--color-fg)_4%,transparent)] px-4 py-2 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[color:color-mix(in_oklch,var(--color-fg)_68%,transparent)] transition-colors hover:border-[color:color-mix(in_oklch,var(--color-fg)_28%,transparent)] hover:text-[var(--color-fg)]">
+            Read the spec
+          </a>
         </div>
       </div>
     </div>
+
+    <div
+      class="absolute inset-x-0 bottom-0 h-24 pointer-events-none select-none"
+      aria-hidden="true"
+      style="background: linear-gradient(to bottom, transparent 0%, var(--color-bg) 100%);"
+    ></div>
   </section>
 
   <!-- The problem -->
   <section class="relative">
     <div class="mx-auto max-w-[1400px] px-5 sm:px-6 pb-16">
       <div class="flex items-center gap-3 mb-6">
-        <span class="text-[10px] font-[family-name:var(--font-mono)] tracking-[0.15em] uppercase text-[var(--color-muted)]">Delegated agents</span>
+        <span class="text-[11px] font-[family-name:var(--font-mono)] tracking-[0.15em] uppercase text-[var(--color-body)]">Delegated agents</span>
         <div class="flex-1 border-t border-[var(--color-border)]"></div>
       </div>
       <p class="text-[15px] text-[var(--color-body)] leading-[1.8] max-w-2xl mb-8">Agent integrations today reuse a user's API keys, OAuth tokens, or a shared client credential. That collapses the agent into the user's identity — there's no per-agent visibility, scoping, approval, or revocation.</p>
 
-      <!-- Tabbed comparison -->
-      <div class="border border-[var(--color-border)]">
-        <!-- Tabs -->
-        <div class="flex border-b border-[var(--color-border)] bg-[var(--color-surface)] overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-          <button class="del-tab px-4 sm:px-5 py-2.5 text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider whitespace-nowrap transition-colors text-[var(--color-fg)] border-b-2 border-[var(--color-fg)]" data-tab="identity">Identity</button>
-          <button class="del-tab px-4 sm:px-5 py-2.5 text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider whitespace-nowrap transition-colors text-[var(--color-muted)] hover:text-[var(--color-fg)] border-b-2 border-transparent" data-tab="permissions">Permissions</button>
-          <button class="del-tab px-4 sm:px-5 py-2.5 text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider whitespace-nowrap transition-colors text-[var(--color-muted)] hover:text-[var(--color-fg)] border-b-2 border-transparent" data-tab="approval">Approval</button>
-          <button class="del-tab px-4 sm:px-5 py-2.5 text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider whitespace-nowrap transition-colors text-[var(--color-muted)] hover:text-[var(--color-fg)] border-b-2 border-transparent" data-tab="revocation">Revocation</button>
-          <button class="del-tab px-4 sm:px-5 py-2.5 text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider whitespace-nowrap transition-colors text-[var(--color-muted)] hover:text-[var(--color-fg)] border-b-2 border-transparent" data-tab="audit">Audit trail</button>
-        </div>
-
-        <!-- Panels -->
-        <div class="del-panel grid grid-cols-2" id="del-identity">
-          <div class="px-6 sm:px-8 py-6 border-r border-[var(--color-border)]">
-            <div class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-red-400 mb-4">Today</div>
-            <div class="flex items-center gap-3 text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">
+      <div class="border border-[var(--color-border)] bg-[var(--color-bg)]">
+        <div class="grid md:grid-cols-2">
+          <div class="px-6 sm:px-8 py-7 border-b md:border-b-0 md:border-r border-[var(--color-border)]">
+            <div class="text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-red-500 mb-4">Today</div>
+            <div class="flex flex-col sm:flex-row items-center gap-3 text-[11px] sm:text-[12px] font-[family-name:var(--font-mono)] text-[var(--color-body)]">
               <div class="flex flex-col items-center gap-1.5">
-                <div class="w-9 h-9 border border-[var(--color-border)] flex items-center justify-center text-[9px]">A1</div>
-                <div class="w-9 h-9 border border-[var(--color-border)] flex items-center justify-center text-[9px]">A2</div>
-                <div class="w-9 h-9 border border-[var(--color-border)] flex items-center justify-center text-[9px]">A3</div>
+                <div class="w-11 h-11 border border-[var(--color-border)] flex items-center justify-center text-[10px]">A1</div>
+                <div class="w-11 h-11 border border-[var(--color-border)] flex items-center justify-center text-[10px]">A2</div>
+                <div class="w-11 h-11 border border-[var(--color-border)] flex items-center justify-center text-[10px]">A3</div>
               </div>
-              <svg class="w-4 h-4 opacity-30 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-              <div class="flex-1 border border-dashed border-red-400/30 px-3 py-2.5 text-center">
-                <div class="text-[10px] text-red-400">same token</div>
-                <div class="text-[9px] mt-0.5">user_oauth_xyz</div>
+              <svg class="w-5 h-5 rotate-90 sm:rotate-0 opacity-60 shrink-0 text-[var(--color-body)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              <div class="w-full flex-1 border border-dashed border-red-400/30 px-3 py-2.5 text-center">
+                <div class="text-[11px] text-red-500">same token</div>
+                <div class="text-[10px] mt-0.5 text-[var(--color-body)]">user_oauth_xyz</div>
               </div>
-              <svg class="w-4 h-4 opacity-30 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-              <div class="w-14 h-14 border border-[var(--color-border)] flex items-center justify-center text-[9px] text-center leading-tight bg-[var(--color-surface)]">Bank<br/>API</div>
+              <svg class="w-5 h-5 rotate-90 sm:rotate-0 opacity-60 shrink-0 text-[var(--color-body)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              <div class="shrink-0 w-16 h-16 border border-[var(--color-border)] flex items-center justify-center text-[10px] text-center leading-tight bg-[var(--color-surface)]">Bank<br/>API</div>
             </div>
-            <p class="text-[11px] text-[var(--color-muted)] mt-3">All agents share one token. The server sees the user, not the agent.</p>
+            <p class="text-[12px] text-[var(--color-body)] leading-relaxed mt-4">All agents share one token. The server sees the user, not the agent.</p>
           </div>
-          <div class="px-6 sm:px-8 py-6">
-            <div class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-green-500 mb-4">With Agent Auth</div>
-            <div class="flex items-center gap-3 text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">
+          <div class="px-6 sm:px-8 py-7">
+            <div class="text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-green-600 mb-4">With Agent Auth</div>
+            <div class="flex flex-col sm:flex-row items-center gap-3 text-[11px] sm:text-[12px] font-[family-name:var(--font-mono)] text-[var(--color-body)]">
               <div class="flex flex-col items-center gap-1.5">
-                <div class="w-9 h-9 border border-green-500/30 flex items-center justify-center text-[9px] text-green-500">A1</div>
-                <div class="w-9 h-9 border border-green-500/30 flex items-center justify-center text-[9px] text-green-500">A2</div>
-                <div class="w-9 h-9 border border-green-500/30 flex items-center justify-center text-[9px] text-green-500">A3</div>
+                <div class="w-11 h-11 border border-green-500/30 flex items-center justify-center text-[10px] text-green-600">A1</div>
+                <div class="w-11 h-11 border border-green-500/30 flex items-center justify-center text-[10px] text-green-600">A2</div>
+                <div class="w-11 h-11 border border-green-500/30 flex items-center justify-center text-[10px] text-green-600">A3</div>
               </div>
-              <svg class="w-4 h-4 opacity-30 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-              <div class="flex-1 flex flex-col gap-1.5">
-                <div class="border border-green-500/20 px-2.5 py-1 text-[9px] bg-green-500/5 flex justify-between"><span><span class="text-green-500">agt_1</span> check_balance</span><span class="text-green-500">✓</span></div>
-                <div class="border border-green-500/20 px-2.5 py-1 text-[9px] bg-green-500/5 flex justify-between"><span><span class="text-green-500">agt_2</span> transfer_funds</span><span class="text-green-500">✓</span></div>
-                <div class="border border-green-500/20 px-2.5 py-1 text-[9px] bg-green-500/5 flex justify-between"><span><span class="text-green-500">agt_3</span> list_transactions</span><span class="text-green-500">✓</span></div>
+              <svg class="w-5 h-5 rotate-90 sm:rotate-0 opacity-60 shrink-0 text-[var(--color-body)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              <div class="w-full flex-1 flex flex-col gap-1.5">
+                <div class="border border-green-500/20 px-3 py-1.5 text-[10px] bg-green-500/5 flex justify-between"><span><span class="text-green-600">agt_1</span> check_balance</span><span class="text-green-600">✓</span></div>
+                <div class="border border-green-500/20 px-3 py-1.5 text-[10px] bg-green-500/5 flex justify-between"><span><span class="text-green-600">agt_2</span> transfer_funds</span><span class="text-green-600">✓</span></div>
+                <div class="border border-green-500/20 px-3 py-1.5 text-[10px] bg-green-500/5 flex justify-between"><span><span class="text-green-600">agt_3</span> list_transactions</span><span class="text-green-600">✓</span></div>
               </div>
-              <svg class="w-4 h-4 opacity-30 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-              <div class="w-14 h-14 border border-[var(--color-border)] flex items-center justify-center text-[9px] text-center leading-tight bg-[var(--color-surface)]">Bank<br/>API</div>
+              <svg class="w-5 h-5 rotate-90 sm:rotate-0 opacity-60 shrink-0 text-[var(--color-body)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              <div class="shrink-0 w-16 h-16 border border-[var(--color-border)] flex items-center justify-center text-[10px] text-center leading-tight bg-[var(--color-surface)]">Bank<br/>API</div>
             </div>
-            <p class="text-[11px] text-[var(--color-muted)] mt-3">Each agent has its own identity. Every request traces back to a specific agent.</p>
-          </div>
-        </div>
-
-        <div class="del-panel grid grid-cols-2 hidden" id="del-permissions">
-          <div class="px-6 sm:px-8 py-6 border-r border-[var(--color-border)]">
-            <div class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-red-400 mb-4">Today</div>
-            <div class="flex flex-col gap-1.5 text-[10px] font-[family-name:var(--font-mono)]">
-              <div class="border border-dashed border-red-400/30 px-2.5 py-1.5 text-[var(--color-muted)]"><span class="text-red-400">A1</span> read, send, delete</div>
-              <div class="border border-dashed border-red-400/30 px-2.5 py-1.5 text-[var(--color-muted)]"><span class="text-red-400">A2</span> read, send, delete</div>
-              <div class="border border-dashed border-red-400/30 px-2.5 py-1.5 text-[var(--color-muted)]"><span class="text-red-400">A3</span> read, send, delete</div>
-            </div>
-            <p class="text-[11px] text-[var(--color-muted)] mt-3">Every agent gets the user's full permissions. An agent that only needs to read your email can also delete your inbox.</p>
-          </div>
-          <div class="px-6 sm:px-8 py-6">
-            <div class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-green-500 mb-4">With Agent Auth</div>
-            <div class="flex flex-col gap-1.5 text-[10px] font-[family-name:var(--font-mono)]">
-              <div class="border border-green-500/20 px-2.5 py-1.5 bg-green-500/5"><span class="text-green-500">agt_1</span> <span class="text-[var(--color-muted)]">read_email</span></div>
-              <div class="border border-green-500/20 px-2.5 py-1.5 bg-green-500/5"><span class="text-green-500">agt_2</span> <span class="text-[var(--color-muted)]">read_email, send_email</span></div>
-              <div class="border border-green-500/20 px-2.5 py-1.5 bg-green-500/5"><span class="text-green-500">agt_3</span> <span class="text-[var(--color-muted)]">read_email, delete_email</span></div>
-            </div>
-            <p class="text-[11px] text-[var(--color-muted)] mt-3">Each agent gets only the capabilities it was granted.</p>
-          </div>
-        </div>
-
-        <div class="del-panel grid grid-cols-2 hidden" id="del-approval">
-          <div class="px-6 sm:px-8 py-6 border-r border-[var(--color-border)]">
-            <div class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-red-400 mb-4">Today</div>
-            <div class="text-[10px] font-[family-name:var(--font-mono)] text-red-400 mb-1.5">No consent step</div>
-            <p class="text-[11px] text-[var(--color-muted)]">Agents act immediately with whatever the token allows. No way to approve or deny specific actions.</p>
-          </div>
-          <div class="px-6 sm:px-8 py-6">
-            <div class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-green-500 mb-4">With Agent Auth</div>
-            <div class="flex items-center gap-2 text-[10px] font-[family-name:var(--font-mono)] mb-1.5">
-              <span class="text-amber-500 border border-amber-500/20 bg-amber-500/5 px-2 py-0.5">agt_3 requests delete_email</span>
-              <span class="text-[var(--color-muted)] opacity-40">→</span>
-              <span class="text-green-500 border border-green-500/20 bg-green-500/5 px-2 py-0.5">✓ user approved</span>
-            </div>
-            <p class="text-[11px] text-[var(--color-muted)]">Users approve each capability explicitly before the agent can use it.</p>
-          </div>
-        </div>
-
-        <div class="del-panel grid grid-cols-2 hidden" id="del-revocation">
-          <div class="px-6 sm:px-8 py-6 border-r border-[var(--color-border)]">
-            <div class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-red-400 mb-4">Today</div>
-            <div class="flex items-center gap-2.5 text-[10px] font-[family-name:var(--font-mono)]">
-              <div class="flex gap-1.5">
-                <div class="w-8 h-8 border border-red-400/30 flex items-center justify-center text-[8px] text-red-400 line-through">A1</div>
-                <div class="w-8 h-8 border border-red-400/30 flex items-center justify-center text-[8px] text-red-400 line-through">A2</div>
-                <div class="w-8 h-8 border border-red-400/30 flex items-center justify-center text-[8px] text-red-400 line-through">A3</div>
-              </div>
-              <span class="text-[9px] text-red-400">all revoked</span>
-            </div>
-            <p class="text-[11px] text-[var(--color-muted)] mt-3">Revoke the token and every agent loses access. One compromise means rotating everything.</p>
-          </div>
-          <div class="px-6 sm:px-8 py-6">
-            <div class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-green-500 mb-4">With Agent Auth</div>
-            <div class="flex items-center gap-2.5 text-[10px] font-[family-name:var(--font-mono)]">
-              <div class="flex gap-1.5">
-                <div class="w-8 h-8 border border-green-500/30 flex items-center justify-center text-[8px] text-green-500">A1</div>
-                <div class="w-8 h-8 border border-red-400/30 flex items-center justify-center text-[8px] text-red-400 line-through">A2</div>
-                <div class="w-8 h-8 border border-green-500/30 flex items-center justify-center text-[8px] text-green-500">A3</div>
-              </div>
-              <span class="text-[9px] text-[var(--color-muted)]">only <span class="text-red-400">agt_2</span> revoked</span>
-            </div>
-            <p class="text-[11px] text-[var(--color-muted)] mt-3">Revoke one agent or let it expire. Other agents are unaffected — each has its own lifecycle.</p>
-          </div>
-        </div>
-
-        <div class="del-panel grid grid-cols-2 hidden" id="del-audit">
-          <div class="px-6 sm:px-8 py-6 border-r border-[var(--color-border)]">
-            <div class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-red-400 mb-4">Today</div>
-            <div class="border border-dashed border-red-400/30 text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] mb-3">
-              <div class="px-2.5 py-1.5 border-b border-dashed border-red-400/30 flex justify-between"><span class="text-red-400">user_abc</span> <span class="opacity-40">app: my_client</span></div>
-              <div class="px-2.5 py-1 border-b border-dashed border-red-400/15 opacity-70">transferred $250</div>
-              <div class="px-2.5 py-1 border-b border-dashed border-red-400/15 opacity-70">deleted 3 emails</div>
-              <div class="px-2.5 py-1 opacity-70">deployed to prod</div>
-            </div>
-            <p class="text-[11px] text-[var(--color-muted)]">All actions logged under the same user and client. No way to tell which agent did what.</p>
-          </div>
-          <div class="px-6 sm:px-8 py-6">
-            <div class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-green-500 mb-4">With Agent Auth</div>
-            <div class="border border-green-500/20 text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] mb-3 bg-green-500/5">
-              <div class="px-2.5 py-1.5 border-b border-green-500/10 flex justify-between"><span class="text-green-500">agt_1</span> <span class="opacity-50">check_balance</span></div>
-              <div class="px-2.5 py-1 border-b border-green-500/10 text-[var(--color-muted)]">checked balance •••• 1842 <span class="opacity-40">14:03:22</span></div>
-              <div class="px-2.5 py-1.5 border-b border-green-500/10 flex justify-between"><span class="text-green-500">agt_2</span> <span class="opacity-50">transfer_funds</span></div>
-              <div class="px-2.5 py-1 border-b border-green-500/10 text-[var(--color-muted)]">transferred $250 <span class="opacity-40">14:05:41</span></div>
-              <div class="px-2.5 py-1.5 border-b border-green-500/10 flex justify-between"><span class="text-green-500">agt_3</span> <span class="opacity-50">delete_email</span></div>
-              <div class="px-2.5 py-1 text-[var(--color-muted)]">deleted 3 emails <span class="opacity-40">14:12:09</span></div>
-            </div>
-            <p class="text-[11px] text-[var(--color-muted)]">Every action is attributed to a specific agent and capability.</p>
+            <p class="text-[12px] text-[var(--color-body)] leading-relaxed mt-4">Each agent has its own identity. Every request traces back to a specific agent.</p>
           </div>
         </div>
 
         <!-- Bottom bar -->
         <div class="border-t border-[var(--color-border)] px-6 sm:px-8 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[var(--color-surface)]">
-          <p class="text-[13px] text-[var(--color-muted)] leading-relaxed max-w-xl">Agent Auth treats each agent as a first-class principal with its own identity, granted capabilities, and lifecycle.</p>
-          <a href="/overview" class="text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)] hover:text-[var(--color-fg)] transition-colors whitespace-nowrap shrink-0">
+          <p class="text-[14px] text-[var(--color-body)] leading-relaxed max-w-xl">Agent Auth treats each agent as a first-class principal with its own identity, granted capabilities, and lifecycle.</p>
+          <a href="/overview" class="text-[12px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-body)] hover:text-[var(--color-fg)] transition-colors whitespace-nowrap shrink-0">
             Read the overview →
           </a>
         </div>
       </div>
-
-      <script is:inline>
-      (function() {
-        var tabs = document.querySelectorAll(".del-tab");
-        var panels = document.querySelectorAll(".del-panel");
-        tabs.forEach(function(tab) {
-          tab.addEventListener("click", function() {
-            var target = tab.getAttribute("data-tab");
-            tabs.forEach(function(t) {
-              t.classList.remove("text-[var(--color-fg)]", "border-[var(--color-fg)]");
-              t.classList.add("text-[var(--color-muted)]", "border-transparent");
-            });
-            tab.classList.remove("text-[var(--color-muted)]", "border-transparent");
-            tab.classList.add("text-[var(--color-fg)]", "border-[var(--color-fg)]");
-            panels.forEach(function(p) { p.classList.add("hidden"); });
-            document.getElementById("del-" + target).classList.remove("hidden");
-          });
-        });
-      })();
-      </script>
     </div>
   </section>
 
@@ -275,51 +163,92 @@ const cards = [
   <section class="relative">
     <div class="mx-auto max-w-[1400px] px-5 sm:px-6 pb-16">
       <div class="flex items-center gap-3 mb-6">
-        <span class="text-[10px] font-[family-name:var(--font-mono)] tracking-[0.15em] uppercase text-[var(--color-muted)]">Autonomous agents</span>
+        <span class="text-[11px] font-[family-name:var(--font-mono)] tracking-[0.15em] uppercase text-[var(--color-body)]">Autonomous agents</span>
         <div class="flex-1 border-t border-[var(--color-border)]"></div>
       </div>
       <p class="text-[15px] text-[var(--color-body)] leading-[1.8] max-w-2xl mb-8">Background workers, scheduled jobs, and service-to-service agents need to authenticate without a user session. Existing auth models don't have a way to represent an agent that operates independently and may later be linked to a user.</p>
 
-      <div class="border border-[var(--color-border)]">
+      <div class="border border-[var(--color-border)] bg-[var(--color-bg)]">
         <div class="grid lg:grid-cols-2">
-          <!-- Autonomous -->
+          <!-- Today -->
           <div class="p-6 sm:p-8 border-b lg:border-b-0 lg:border-r border-[var(--color-border)]">
-            <div class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)] mb-4">Autonomous mode</div>
-            <div class="flex flex-col gap-1.5 text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] mb-4">
-              <div class="border border-green-500/20 px-2.5 py-1.5 bg-green-500/5 flex justify-between">
-                <span><span class="text-green-500">agt_bg</span> monitor_alerts</span>
-                <span class="text-[9px] text-[var(--color-muted)]">no user</span>
-              </div>
-              <div class="border border-green-500/20 px-2.5 py-1.5 bg-green-500/5 flex justify-between">
-                <span><span class="text-green-500">agt_cron</span> sync_data</span>
-                <span class="text-[9px] text-[var(--color-muted)]">no user</span>
-              </div>
-              <div class="border border-green-500/20 px-2.5 py-1.5 bg-green-500/5 flex justify-between">
-                <span><span class="text-green-500">agt_svc</span> process_queue</span>
-                <span class="text-[9px] text-[var(--color-muted)]">no user</span>
+            <div class="text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-red-500 mb-4">Today</div>
+            <div class="border border-[var(--color-border)] bg-[var(--color-surface)] p-3 sm:p-4 mb-3">
+              <div class="flex flex-wrap items-center gap-2 text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-body)]">
+                <div class="inline-flex items-center gap-2 border border-[var(--color-border)] bg-[var(--color-bg)] px-2.5 py-2">
+                  <svg class="h-3.5 w-3.5 text-[var(--color-fg)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="5" y="8" width="14" height="10" rx="3" />
+                    <path d="M12 4v4" />
+                    <path d="M8 18v2" />
+                    <path d="M16 18v2" />
+                    <circle cx="9.5" cy="13" r="1" />
+                    <circle cx="14.5" cy="13" r="1" />
+                    <path d="M10 15.5h4" />
+                  </svg>
+                  <span class="text-[var(--color-fg)]">agent</span>
+                </div>
+                <span class="text-red-500">→</span>
+                <div class="inline-flex items-center gap-2 border border-[var(--color-border)] bg-[var(--color-bg)] px-2.5 py-2">
+                  <svg class="h-3.5 w-3.5 text-[var(--color-fg)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="14" rx="2" />
+                    <path d="M8 20h8" />
+                    <path d="M12 18v2" />
+                  </svg>
+                  <span class="text-[var(--color-fg)]">browser</span>
+                </div>
+                <span class="text-red-500">→</span>
+                <div class="inline-flex items-center border border-dashed border-[var(--color-border)] bg-[var(--color-bg)] px-2.5 py-2 text-[var(--color-fg)]">
+                  signup
+                </div>
+                <span class="text-red-500">→</span>
+                <div class="inline-flex items-center border border-dashed border-[var(--color-border)] bg-[var(--color-bg)] px-2.5 py-2 text-[var(--color-fg)]">
+                  CAPTCHA
+                </div>
+                <span class="text-red-500">→</span>
+                <div class="inline-flex items-center border border-[var(--color-border)] bg-[var(--color-bg)] px-2.5 py-2">
+                  <span class="text-[var(--color-fg)]">user account</span>
+                </div>
               </div>
             </div>
-            <p class="text-[11px] text-[var(--color-muted)]">Agents register with <code class="text-[10px] px-1 py-0.5 bg-[var(--color-surface)] border border-[var(--color-border)]">mode: "autonomous"</code> and get their own identity and capabilities without a user session. Permissions come from server policy or admin approval.</p>
+            <p class="text-[12px] text-[var(--color-body)] leading-relaxed">Agents often have to pass through a human signup path, so the server ends up seeing a user account instead of the agent itself.</p>
           </div>
 
-          <!-- Claiming -->
+          <!-- With Agent Auth -->
           <div class="p-6 sm:p-8">
-            <div class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)] mb-4">Connecting back to a user</div>
-            <div class="flex flex-col gap-1.5 text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] mb-4">
-              <div class="border border-green-500/20 px-2.5 py-1.5 bg-green-500/5">
-                <span class="text-green-500">agt_bg</span> running autonomously…
-              </div>
-              <div class="border border-amber-500/20 px-2.5 py-1.5 bg-amber-500/5">
-                <span class="text-amber-500">host linked</span> → user claims the host
-              </div>
-              <div class="border border-blue-400/20 px-2.5 py-1.5 bg-blue-400/5">
-                <span class="text-blue-400">agt_bg</span> claimed — work attributed to user
-              </div>
-              <div class="border border-green-500/20 px-2.5 py-1.5 bg-green-500/5">
-                <span class="text-green-500">agt_new</span> new delegated agent under user
+            <div class="text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-green-600 mb-4">With Agent Auth</div>
+            <div class="border border-[var(--color-border)] bg-[var(--color-surface)] p-3 sm:p-4 mb-3">
+              <div class="flex flex-wrap items-center gap-2 text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-body)]">
+                <div class="inline-flex items-center gap-2 border border-[var(--color-border)] bg-[var(--color-bg)] px-2.5 py-2">
+                  <svg class="h-3.5 w-3.5 text-[var(--color-fg)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="5" y="8" width="14" height="10" rx="3" />
+                    <path d="M12 4v4" />
+                    <path d="M8 18v2" />
+                    <path d="M16 18v2" />
+                    <circle cx="9.5" cy="13" r="1" />
+                    <circle cx="14.5" cy="13" r="1" />
+                    <path d="M10 15.5h4" />
+                  </svg>
+                  <span class="text-[var(--color-fg)]">agent</span>
+                </div>
+                <span class="text-green-600">→</span>
+                <div class="inline-flex items-center border border-[var(--color-border)] bg-[var(--color-bg)] px-2.5 py-2 text-[var(--color-fg)]">
+                  register autonomous
+                </div>
+                <span class="text-green-600">→</span>
+                <div class="inline-flex items-center border border-[var(--color-border)] bg-[var(--color-bg)] px-2.5 py-2 text-[var(--color-fg)]">
+                  agt_bg_42
+                </div>
+                <span class="text-green-600">→</span>
+                <div class="inline-flex items-center border border-[var(--color-border)] bg-[var(--color-bg)] px-2.5 py-2 text-[var(--color-fg)]">
+                  policy / admin
+                </div>
+                <span class="text-green-600">→</span>
+                <div class="inline-flex items-center border border-[var(--color-border)] bg-[var(--color-bg)] px-2.5 py-2">
+                  <span class="text-[var(--color-fg)]">autonomous agent</span>
+                </div>
               </div>
             </div>
-            <p class="text-[11px] text-[var(--color-muted)]">When a user later links to the host, autonomous agents are claimed — their activity is attributed to the user, and future agents run in delegated mode with user approval.</p>
+            <p class="text-[12px] text-[var(--color-body)] leading-relaxed">Agents get their own registration path and first-class identity. If a user links later, those agents can still be claimed cleanly.</p>
           </div>
         </div>
       </div>
@@ -330,36 +259,61 @@ const cards = [
   <section class="relative">
     <div class="mx-auto max-w-[1400px] px-5 sm:px-6 pb-16">
       <div class="flex items-center gap-3 mb-6">
-        <span class="text-[10px] font-[family-name:var(--font-mono)] tracking-[0.15em] uppercase text-[var(--color-muted)]">Discovery</span>
+        <span class="text-[11px] font-[family-name:var(--font-mono)] tracking-[0.15em] uppercase text-[var(--color-body)]">Discovery</span>
         <div class="flex-1 border-t border-[var(--color-border)]"></div>
       </div>
       <p class="text-[15px] text-[var(--color-body)] leading-[1.8] max-w-2xl mb-8">Connecting an agent to a new service requires finding the right server, editing config files, and providing API keys. Agent Auth standardizes discovery — agents resolve a well-known endpoint or query a registry to find services.</p>
 
-      <div class="border border-[var(--color-border)]">
+      <div class="border border-[var(--color-border)] bg-[var(--color-bg)]">
         <div class="grid lg:grid-cols-2">
           <div class="p-6 sm:p-8 border-b lg:border-b-0 lg:border-r border-[var(--color-border)]">
-            <div class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-red-400 mb-4">Today</div>
-            <div class="flex flex-col gap-1.5 text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] mb-3">
-              <div class="border border-dashed border-red-400/30 px-2.5 py-1.5">1. Find the right MCP server</div>
-              <div class="border border-dashed border-red-400/30 px-2.5 py-1.5">2. Add it to your config file</div>
-              <div class="border border-dashed border-red-400/30 px-2.5 py-1.5">3. Create API key, paste it in</div>
-              <div class="border border-dashed border-red-400/30 px-2.5 py-1.5">4. Hope the agent knows how to use it</div>
+            <div class="text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-red-500 mb-4">Today</div>
+            <div class="grid gap-3 mb-3 md:grid-cols-[minmax(0,1fr)_140px] text-[11px] font-[family-name:var(--font-mono)] text-[var(--color-body)]">
+              <div class="space-y-1.5">
+                <div class="border border-dashed border-red-400/30 px-3 py-2">1. Find the right MCP server</div>
+                <div class="border border-dashed border-red-400/30 px-3 py-2">2. Add it to your config file</div>
+                <div class="border border-dashed border-red-400/30 px-3 py-2">3. Create API key, paste it in</div>
+                <div class="border border-dashed border-red-400/30 px-3 py-2">4. Hope the agent knows how to use it</div>
+              </div>
+              <div class="border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] p-3">
+                <div class="text-[10px] uppercase tracking-[0.12em] text-red-500 mb-2">Manual setup</div>
+                <div class="space-y-1.5 text-[10px] opacity-80">
+                  <div>servers.json</div>
+                  <div>API_KEY=sk_live_...</div>
+                  <div>custom docs</div>
+                  <div>trial and error</div>
+                </div>
+              </div>
             </div>
-            <p class="text-[11px] text-[var(--color-muted)]">Every new service means manual setup. No standard way for agents to find and connect to services.</p>
+            <p class="text-[12px] text-[var(--color-body)] leading-relaxed">Every new service means manual setup. No standard way for agents to find and connect to services.</p>
           </div>
           <div class="p-6 sm:p-8">
-            <div class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-green-500 mb-4">With Agent Auth</div>
-            <div class="flex flex-col gap-3 text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] mb-3">
-              <div>
-                <div class="text-[9px] text-[var(--color-muted)] mb-1">By URL</div>
-                <div class="border border-green-500/20 px-2.5 py-1.5 bg-green-500/5"><span class="text-green-500">→</span> "Connect to bank.com" <span class="text-[var(--color-muted)] opacity-50">→</span> <span class="text-green-500">auto-configured</span></div>
-              </div>
-              <div>
-                <div class="text-[9px] text-[var(--color-muted)] mb-1">By intent</div>
-                <div class="border border-green-500/20 px-2.5 py-1.5 bg-green-500/5"><span class="text-green-500">→</span> "Check my bank balance" <span class="text-[var(--color-muted)] opacity-50">→</span> <span class="text-green-500">registry finds services</span></div>
+            <div class="text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-green-600 mb-4">With Agent Auth</div>
+            <div class="border border-[var(--color-border)] bg-[var(--color-surface)] p-4 sm:p-5 mb-3">
+              <div class="grid gap-4 lg:grid-cols-2 text-[11px] font-[family-name:var(--font-mono)] text-[var(--color-body)]">
+                <div>
+                  <div class="text-[10px] uppercase tracking-[0.12em] opacity-75 mb-2">By URL</div>
+                  <div class="space-y-2">
+                    <div class="border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2">bank.com</div>
+                    <div class="pl-3 border-l border-dashed border-green-500/30 text-[10px] opacity-75">resolve <code>/.well-known/agent-configuration</code></div>
+                    <div class="border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2">capabilities, auth methods, approval URL</div>
+                    <div class="text-green-600 text-[10px]">auto-configured connection</div>
+                  </div>
+                </div>
+                <div>
+                  <div class="text-[10px] uppercase tracking-[0.12em] opacity-75 mb-2">By intent</div>
+                  <div class="space-y-2">
+                    <div class="border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2">"check my bank balance"</div>
+                    <div class="pl-3 border-l border-dashed border-green-500/30 text-[10px] opacity-75">query registry for matching providers</div>
+                    <div class="grid gap-1.5">
+                      <div class="border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 flex items-center justify-between"><span>auth.bank.com</span><span class="text-green-600">best match</span></div>
+                      <div class="border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 opacity-70">finance.example</div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-            <p class="text-[11px] text-[var(--color-muted)]">The agent resolves a well-known configuration endpoint from the URL, or queries a registry to find providers matching the task.</p>
+            <p class="text-[12px] text-[var(--color-body)] leading-relaxed">The agent resolves a well-known configuration endpoint from the URL, or queries a registry to find providers matching the task.</p>
           </div>
         </div>
       </div>
@@ -398,18 +352,16 @@ const cards = [
   <div class="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 flex flex-col items-end" id="ask-trigger-wrap" style="translate: 0 120%; opacity: 0; transition: translate .5s cubic-bezier(.32,.72,0,1), opacity .4s ease;">
     <button
       id="ask-trigger"
-      class="flex items-center gap-3 cursor-pointer group px-4 py-3 border border-[color-mix(in_oklch,var(--color-fg)_10%,transparent)] backdrop-blur-md bg-[var(--color-bg)]/88 rounded-lg shadow-[0_8px_24px_color-mix(in_oklch,var(--color-fg)_6%,transparent)]"
+      aria-label="Learn about the protocol"
+      class="flex items-center justify-center cursor-pointer group w-11 h-11 border border-[color-mix(in_oklch,var(--color-fg)_10%,transparent)] backdrop-blur-md bg-[var(--color-bg)]/92 rounded-lg"
     >
-      <span class="flex items-center gap-2">
-        <svg class="w-3.5 h-3.5 text-[var(--color-muted)] group-hover:text-[var(--color-fg)] transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="4" y="4" width="16" height="16" rx="4" class="ask-agent-body"/>
-          <circle cx="9.5" cy="12" r="1.5" fill="currentColor" stroke="none" class="ask-agent-eye"/>
-          <circle cx="14.5" cy="12" r="1.5" fill="currentColor" stroke="none" class="ask-agent-eye"/>
-          <line x1="12" y1="1" x2="12" y2="4" class="ask-agent-antenna"/>
-          <circle cx="12" cy="1" r="1" fill="currentColor" stroke="none" class="ask-agent-dot"/>
-        </svg>
-        <span class="text-[10px] font-[family-name:var(--font-mono)] font-medium uppercase tracking-widest text-[color-mix(in_oklch,var(--color-fg)_55%,transparent)] group-hover:text-[var(--color-fg)] transition-colors">Learn about the protocol</span>
-      </span>
+      <svg class="w-4 h-4 text-[var(--color-muted)] group-hover:text-[var(--color-fg)] transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="4" y="4" width="16" height="16" rx="4" class="ask-agent-body"/>
+        <circle cx="9.5" cy="12" r="1.5" fill="currentColor" stroke="none" class="ask-agent-eye"/>
+        <circle cx="14.5" cy="12" r="1.5" fill="currentColor" stroke="none" class="ask-agent-eye"/>
+        <line x1="12" y1="1" x2="12" y2="4" class="ask-agent-antenna"/>
+        <circle cx="12" cy="1" r="1" fill="currentColor" stroke="none" class="ask-agent-dot"/>
+      </svg>
     </button>
   </div>
 
@@ -484,9 +436,6 @@ const cards = [
   </div>
 
   <style is:global>
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
-    @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-
     details.group .faq-content {
       display: grid;
       grid-template-rows: 0fr;
@@ -684,302 +633,6 @@ const cards = [
     .ask-thinking span:nth-child(3) { animation-delay: 0.4s; }
 
   </style>
-
-  <script is:inline>
-  (function() {
-    var $ = function(id) { return document.getElementById(id); };
-    var stepsEl = $("demo-steps");
-    var scrollEl = $("demo-scroll");
-    var promptEl = $("demo-prompt");
-    var cursorEl = $("demo-cursor");
-    var footerEl = $("demo-footer");
-    var replayBtn = $("demo-replay-btn");
-
-    var isRunning = false;
-    var currentFlow = "balance";
-
-    var balanceFlow = {
-      prompt: "Show me my balance",
-      steps: [
-        { phase: "connect",  text: "Connecting to auth.bank.com…" },
-        { phase: "protocol", text: "Discovering server configuration", detail: "GET /.well-known/agent-configuration" },
-        { phase: "protocol", text: "Registering agent identity", detail: "agent_id: agt_k7x9m2" },
-        { phase: "waiting",  text: "Waiting for user approval…", detail: "Opening browser for authorization" },
-        { phase: "device",   approvalCard: true, agent: "Bank Balance Checker", host: "MacBook Pro", permissions: ["List your bank accounts", "View account balances"] },
-        { phase: "polling",  text: "Agent polling for approval…", detail: "Waiting for browser response", spinner: true },
-        { phase: "approved", text: "User approved — capabilities granted" },
-        { phase: "sign",     text: "Signing request", detail: "EdDSA JWT • sub: agt_k7x9m2 • exp: 60s" },
-        { phase: "verify",   text: "Bank verified agent identity", detail: "Signature valid • Agent active" },
-        { phase: "result",   text: "Balance retrieved", result: true },
-      ],
-      result: {
-        label: "Checking •••• 1842",
-        value: "$4,280.13",
-        meta: "agent: agt_k7x9m2",
-      },
-    };
-
-    var transferFlow = {
-      prompt: "Transfer $250 from checking to savings",
-      steps: [
-        { phase: "protocol", text: "Agent needs additional permission", detail: "Requesting transfer access" },
-        { phase: "waiting",  text: "Waiting for user approval…", detail: "Opening browser for authorization" },
-        { phase: "device",   approvalCard: true, agent: "Bank Balance Checker", host: "MacBook Pro", permissions: ["Transfer funds between your accounts"] },
-        { phase: "polling",  text: "Agent polling for approval…", detail: "Waiting for browser response", spinner: true },
-        { phase: "approved", text: "User approved — transfer capability granted" },
-        { phase: "sign",     text: "Signing transfer request", detail: "EdDSA JWT • sub: agt_k7x9m2 • exp: 60s" },
-        { phase: "verify",   text: "Bank verified and executed transfer", detail: "Signature valid • Transfer processed" },
-        { phase: "result",   text: "Transfer complete", result: true },
-      ],
-      result: {
-        label: "Transfer confirmed",
-        value: "$250.00",
-        meta: "checking •••• 1842 → savings •••• 7391",
-      },
-    };
-
-    var phaseStyles = {
-      connect:  { color: "var(--color-muted)", icon: "◦" },
-      protocol: { color: "var(--color-muted)", icon: "›" },
-      waiting:  { color: "#d97706",            icon: "…" },
-      polling:  { color: "#d97706",            icon: "◌" },
-      device:   { color: "#d97706",            icon: "!" },
-      approval: { color: "#d97706",            icon: "!" },
-      approved: { color: "#16a34a",            icon: "✓" },
-      sign:     { color: "var(--color-fg)",    icon: "⚿" },
-      verify:   { color: "#16a34a",            icon: "✓" },
-      result:   { color: "#16a34a",            icon: "✓" },
-    };
-
-    function sleep(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }
-
-    function scrollToBottom() {
-      scrollEl.scrollTop = scrollEl.scrollHeight;
-    }
-
-    async function typeText(el, text) {
-      el.textContent = "";
-      for (var i = 0; i < text.length; i++) {
-        el.textContent += text[i];
-        await sleep(28 + Math.random() * 22);
-      }
-    }
-
-    function addStep(step, animate) {
-      var row = document.createElement("div");
-      row.style.cssText = "display:flex;gap:8px;align-items:flex-start;padding:6px 0;";
-      if (animate) { row.style.opacity = "0"; row.style.transform = "translateY(4px)"; }
-
-      var style = phaseStyles[step.phase] || phaseStyles.protocol;
-
-      var iconEl = document.createElement("span");
-      iconEl.style.cssText = "flex-shrink:0;width:14px;font-family:var(--font-mono);font-size:11px;text-align:center;margin-top:1px;color:" + style.color + ";";
-      if (step.spinner) {
-        iconEl.innerHTML = '<span style="display:inline-block;animation:spin 1s linear infinite;">◌</span>';
-      } else {
-        iconEl.textContent = style.icon;
-      }
-
-      var bodyEl = document.createElement("div");
-      bodyEl.style.cssText = "flex:1;min-width:0;";
-
-      var labelEl = document.createElement("div");
-      labelEl.style.cssText = "font-size:12px;line-height:1.5;";
-      labelEl.textContent = step.text;
-      bodyEl.appendChild(labelEl);
-
-      if (step.detail) {
-        var detailEl = document.createElement("div");
-        detailEl.style.cssText = "font-family:var(--font-mono);font-size:10px;color:var(--color-muted);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;";
-        detailEl.textContent = step.detail;
-        bodyEl.appendChild(detailEl);
-      }
-
-      row.appendChild(iconEl);
-      row.appendChild(bodyEl);
-      stepsEl.appendChild(row);
-      scrollToBottom();
-
-      if (animate) {
-        requestAnimationFrame(function() { requestAnimationFrame(function() {
-          row.style.transition = "opacity .25s ease,transform .25s ease";
-          row.style.opacity = "1";
-          row.style.transform = "translateY(0)";
-        }); });
-      }
-
-      return row;
-    }
-
-    function addApprovalCard(step) {
-      return new Promise(function(resolve) {
-        var card = document.createElement("div");
-        card.style.cssText = "margin:6px 0;border:1px solid var(--color-border);border-radius:6px;background:var(--color-bg);opacity:0;transform:translateY(4px);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);";
-
-        var tabBar = '<div style="display:flex;align-items:center;background:var(--color-surface);border-bottom:1px solid var(--color-border);padding:0 8px;">' +
-          '<div style="display:flex;align-items:center;gap:5px;padding:5px 10px;border-bottom:2px solid var(--color-fg);margin-bottom:-1px;">' +
-            '<svg style="width:9px;height:9px;color:var(--color-muted);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>' +
-            '<span style="font-size:9px;">Authorize Agent</span>' +
-          '</div>' +
-        '</div>';
-
-        var urlBar = '<div style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-bottom:1px solid var(--color-border);">' +
-          '<svg style="width:9px;height:9px;color:#16a34a;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>' +
-          '<span style="font-family:var(--font-mono);font-size:9px;color:var(--color-muted);">auth.bank.com/device</span>' +
-        '</div>';
-
-        var page = '<div style="padding:12px 14px;">' +
-          '<div style="font-size:12px;font-weight:600;margin-bottom:1px;">' + step.agent + '</div>' +
-          '<div style="font-size:10px;color:var(--color-muted);margin-bottom:10px;">via ' + step.host + '</div>' +
-          '<div style="font-size:10px;color:var(--color-muted);margin-bottom:6px;">This agent wants to:</div>';
-
-        for (var i = 0; i < step.permissions.length; i++) {
-          page += '<div style="display:flex;align-items:center;gap:6px;padding:4px 0;">' +
-            '<span style="color:var(--color-muted);font-size:10px;flex-shrink:0;">•</span>' +
-            '<span style="font-size:11px;">' + step.permissions[i] + '</span></div>';
-        }
-
-        page += '<div style="display:flex;gap:8px;margin-top:10px;">' +
-          '<button class="demo-approve-btn" style="flex:1;padding:6px 0;font-size:11px;font-weight:500;background:var(--color-fg);color:var(--color-bg);border:none;cursor:pointer;transition:all 0.2s;border-radius:3px;">Approve</button>' +
-          '<button style="padding:6px 14px;font-size:11px;background:transparent;color:var(--color-muted);border:1px solid var(--color-border);cursor:default;border-radius:3px;">Deny</button>' +
-        '</div></div>';
-
-        card.innerHTML = tabBar + urlBar + page;
-        stepsEl.appendChild(card);
-        scrollToBottom();
-
-        requestAnimationFrame(function() { requestAnimationFrame(function() {
-          card.style.transition = "opacity .3s ease,transform .3s ease";
-          card.style.opacity = "1";
-          card.style.transform = "translateY(0)";
-        }); });
-
-        setTimeout(function() {
-          var btn = card.querySelector(".demo-approve-btn");
-          if (btn) {
-            btn.textContent = "Approved ✓";
-            btn.style.background = "#16a34a";
-            btn.style.color = "#fff";
-
-            setTimeout(function() {
-              card.style.transition = "opacity .3s ease,transform .2s ease";
-              card.style.opacity = "0.4";
-              card.style.transform = "scale(0.98)";
-              setTimeout(function() { resolve(); }, 400);
-            }, 600);
-          }
-        }, 2000);
-      });
-    }
-
-    function addResult(result) {
-      var wrap = document.createElement("div");
-      wrap.style.cssText = "margin-top:6px;padding:10px 12px;border:1px solid var(--color-border);background:var(--color-surface);opacity:0;transform:translateY(4px);";
-
-      wrap.innerHTML =
-        '<div style="font-size:11px;color:var(--color-muted);font-family:var(--font-mono);">' + result.label + '</div>' +
-        '<div style="font-size:20px;font-weight:600;margin-top:2px;">' + result.value + '</div>' +
-        '<div style="font-size:10px;color:var(--color-muted);font-family:var(--font-mono);margin-top:4px;">' + result.meta + '</div>';
-
-      stepsEl.appendChild(wrap);
-      scrollToBottom();
-
-      requestAnimationFrame(function() { requestAnimationFrame(function() {
-        wrap.style.transition = "opacity .3s ease,transform .3s ease";
-        wrap.style.opacity = "1";
-        wrap.style.transform = "translateY(0)";
-      }); });
-    }
-
-    function addUserMessage(text) {
-      return new Promise(async function(resolve) {
-        var row = document.createElement("div");
-        row.style.cssText = "display:flex;gap:8px;align-items:flex-start;padding:8px 0;margin-top:4px;border-top:1px solid var(--color-border);opacity:0;transform:translateY(4px);";
-        var icon = document.createElement("span");
-        icon.style.cssText = "flex-shrink:0;color:var(--color-muted);font-size:13px;margin-top:-1px;";
-        icon.textContent = "›";
-        var body = document.createElement("span");
-        body.style.cssText = "font-size:12px;line-height:1.5;";
-        row.appendChild(icon);
-        row.appendChild(body);
-        stepsEl.appendChild(row);
-        scrollToBottom();
-
-        requestAnimationFrame(function() { requestAnimationFrame(function() {
-          row.style.transition = "opacity .2s ease,transform .2s ease";
-          row.style.opacity = "1";
-          row.style.transform = "translateY(0)";
-        }); });
-
-        await sleep(200);
-        for (var i = 0; i < text.length; i++) {
-          body.textContent += text[i];
-          scrollToBottom();
-          await sleep(28 + Math.random() * 22);
-        }
-        resolve();
-      });
-    }
-
-    async function runSteps(steps, result) {
-      for (var i = 0; i < steps.length; i++) {
-        var step = steps[i];
-
-        if (step.approvalCard) {
-          await sleep(300);
-          await addApprovalCard(step);
-          continue;
-        }
-
-        var delay = step.phase === "connect" ? 300 :
-                    step.phase === "waiting" ? 600 :
-                    step.phase === "polling" ? 400 :
-                    step.phase === "approved" ? 800 :
-                    step.phase === "result" ? 400 : 500;
-        await sleep(delay);
-        addStep(step, true);
-
-        if (step.result) {
-          await sleep(350);
-          addResult(result);
-        }
-      }
-    }
-
-    async function runFullDemo() {
-      if (isRunning) return;
-      isRunning = true;
-      footerEl.style.visibility = "hidden";
-      stepsEl.innerHTML = "";
-      cursorEl.style.display = "inline-block";
-
-      await typeText(promptEl, balanceFlow.prompt);
-      cursorEl.style.display = "none";
-      await sleep(400);
-
-      await runSteps(balanceFlow.steps, balanceFlow.result);
-
-      await sleep(1500);
-
-      await addUserMessage(transferFlow.prompt);
-      await sleep(400);
-
-      await runSteps(transferFlow.steps, transferFlow.result);
-
-      await sleep(400);
-      footerEl.style.visibility = "visible";
-      isRunning = false;
-    }
-
-    replayBtn.addEventListener("click", function() {
-      runFullDemo();
-    });
-
-    setTimeout(function() {
-      runFullDemo();
-    }, 800);
-  })();
-  </script>
 
   <script is:inline>
   (function() {
