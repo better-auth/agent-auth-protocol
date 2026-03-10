@@ -46,7 +46,7 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "S
 - **Client** — The process that holds a host identity and exposes protocol tools to AI systems (MCP server, CLI, SDK). It manages host and agent keys, talks to servers, and signs JWTs. AI tools like Claude Code or ChatGPT connect to a client.
 - **Server** — The service's authorization server. It manages discovery, host and agent registrations, approvals, capability grants, and JWT verification. Also called the auth server.
 - **Host** — The client's persistent identity: a keypair plus metadata registered with each server. A host is not a running process. It may be linked to a user or unlinked.
-- **Capability** — A server-offered action or function. Each capability has a `name` and a human-readable description. Capabilities are executed through the server's execute endpoint (`POST /capability/execute`). Servers MAY also include additional metadata for direct execution by clients (e.g. HTTP endpoint details, MCP tool metadata).
+- **Capability** — A server-offered action or function. Each capability has a `name` and a human-readable description. Capabilities are executed through the server's execute endpoint (`POST /capability/execute`).
 - **Agent Capability Grant** — A stored grant of one capability to one agent. Carries per-capability state and metadata such as `status`, `granted_by`, and `expires_at`.
 - **Default capabilities** — The set of capabilities a host is pre-authorized to grant its agents without additional user approval.
 - **Registration** — The process by which a client registers an agent identity under a host on a server. A successful registration results in an `agent_id`, a mode, and an initial capability set.
@@ -145,7 +145,7 @@ Resource servers that are co-located with the authorization server MAY verify th
 **Notes:**
 
 - **Discovery is a pre-step for generic clients.** Multi-provider clients MAY call `list_providers` (§7.1.1), `search_providers` (§7.1.2), and `discover_provider` (§7.1.3) before step (A). Single-service clients skip discovery.
-- **Capabilities are executed through a standard endpoint.** The agent calls `execute_capability` (§7.9), which sends the capability name and arguments to `POST /capability/execute` (§6.11). The server validates the agent JWT, executes the capability, and returns the result. Servers MAY also expose direct execution metadata on capabilities for clients that prefer to call service endpoints directly (§4.2).
+- **Capabilities are executed through a standard endpoint.** The agent calls `execute_capability` (§7.9), which sends the capability name and arguments to `POST /capability/execute` (§6.11). The server validates the agent JWT, executes the capability, and returns the result.
 - **Capability escalation.** An active agent that needs additional capabilities calls `request_capability` (§7.5), which may trigger another approval flow (D) for the new capabilities.
 - **Reactivation.** An expired agent can be reactivated via `reactivate_agent` (§7.7), which calls `POST /agent/reactivate` (§6.6). Capabilities decay to host defaults; escalated capabilities must be re-requested.
 
@@ -247,9 +247,9 @@ When a host becomes linked, all active autonomous agents under that host MUST be
 3. Each autonomous agent's activity history is attributed to the user
 4. Any resources created or owned by the autonomous agent SHOULD be transferred to the user
 
-This is analogous to anonymous-to-authenticated user linking: everything the agent did before a user was in the picture becomes the user's. Servers MAY use a system account or anonymous placeholder to hold autonomous agent ownership until a real user claims it.
+Once claimed, the autonomous agent is terminal — it cannot be reactivated. If the user wants to continue using the service, the host registers a new delegated agent. Servers MAY use a system account or anonymous placeholder to hold autonomous agent ownership until a real user claims it.
 
-Claiming is automatic — it is a direct consequence of host linking. Once claimed, the autonomous agent is terminal. If the user wants to continue using the service, the host registers a new delegated agent.
+Operational guidance for the claiming flow — including user-facing presentation, linking UX, and post-claim management — is in Appendix B.1.
 
 ### 3.5 Host States
 
@@ -337,81 +337,24 @@ Capabilities may operate in different modes, controlled by the server:
 
 The server determines the interaction mode for each capability. The agent does not need to know — the client and server handle it.
 
-### 4.2 Direct Execution
+### 4.2 General Notes
 
-Servers MAY include additional metadata on capability objects to let clients call service endpoints directly, bypassing the execute endpoint. This is useful for low-latency use cases, streaming over long-lived connections, or services that already validate agent JWTs at their own endpoints.
+Capability names are opaque strings at the protocol layer. Clients and agents MUST treat capability names as uninterpreted identifiers for authorization and execution. They MUST NOT derive protocol semantics from delimiters, prefixes, or other naming patterns.
 
-When a capability includes direct execution metadata, clients MAY use it instead of `POST /capability/execute`. Clients that support direct execution SHOULD still prefer the execute endpoint unless the agent or user explicitly opts for direct calls, or the server does not support the execute endpoint.
+The protocol still benefits from a consistent naming convention. Servers SHOULD publish stable, human-readable capability names that follow a predictable structure when possible.
 
-Direct execution metadata is server-defined — the core protocol does not constrain its shape. Clients SHOULD pass all fields through unchanged when describing capabilities or returning grant details to the agent. Clients MAY provide helper tools for execution profiles they recognize (e.g. an HTTP request tool).
+**Recommended format:** `[namespace:]verb:resource[:qualifier...]`
 
-**Examples:**
+- `namespace` is OPTIONAL but RECOMMENDED for providers that expect their capabilities to appear in multi-provider clients. It identifies the provider or product, such as `github`, `slack`, or a reverse-domain name like `com.example.crm`.
+- `verb` SHOULD describe the primary action, such as `read`, `list`, `create`, `update`, `delete`, or `send`.
+- `resource` SHOULD name the primary object the capability operates on, such as `issue`, `message`, `balance`, or `deployment`.
+- `qualifier` segments are OPTIONAL and can further specialize the capability when needed.
 
-A capability with HTTP execution metadata:
-
-```json
-{
-  "name": "create_payment",
-  "description": "Create a new payment",
-  "http": {
-    "method": "POST",
-    "url": "https://api.bank.com/v1/payments",
-    "input": {
-      "requestBody": {
-        "required": true,
-        "content": {
-          "application/json": {
-            "schema": {
-              "type": "object",
-              "required": ["amount", "currency"],
-              "properties": {
-                "amount": { "type": "number" },
-                "currency": { "type": "string" }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}
-```
-
-A capability with a GraphQL descriptor:
-
-```json
-{
-  "name": "get_user",
-  "description": "Look up a user by ID",
-  "graphql": {
-    "endpoint": "https://api.example.com/graphql",
-    "query": "query GetUser($id: ID!) { user(id: $id) { name email } }"
-  }
-}
-```
-
-A capability with a custom / proprietary descriptor:
-
-```json
-{
-  "name": "deploy_service",
-  "description": "Deploy a service to production",
-  "acme.deploy": {
-    "cluster": "us-east-1",
-    "runtime": "node20"
-  }
-}
-```
-
-The core protocol only requires `name` and `description`. Everything else is optional execution metadata for direct callers. For HTTP capabilities, the `http` field SHOULD include at minimum `method` and `url`. Clients that support direct execution SHOULD send the signed JWT as `Authorization: Bearer <token>`.
-
-### 4.3 General Notes
-
-Capability names are opaque strings. The protocol does not define a required naming format — servers MAY use any stable string. Clients and agents MUST treat capability names as uninterpreted identifiers.
+**Examples:** `github:create:issue`, `slack:send:message`, `bank:read:balance`, `com.example.crm:update:contact`
 
 Servers MAY include additional fields on capability objects beyond those defined above. Clients SHOULD pass through unrecognized fields without dropping them.
 
-For generic clients that support multiple providers, the client MAY prefix capability names with the provider name when presenting them to the agent (e.g. `list_issues` → `github.list_issues`) to avoid naming collisions. This is a **client-local convention only**. The client MUST map prefixed names back to the original capability objects before execution. The server never sees prefixed client-local identifiers.
+For generic clients that support multiple providers, the client MAY prefix capability names with the provider name when presenting them to the agent (e.g. `create:issue` → `github.create:issue`) to avoid naming collisions. This is a **client-local convention only**. The client MUST map prefixed names back to the original capability objects before execution. The server never sees prefixed client-local identifiers.
 
 ## 5. Authentication
 
@@ -454,7 +397,7 @@ Agents authenticate by signing short-lived JWTs per [RFC 7519](https://datatrack
 
 | Claim | Required | Description |
 |---|---|---|
-| `capabilities` | No | String array of capability names this JWT is authorized for. If present, the server MUST reject requests for capabilities not in this list — even if the agent has them granted. If absent, the JWT is valid for all the agent's granted capabilities. |
+| `capabilities` | No | String array of capability names this JWT is authorized for. If present, the server MUST reject requests for capabilities not in this list — even if the agent has them granted. If absent, the JWT is valid for all the agent's granted capabilities. Clients SHOULD omit this claim when the JWT does not need to restrict capabilities, since the server already tracks granted capabilities per agent. Include it only when the client intentionally limits a specific JWT to a subset of the agent's grants. |
 | `cnf` | No | Optional confirmation claim for proof-of-possession profiles. When present, it binds the JWT to a proof key or client certificate, following [RFC 7800](https://datatracker.ietf.org/doc/html/rfc7800). |
 
 ### 5.4 Proof of Possession (Optional)
@@ -535,9 +478,7 @@ This endpoint enables generic clients to work with any Agent Auth server. Purpos
     "revoke_host": "/host/revoke",
     "rotate_key": "/agent/rotate-key",
     "rotate_host_key": "/host/rotate-key",
-    "introspect": "/agent/introspect",
-    "device_authorization": "/device/code",
-    "ciba_authorize": "/agent/ciba/authorize"
+    "introspect": "/agent/introspect"
   },
   "jwks_uri": "https://auth.bank.com/.well-known/jwks.json"
 }
@@ -551,11 +492,13 @@ This endpoint enables generic clients to work with any Agent Auth server. Purpos
 | `issuer` | string | Yes | Base URL of the authorization server |
 | `algorithms` | string[] | Yes | Supported key algorithms |
 | `modes` | string[] | Yes | Supported registration modes: `"delegated"`, `"autonomous"`, or both |
-| `approval_methods` | string[] | Yes | How user approval works. Defined values: `"device_authorization"` (RFC 8628), `"ciba"` (Client Initiated Backchannel Authentication). Servers MAY include additional custom methods (see §9.4). Clients SHOULD ignore methods they don't recognize. |
+| `approval_methods` | string[] | Yes | How user approval works. Defined core values: `"device_authorization"` (RFC 8628), `"ciba"` (Client Initiated Backchannel Authentication). Servers MAY include additional custom methods defined by extension profiles (see §13.8.3). Clients SHOULD ignore methods they don't recognize. |
 | `endpoints` | object | Yes | Server API endpoint paths, relative to `issuer` |
 | `jwks_uri` | string | No | URL to the server's JWKS (JSON Web Key Set). Enables clients to verify server-signed responses in future protocol extensions. Servers that plan to sign responses SHOULD include this. |
 
 Capabilities are listed via `/capability/list` (§6.2), described in detail via `/capability/describe` (§6.2.1), and executed through `POST /capability/execute` (§6.11). The discovery document covers identity and authorization configuration only.
+
+Approval methods are negotiated through `POST /agent/register` (§6.3), `POST /agent/request-capability` (§6.4), and `POST /agent/reactivate` (§6.6). The server communicates the chosen method in the returned `approval` object — approval initiation is not a separate discovery-advertised endpoint in the core protocol.
 
 #### 6.1.1 Versioning
 
@@ -572,7 +515,7 @@ The `version` field identifies the draft version of the protocol, using the form
 GET /capability/list
 ```
 
-Returns a lightweight listing of capabilities the server offers. Each entry includes only `name`, `description`, and (when authenticated with an agent JWT) `grant_status`. For full capability details including `input` schemas and execution metadata, use `GET /capability/describe` (§6.2.1).
+Returns a lightweight listing of capabilities the server offers. Each entry includes only `name`, `description`, and (when authenticated with an agent JWT) `grant_status`. For full capability details including `input` schemas, use `GET /capability/describe` (§6.2.1).
 
 Supports three authentication modes:
 
@@ -644,13 +587,30 @@ Supports three authentication modes:
 
 Pagination is optional — servers with a small capability set MAY return all capabilities in a single response with `has_more: false`. Clients MUST handle both paginated and non-paginated responses.
 
+**Authentication required (optional):**
+
+Servers whose capabilities depend entirely on user context (e.g. multi-tenant services with no public capability set) MAY return `401 Unauthorized` on unauthenticated requests instead of an empty list. The response SHOULD include a `WWW-Authenticate: AgentAuth` challenge (§6.14) so the client knows where to discover and register:
+
+```
+HTTP/1.1 401 Unauthorized
+WWW-Authenticate: AgentAuth discovery="https://auth.example.com/.well-known/agent-configuration"
+Content-Type: application/json
+
+{
+  "error": "authentication_required",
+  "error_description": "This server requires a host or agent JWT to list capabilities."
+}
+```
+
+Clients that receive a `401` on capability list SHOULD proceed through discovery and registration, then retry the request with a host or agent JWT. Servers that support unauthenticated capability listing MUST NOT return `401` — they return public capabilities or an empty list instead.
+
 ### 6.2.1 Describe Capability
 
 ```
 GET /capability/describe?name={capability_name}
 ```
 
-Returns the full detail for a single capability, including `input` schema and any execution metadata. This is the complement to the lightweight list endpoint (§6.2) — agents call it when they need to know a capability's input shape or direct execution details.
+Returns the full detail for a single capability, including its `input` schema. This is the complement to the lightweight list endpoint (§6.2) — agents call it when they need to know a capability's input shape before executing it.
 
 **Authorization:** Same three modes as `GET /capability/list` (§6.2). When authenticated with an agent JWT, the response includes `grant_status`.
 
@@ -680,66 +640,6 @@ Returns the full detail for a single capability, including `input` schema and an
 }
 ```
 
-**Example response (HTTP execution metadata):**
-
-```json
-{
-  "name": "transfer_domestic",
-  "description": "Transfer funds domestically",
-  "input": {
-    "type": "object",
-    "required": ["amount", "currency", "destination_account"],
-    "properties": {
-      "amount": { "type": "number" },
-      "currency": { "type": "string" },
-      "destination_account": { "type": "string" }
-    }
-  },
-  "http": {
-    "method": "POST",
-    "url": "https://api.bank.com/v1/transfers/domestic",
-    "input": {
-      "requestBody": {
-        "required": true,
-        "content": {
-          "application/json": {
-            "schema": {
-              "type": "object",
-              "required": ["amount", "currency", "destination_account"],
-              "properties": {
-                "amount": { "type": "number" },
-                "currency": { "type": "string" },
-                "destination_account": { "type": "string" }
-              }
-            }
-          }
-        }
-      }
-    }
-  },
-  "grant_status": "granted"
-}
-```
-
-**Example response (custom execution metadata):**
-
-```json
-{
-  "name": "get_transactions",
-  "description": "Get recent transactions",
-  "input": {
-    "type": "object",
-    "properties": {
-      "limit": { "type": "number", "description": "Max transactions to return" }
-    }
-  },
-  "acme.stream": {
-    "channel": "deployments"
-  },
-  "grant_status": "granted"
-}
-```
-
 If the capability name does not exist, the server MUST return `404` with error code `capability_not_found`.
 
 ### 6.3 Agent Registration
@@ -761,7 +661,9 @@ Registers a new agent through a host.
   "capabilities": ["check_balance", "transfer_domestic"],
   "mode": "delegated",
   "reason": "User asked to check account balances and make a domestic transfer",
-  "preferred_method": "device_authorization"
+  "preferred_method": "device_authorization",
+  "login_hint": "alice@example.com",
+  "binding_message": "Approve connection for Bank balance checker"
 }
 ```
 
@@ -772,7 +674,17 @@ Registers a new agent through a host.
 | `capabilities` | string[] | No | Requested capability names. If omitted, the agent is created with no capabilities — the agent can request them later via `POST /agent/request-capability` (§6.4). |
 | `mode` | string | No | `"delegated"` (default) or `"autonomous"` |
 | `reason` | string | No | Human-readable reason for the request. Displayed to the user on the approval screen. |
-| `preferred_method` | string | No | Preferred approval method (e.g. `"device_authorization"`, `"ciba"`). This is a hint — the server makes the final decision and returns the chosen method in the `approval` object (§9.5). Values correspond to the `approval_methods` array in the discovery response (§6.1). |
+| `preferred_method` | string | No | Preferred approval method (e.g. `"device_authorization"`, `"ciba"`). This is a hint — the server makes the final decision and returns the chosen method in the `approval` object (§9.5). Values correspond to the `approval_methods` array in the discovery response (§6.1), including any extension-defined methods the client understands. |
+| `login_hint` | string | No | User identifier hint for approval methods that benefit from the server already knowing who should approve (for example CIBA). The server MAY ignore it, validate it against its own rules, or reject it if the format is unsupported. |
+| `binding_message` | string | No | Short message shown to the approver when the selected approval method supports it. Intended to help the user confirm what they are approving. The server MAY ignore it or display a server-generated message instead. |
+
+**Idempotency and retry semantics:**
+
+Registration is keyed by the host identity plus the agent public key carried in the host JWT.
+
+- If no agent exists for that tuple, the server creates one.
+- If a matching agent exists in `pending` state, the server SHOULD treat the request as an idempotent retry and return the existing `agent_id` and current or refreshed approval flow instead of creating a second agent.
+- If a matching agent exists in `active`, `rejected`, `revoked`, or `claimed` state, the server SHOULD reject the request with `409 agent_exists`. Clients SHOULD generate a new agent keypair for a new registration attempt.
 
 **Response (auto-approved):**
 
@@ -817,7 +729,7 @@ Registers a new agent through a host.
 }
 ```
 
-When `status` is `"active"`, `agent_capability_grants` MUST include full capability details (`description`, `input`, and any execution metadata) on each grant.
+When `status` is `"active"`, `agent_capability_grants` MUST include full capability details (`description` and `input`) on each grant.
 
 **Response (approval required):**
 
@@ -867,7 +779,9 @@ Content-Type: application/json
 {
   "capabilities": ["transfer_international"],
   "reason": "User requested an international wire transfer",
-  "preferred_method": "ciba"
+  "preferred_method": "ciba",
+  "login_hint": "alice@example.com",
+  "binding_message": "Approve international transfer access"
 }
 ```
 
@@ -875,14 +789,16 @@ Content-Type: application/json
 |---|---|---|---|
 | `capabilities` | string[] | Yes | Additional capability names to request for this agent |
 | `reason` | string | No | Human-readable explanation for why the agent is requesting these capabilities. Servers SHOULD store this on the resulting grant records for auditability. |
-| `preferred_method` | string | No | Preferred approval method (e.g. `"device_authorization"`, `"ciba"`). This is a hint — the server makes the final decision and returns the chosen method in the `approval` object (§9.5). Values correspond to the `approval_methods` array in the discovery response (§6.1). |
+| `preferred_method` | string | No | Preferred approval method (e.g. `"device_authorization"`, `"ciba"`). This is a hint — the server makes the final decision and returns the chosen method in the `approval` object (§9.5). Values correspond to the `approval_methods` array in the discovery response (§6.1), including any extension-defined methods the client understands. |
+| `login_hint` | string | No | User identifier hint for approval methods that benefit from the server already knowing who should approve (for example CIBA). The server MAY ignore it or validate it against server policy. |
+| `binding_message` | string | No | Short message shown to the approver when the selected approval method supports it. The server MAY ignore it or replace it with its own message. |
 
-**Response (auto-approved — within host defaults):**
+**Response (auto-approved):**
 
 ```json
 {
   "agent_id": "agt_abc123",
-  "status": "granted",
+  "status": "active",
   "agent_capability_grants": [
     {
       "capability": "transfer_international",
@@ -991,7 +907,7 @@ Authorization: Bearer <host_jwt>
 }
 ```
 
-The `agent_capability_grants` array is the single source of truth for capability state. Each grant has a `status` field: `"active"` (granted and usable), `"pending"` (awaiting approval), or `"denied"` (user rejected). Active grants include full capability details (`description`, `input`, and any execution metadata). Pending and denied grants include only `capability` and `status`.
+The `agent_capability_grants` array in the status response reflects the server's current capability state for this agent. Each grant has a `status` field: `"active"` (granted and usable), `"pending"` (awaiting approval), or `"denied"` (user rejected). Active grants include full capability details (`description` and `input`). Pending and denied grants include only `capability` and `status`.
 
 ### 6.6 Reactivate
 
@@ -1126,15 +1042,18 @@ POST /agent/rotate-key
 
 Replaces an agent's public key. The old key stops working immediately.
 
-**Authorization:** Agent JWT. The request MUST be signed with the agent's current key.
+**Authorization:** Host JWT. The server MUST verify the agent is registered under this host.
 
 **Request body:**
 
 ```json
 {
+  "agent_id": "agt_abc123",
   "public_key": { "kty": "OKP", "crv": "Ed25519", "x": "new-key..." }
 }
 ```
+
+This endpoint is intended for planned rotation and incident response. Because the host controls the agent's lifecycle, host-authenticated rotation remains usable even when the agent's previous key is suspected to be compromised.
 
 **Response:**
 
@@ -1350,6 +1269,10 @@ Content-Type: application/json
 
 The auth server performs the full verification flow (§5.5) and returns an active/inactive response.
 
+**Endpoint protection:**
+
+The introspect endpoint exposes agent identity, capability grants, and user association. Servers SHOULD protect it with server-to-server authentication. The mechanism is implementation-specific — common approaches include shared secrets (API keys), mutual TLS, or network-level restrictions (IP allowlisting, private networking). Servers that expose the introspect endpoint without caller authentication MUST rate-limit it aggressively to prevent enumeration and abuse.
+
 ### 6.13 Error Format
 
 All endpoints use a standard error response format:
@@ -1394,7 +1317,7 @@ The `error` field is a machine-readable code (snake_case string). The `message` 
 | `POST /agent/register` | 400 | `unsupported_mode` | Requested mode (`delegated`/`autonomous`) is not supported by this server |
 | `POST /agent/register` | 400 | `unsupported_algorithm` | Agent's key algorithm is not in the server's supported set |
 | `POST /agent/register` | 400 | `invalid_capabilities` | One or more requested capability names don't exist or are blocked |
-| `POST /agent/register` | 409 | `agent_exists` | An agent with this public key is already registered |
+| `POST /agent/register` | 409 | `agent_exists` | A non-pending agent with this public key is already registered under this host. Pending registrations are retried idempotently and return existing state instead of this error. |
 | `POST /agent/request-capability` | 400 | `invalid_capabilities` | One or more requested capability names don't exist or are blocked |
 | `POST /agent/request-capability` | 409 | `already_granted` | All requested capabilities are already granted |
 | Any agent-authenticated | 403 | `capability_not_granted` | The agent does not have this capability |
@@ -1408,6 +1331,7 @@ The `error` field is a machine-readable code (snake_case string). The `message` 
 | `POST /agent/rotate-key` | 400 | `unsupported_algorithm` | New key's algorithm is not supported |
 | `POST /host/rotate-key` | 400 | `unsupported_algorithm` | New key's algorithm is not supported |
 | `GET /agent/status` | 404 | `agent_not_found` | Agent ID doesn't exist |
+| `GET /capability/list` | 401 | `authentication_required` | Server requires auth to list capabilities (§6.2) |
 | `GET /capability/describe` | 404 | `capability_not_found` | Capability name doesn't exist |
 
 Servers MAY return additional error codes beyond those listed. Clients SHOULD handle unknown error codes gracefully by falling back to the HTTP status code.
@@ -1519,7 +1443,7 @@ Fetches a provider's discovery document from a direct service URL. Clients SHOUL
 
 ### 7.2 list_capabilities
 
-Returns a lightweight listing of available capabilities — names, descriptions, and grant status. All parameters are optional — a bare `list_capabilities()` returns everything the server offers. For full capability details including input schemas and execution metadata, use `describe_capability` (§7.2.1).
+Returns a lightweight listing of available capabilities — names, descriptions, and grant status. All parameters are optional — a bare `list_capabilities()` returns everything the server offers. For full capability details including input schemas, use `describe_capability` (§7.2.1).
 
 **Input:**
 
@@ -1556,7 +1480,7 @@ The `grant_status` field is present when the request is authenticated with an ag
 
 ### 7.2.1 describe_capability
 
-Returns the full detail for a single capability, including its `input` schema and any execution metadata. Agents call this when they need to know a capability's input shape before executing it, or to re-fetch details that are no longer in context.
+Returns the full detail for a single capability, including its `input` schema. Agents call this when they need to know a capability's input shape before executing it, or to re-fetch details that are no longer in context.
 
 **Input:**
 
@@ -1604,20 +1528,22 @@ Connects an agent to a service. This generates a keypair, registers the agent on
 | `mode` | string | No | `"delegated"` (default) or `"autonomous"` |
 | `reason` | string | No | Human-readable reason for the request. Displayed to the user on the approval screen. |
 | `preferred_method` | string | No | Preferred approval method hint (e.g. `"device_authorization"`, `"ciba"`). Passed through to the server on `POST /agent/register` (§6.3). |
+| `login_hint` | string | No | Optional user identifier hint for approval methods like CIBA. Passed through to the server on `POST /agent/register` (§6.3). |
+| `binding_message` | string | No | Optional short approver-facing message for approval methods that support it. Passed through to the server on `POST /agent/register` (§6.3). |
 
 **Behavior:**
 
 1. Look up the provider's configuration (trigger `discover_provider` first if the input is a direct service URL and no retained configuration exists)
 2. Generate an agent keypair
 3. Sign a host JWT containing the agent's public key (see §5.2 for JWT construction)
-4. Call `POST /agent/register` (§6.3) with the host JWT, capabilities, and mode
+4. Call `POST /agent/register` (§6.3) with the host JWT, requested capabilities, mode, and any approval hints
 5. If `status: "active"` → store the agent connection and return agent_id + granted capabilities (including full capability details from the grant response)
 6. If `status: "pending"` → initiate the approval flow returned by the server (§9). Poll for status until the agent is approved, rejected, or the approval expires. On approval, store the connection and return agent_id + granted capabilities (including full capability details). On rejection or timeout, report the outcome to the agent.
 7. If the server returns `invalid_capabilities` → return an error to the agent indicating which capability names were not recognized. The client SHOULD include the list of available capabilities (from the most recent `list_capabilities` or `discover_provider` result) so the agent can self-correct without an extra round trip.
 
 ### 7.4 sign_jwt
 
-Returns a signed agent JWT for authenticating requests. The agent does not hold its own private key — the client does (§5.1). Most agents use `execute_capability` (§7.9) instead of requesting a raw JWT. This tool exists for agents that need direct access to a signed token — for example, to make direct HTTP calls to service endpoints that accept agent JWTs (§4.2).
+Returns a signed agent JWT for authenticating requests. The agent does not hold its own private key — the client does (§5.1). Most agents use `execute_capability` (§7.9) instead of requesting a raw JWT. This tool exists for agents that need direct access to a signed token — for example, to authenticate with resource servers that validate agent JWTs directly.
 
 **Input:**
 
@@ -1655,12 +1581,14 @@ Requests additional capabilities for an already-connected agent. This is how an 
 | `capabilities` | string[] | Yes | Additional capability names to request |
 | `reason` | string | No | Why the agent needs these capabilities |
 | `preferred_method` | string | No | Preferred approval method hint (e.g. `"device_authorization"`, `"ciba"`). Passed through to the server on `POST /agent/request-capability` (§6.4). |
+| `login_hint` | string | No | Optional user identifier hint for approval methods like CIBA. Passed through to the server on `POST /agent/request-capability` (§6.4). |
+| `binding_message` | string | No | Optional short approver-facing message for approval methods that support it. Passed through to the server on `POST /agent/request-capability` (§6.4). |
 
 **Behavior:**
 
 1. Sign an agent JWT and call `POST /agent/request-capability` (§6.4)
-2. If `status: "granted"` → return the newly granted capabilities with full capability details from the grant response
-3. If `status: "pending"` → initiate the approval flow returned by the server (§9). Poll for status until approved or denied. On approval, return full capability details.
+2. If `status: "active"` → return the newly granted capabilities with full capability details from the grant response
+3. If `status: "pending"` → initiate the approval flow returned by the server (§9). Poll for status until the requested grants are approved or denied. On completion, return the current agent status and grant details.
 4. If the server returns `invalid_capabilities` → return an error to the agent indicating which capability names were not recognized. The client SHOULD include the list of available capabilities so the agent can self-correct.
 5. Return the outcome to the agent
 
@@ -1668,9 +1596,12 @@ Requests additional capabilities for an already-connected agent. This is how an 
 
 ```json
 {
-  "granted": [
+  "agent_id": "agt_abc123",
+  "status": "active",
+  "agent_capability_grants": [
     {
-      "name": "write_document",
+      "capability": "write_document",
+      "status": "active",
       "description": "Write or update a document",
       "input": {
         "type": "object",
@@ -1682,21 +1613,14 @@ Requests additional capabilities for an already-connected agent. This is how an 
       }
     },
     {
-      "name": "delete_document",
-      "description": "Delete a document",
-      "input": {
-        "type": "object",
-        "required": ["document_id"],
-        "properties": {
-          "document_id": { "type": "string" }
-        }
-      }
+      "capability": "delete_document",
+      "status": "denied"
     }
-  ],
-  "pending": [],
-  "denied": []
+  ]
 }
 ```
+
+As with the server status response (§6.5), active grants include full capability details. Pending and denied grants include only `capability` and `status`.
 
 ### 7.6 disconnect_agent
 
@@ -1804,7 +1728,6 @@ Executes a granted capability through the server's execute endpoint (§6.11). Th
 3. Return the result to the agent
 4. For async responses (`status: "pending"`), poll the `status_url` until completion and return the final result
 
-Clients MAY also support direct execution for capabilities that include execution metadata (§4.2). When a capability has an `http` field, the client MAY construct and send the HTTP request directly per §4.2 instead of going through the execute endpoint. Clients SHOULD prefer the execute endpoint unless there is a specific reason to use direct execution (e.g. streaming, low latency).
 
 ### 7.10 Registry
 
@@ -1883,7 +1806,7 @@ Clients SHOULD auto-detect the `name` from available context (e.g. device hostna
 | `id` | string | Unique identifier |
 | `name` | string | Human-readable name for the agent |
 | `host_id` | string (FK) | The host this agent is registered under (**required**) |
-| `user_id` | string? (FK) | The user this agent acts on behalf of. Set from the host's `user_id` or session auth. |
+| `user_id` | string? (FK) | The single effective user context this agent acts on behalf of. Set from the host's `user_id` or session auth. Core protocol behavior assumes at most one effective `user_id` per agent at a time. |
 | `public_key` | JWK? | Ed25519 public key (see §5.1). Present when inline key registration is used. |
 | `jwks_url` | string? | JWKS endpoint URL. Present when JWKS-based registration is used. |
 | `status` | enum | active, pending, expired, revoked, rejected, claimed |
@@ -1904,7 +1827,7 @@ Agent capabilities are stored as individual agent capability grant records rathe
 | `agent_id` | string (FK) | The agent this capability grant belongs to |
 | `capability` | string | The granted capability identifier |
 | `status` | enum | `active`, `pending`, or `denied` |
-| `granted_by` | string? (FK) | User who granted this capability |
+| `granted_by` | string? (FK) | User or system actor who granted this capability. Informational for audit and revocation history — it does not change the agent's single effective `user_id`. |
 | `reason` | string? | Why this capability was granted or requested |
 | `expires_at` | datetime? | When this specific capability grant expires (independent of agent TTL) |
 | `created_at` | datetime | Created |
@@ -1914,27 +1837,17 @@ An agent's effective capabilities are all agent capability grants where `status 
 
 Implementations MAY use flat arrays on the agent model instead of a separate table, but MUST support at minimum per-capability status tracking (active vs pending).
 
-#### 8.3.1 Multi-Grantor Authorization
+#### 8.3.1 Single-User Core Model
 
-Different users can grant different capabilities to the same agent. Each agent capability grant row has its own `granted_by`, tracking who authorized it. Grants are independently revocable — revoking one user's grant does not affect another's.
+The core protocol models an agent as having one effective user context at a time (`agent.user_id`). A capability grant MAY still record a different `granted_by` value for audit purposes — for example, an admin or another authorized reviewer may approve a capability request — but that does not change which user the agent is acting for.
 
-**Example:** A single agent with three grants from three different users:
-
-| capability | granted_by | Use case |
-|---|---|---|
-| `read_emails` | `user_alice` | Alice granted access to her emails |
-| `create_issue` | `user_bob` | Bob granted access to his repository |
-| `audit_log` | `admin` | Admin granted global audit access |
-
-Revoking Alice's `read_emails` grant does not affect Bob's `create_issue` or the admin's `audit_log`.
-
-**How targeting works:** The protocol does not define a built-in mechanism for directing approval flows to specific users. Targeting a particular user is itself a privileged operation — an agent should not be able to send approval requests to arbitrary users simply because it is registered. Instead, servers that support multi-grantor workflows SHOULD expose targeting as a capability the agent must earn. For example, a server might offer a `target_user` capability that, once granted, allows the agent to include a `target` field in capability requests. The server MAY also expose a discovery capability that returns valid target identifiers (organization members, project collaborators, etc.). The mechanics of targeting — request fields, resolution logic, and client tooling — are server-defined extensions, not part of the core protocol.
+More advanced workflows where a single agent accumulates authority from multiple end users, targets specific users for approval, or selects a subject at execution time are not part of the core protocol. Those patterns are defined, if at all, by extension profiles such as the Cross-User Grant Profile (§13.8.1).
 
 ## 9. Approval Methods
 
 When a registration or capability request requires user consent, the server returns an `approval` object describing how the client should facilitate it. This section defines the approval methods the protocol supports.
 
-Servers MUST support device authorization (§9.1) as the baseline approval method. All other methods are OPTIONAL.
+Servers MUST support device authorization (§9.1) as the baseline approval method. Servers SHOULD also support CIBA (§9.2) — it provides a better user experience when the server already knows the user's identity. Other methods are OPTIONAL.
 
 ### 9.1 Device Authorization (RFC 8628)
 
@@ -1947,7 +1860,7 @@ The baseline approval method. Every conformant server MUST support this. Used wh
 
 **Agent Auth-specific behavior:**
 
-- **Agent ID is reusable after timeout only.** A timed-out pending agent stays in `pending` state. The client MAY retry by calling `POST /agent/register` with the same agent keypair — the server SHOULD recognize the existing agent and reuse it with a new approval flow.
+- **Pending registration retries are idempotent.** A client MAY retry `POST /agent/register` with the same host identity and agent keypair. The server SHOULD recognize the existing pending agent and return the same `agent_id`, along with either the current approval state or a refreshed approval flow.
 - **User denial is terminal for that attempt.** If the approval flow returns `access_denied`, the server SHOULD transition the agent to `rejected` (not `pending`). The client MUST NOT automatically retry a denied registration.
 - **Pending agent cleanup.** Servers SHOULD periodically clean up agents that remain in `pending` state beyond a server-defined threshold (e.g. 24 hours, 7 days). Cleaned-up pending agents are deleted, not revoked — they never became active.
 
@@ -1955,55 +1868,43 @@ The baseline approval method. Every conformant server MUST support this. Used wh
 
 Used when the server can reach the user directly (e.g. mobile app, email, in-app notification). Servers SHOULD implement CIBA — it provides a better experience than device authorization when the server already knows the user's identity, since the user doesn't need to navigate to a URL.
 
-1. Client calls `POST /agent/ciba/authorize` with `login_hint` (email, phone, user ID) and optional `capabilities`, `binding_message`
-2. Server creates a pending CIBA request and returns `expires_in`, `interval`
-3. Server notifies the user through its notification channel (push notification, email, SMS, in-app)
-4. User approves or denies on their device (implementation-specific — the server provides its own approval UI or endpoints)
-5. Client polls `GET /agent/status` (§6.5) at the `interval` rate until the agent's status changes
+In this protocol, CIBA is not a separate initiation flow. The client still starts with `POST /agent/register` (§6.3), `POST /agent/request-capability` (§6.4), or `POST /agent/reactivate` (§6.6). If the server chooses CIBA, it returns `approval.method = "ciba"` in the normal approval object.
 
-**Protocol endpoint:**
+The client MAY include `login_hint` and `binding_message` on registration or capability-request calls to help the server route the approval request, but the server chooses whether to honor them.
 
-| Endpoint | Method | Description |
-|---|---|---|
-| `/agent/ciba/authorize` | POST | Initiate a CIBA authentication request |
+**Example approval object:**
+
+```json
+{
+  "approval": {
+    "method": "ciba",
+    "expires_in": 300,
+    "interval": 5,
+    "binding_message": "Approve connection for Bank balance checker"
+  }
+}
+```
+
+The server notifies the user through its notification channel (push notification, email, SMS, in-app, etc.), and the client polls `GET /agent/status` (§6.5) at the returned `interval` rate until the agent or requested grants leave `pending` state.
 
 The user-facing approval surface (approve, deny, list pending requests) is an implementation concern — the server provides whatever UI or endpoints are appropriate for its platform. These are not protocol endpoints.
-
-Approval result is observed through `GET /agent/status` (§6.5), not a separate token endpoint. The client polls the status endpoint at the `interval` rate.
 
 Servers implementing CIBA MUST follow the security considerations in [CIBA Core §13](https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html#rfc.section.13) — particularly around rate limiting, user enumeration, and notification fatigue.
 
 ### 9.3 Real-Time Notification (Optional)
 
-Polling is the baseline for all approval methods. However, servers MAY offer real-time notification as an alternative to reduce unnecessary polling.
-
-If the server supports push notification, the `approval` object in the response MAY include a `notification_url` field:
-
-```json
-{
-  "approval": {
-    "method": "device_authorization",
-    "verification_uri": "https://bank.com/device",
-    "user_code": "ABCD-1234",
-    "expires_in": 300,
-    "interval": 5,
-    "notification_url": "https://auth.bank.com/agent/events/agt_abc123"
-  }
-}
-```
-
-The client connects to `notification_url` via SSE and receives an event when the approval completes, is denied, or expires. If the connection fails or `notification_url` is absent, the client MUST fall back to polling `GET /agent/status`.
+Polling is the baseline for all core approval methods. Real-time approval notification is defined as an extension profile in §13.8.2. Core clients MUST function correctly using polling alone.
 
 ### 9.4 Server-Defined
 
-The server MAY implement custom approval flows. The `approval` object in responses carries whatever information the client needs to facilitate approval.
+Custom approval methods are not part of the core protocol. They are defined, if at all, by extension profiles such as the Server-Defined Approval Profile (§13.8.3).
 
 ### 9.5 Method Selection
 
 When a server supports multiple approval methods, it decides which one to use based on context. Clients MAY include a `preferred_method` field in registration (§6.3) and capability requests (§6.4) to indicate which approval method they prefer. The server SHOULD consider this hint but makes the final decision and returns the chosen method in the `approval` object. The server MAY ignore `preferred_method` entirely — for example, if the preferred method is unavailable, not supported, or inappropriate for the request context.
 
 General guidance:
-- **[CIBA](https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html)** when the server already knows the user (e.g. host has a `user_id` or client provides a `login_hint`)
+- **[CIBA](https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html)** when the server already knows the user (e.g. host has a `user_id` or the client provides a `login_hint` the server can resolve)
 - **Device authorization** when the user is unknown and must navigate to a URL themselves
 
 ## 10. Security Considerations
@@ -2052,7 +1953,7 @@ Hosts that register across many servers SHOULD prefer JWKS-based registration, s
 If an agent's private key is leaked, anyone holding it can impersonate that agent. This is inherent to any keypair-based system (same as a leaked SSH key or OAuth token). However, unlike bearer tokens, the agent's private key never traverses the wire — it can only leak from the client's local storage.
 
 Mitigations:
-- **Key rotation.** Use `POST /agent/rotate-key` to immediately invalidate the compromised key and replace it with a new one.
+- **Host-authorized key rotation.** Use `POST /agent/rotate-key` with a Host JWT to immediately invalidate the compromised key and replace it with a new one.
 - **Short TTL.** Agents with short `session_ttl` values auto-expire, limiting the window of compromise.
 - **Revocation.** If compromise is detected, revoke the agent immediately.
 - **Secure storage.** Clients SHOULD store agent private keys securely (keychain, encrypted file, memory-only).
@@ -2170,7 +2071,7 @@ Services with MCP servers can expose Agent Auth-backed capabilities through an M
 
 #### OpenAPI
 
-Services with OpenAPI documents can derive capability definitions from existing API operations. An adapter maps OpenAPI operations to Agent Auth capabilities. The execute endpoint can proxy to these operations, so existing APIs don't need to validate agent JWTs themselves. Services MAY also expose the HTTP profile (§4.2) on capabilities for clients that prefer direct execution.
+Services with OpenAPI documents can derive capability definitions from existing API operations. An adapter maps OpenAPI operations to Agent Auth capabilities. The execute endpoint can proxy to these operations, so existing APIs don't need to validate agent JWTs themselves.
 
 #### OAuth 2.0
 
@@ -2261,6 +2162,47 @@ The protocol uses "host" to describe the client's persistent identity on a serve
 
 Servers SHOULD periodically clean up agents that remain in `pending` state beyond a server-defined threshold (e.g. 24 hours, 7 days). Cleaned-up pending agents are deleted, not revoked — they never became active. Hosts in `pending` state should be cleaned up similarly.
 
+### 13.8 Extension Profiles
+
+The following profiles are outside the core interoperability surface of this specification. Clients and servers MAY implement them by agreement, but conformant implementations MUST NOT assume support unless the relevant profile is explicitly documented by the server.
+
+#### 13.8.1 Cross-User Grant Profile
+
+This profile allows a capability grant's approver (`granted_by`) to be different from the agent's effective user context (`agent.user_id`) in ways that affect authorization semantics, not just audit history.
+
+Examples include:
+
+- A single agent receiving approvals from multiple end users
+- Approval requests targeted at a specific user or reviewer
+- Execution-time subject selection where the same agent can act for different users depending on the granted capability
+
+This profile requires additional protocol surface beyond the core specification, such as targeting fields, approval-routing rules, introspection extensions, and execution semantics that tell the resource server whose authority is being exercised. Those details are intentionally left to profile-specific definitions.
+
+#### 13.8.2 Real-Time Approval Notification Profile
+
+This profile augments the core polling model with a `notification_url` in the `approval` object:
+
+```json
+{
+  "approval": {
+    "method": "device_authorization",
+    "verification_uri": "https://bank.com/device",
+    "user_code": "ABCD-1234",
+    "expires_in": 300,
+    "interval": 5,
+    "notification_url": "https://auth.bank.com/agent/events/agt_abc123"
+  }
+}
+```
+
+The client connects to `notification_url` via SSE and receives an event when the approval completes, is denied, or expires. If the connection fails or `notification_url` is absent, the client MUST fall back to polling `GET /agent/status`.
+
+#### 13.8.3 Server-Defined Approval Profile
+
+This profile allows servers to expose approval methods beyond the core `"device_authorization"` and `"ciba"` set. Extension-defined methods appear in discovery's `approval_methods` array and in the returned `approval.method` field.
+
+The `approval` object carries whatever additional fields the client needs to facilitate the custom flow. Clients that do not recognize an extension-defined method SHOULD report that the server selected an unsupported approval method rather than attempting to guess the semantics.
+
 ## 14. Privacy Considerations
 
 ### 14.1 Host Key Correlation
@@ -2283,8 +2225,7 @@ The protocol provides per-agent, per-call traceability by design (§12). This is
 
 Autonomous agents (`mode: "autonomous"`) can register and operate without a user in the loop. When a host acquires a `user_id`, autonomous agents under it are automatically claimed and their activity history is attributed to the user (§3.4). The user may not be aware of what the agent did before the host was linked.
 
-- Servers MUST show users the autonomous agent's activity history as part of the host linking flow so the user can make an informed decision.
-- Servers SHOULD clearly indicate that the agent operated autonomously before the user was involved.
+- Servers SHOULD provide the user with visibility into the autonomous agent's activity before completing the claiming process. See Appendix B.1 for operational guidance on the claiming flow.
 
 ### 14.4 Capability Requests as Behavioral Signal
 
@@ -2330,7 +2271,7 @@ The `reason` field on registration and capability requests is freetext. Agents m
 - **Billing** — how autonomous agents pay for access
 - **User signup** — how new user accounts are created
 - **Internal routing** — how the server routes capability calls to backends
-- **MCP server implementation** — a server may include MCP-related metadata on capabilities for direct execution, but the protocol does not define MCP servers. Services that expose MCP capabilities implement their MCP server independently.
+- **MCP server implementation** — the protocol does not define MCP servers. Services that expose MCP capabilities implement their MCP server independently.
 
 ---
 
@@ -2562,7 +2503,7 @@ Agent                    Client                   Server              User
   │                        │                        │                   │
   │  ┌─ In host defaults? ─────────────────────────────────────────┐   │
   │  │                                                              │   │
-  │  │ YES → { status: "granted" }                                  │   │
+  │  │ YES → { status: "active" }                                   │   │
   │  │        agent can now call capability x                       │   │
   │  │                                                              │   │
   │  │ NO  → { status: "pending", approval: { ... } }              │   │
@@ -2712,3 +2653,102 @@ Agent                    Client                   github.com      bank.com
   │   connections — one    │                        │                │
   │   per provider)        │                        │                │
 ```
+
+## Appendix B: Operational Guidance
+
+This appendix collects non-normative guidance for implementers building user-facing surfaces, dashboards, and management workflows around the protocol. Nothing in this appendix changes the wire-level requirements — it describes how to present protocol state to users and operators.
+
+### B.1 Autonomous Agent Claiming
+
+Claiming (§3.4) is a direct consequence of host linking. The protocol requires that autonomous agents transition to `"claimed"` and that activity is attributed to the user, but the user experience around this transition is an implementation concern. The following guidance helps implementers build a responsible claiming flow.
+
+**Pre-claim disclosure.** Before completing the link, servers should present the user with:
+
+- The number of autonomous agents under the host
+- A summary of each agent's activity (capabilities used, resources created, time range)
+- A clear statement that claiming is irreversible — the autonomous agents become terminal
+
+This gives the user an informed choice. An agent that checked a public weather API is different from one that created database records or sent messages.
+
+**Labeling.** Activity that occurred before the user was linked should be visually distinguished from post-claim activity. For example, a dashboard might label pre-claim actions as "Performed autonomously before you connected" or group them under a separate timeline section. The goal is to prevent users from mistaking autonomous actions for their own.
+
+**Post-claim management.** Once claimed, the user inherits the agent's data. Servers should provide a way for users to:
+
+- View the claimed agent's full activity history
+- Delete the claimed agent and its associated data if they don't want it
+- Understand that the agent itself is terminal — no further actions will come from it
+
+**Resource transfer.** If the autonomous agent created resources (files, records, subscriptions), the server should transfer ownership to the user. Resources that cannot be transferred (e.g. external side effects) should be documented in the activity summary so the user knows what happened.
+
+### B.2 Approval Screens
+
+When a user approves an agent registration or capability escalation, the approval screen is the primary trust boundary. The protocol provides the data (agent name, requested capabilities, reason, mode) — this section describes how to present it effectively.
+
+**First-time host approval** (unknown host, no linked user):
+
+- Show the host name (from `host_name` in the registration request) and that this is a new, previously unseen connection
+- List each requested capability with its human-readable description
+- Show the agent's `reason` field if provided — this is freetext from the agent, so display it as a quote, not as trusted content
+- Warn if the request includes high-risk capabilities (the server defines what "high-risk" means for its domain)
+- Require fresh authentication — a stale session cookie should not be sufficient (§10.11)
+
+**Capability escalation** (active agent requesting additional capabilities):
+
+- Show which capabilities the agent already has alongside the new request, so the user understands the delta
+- Show the `reason` field for the escalation
+- Highlight if the new capabilities represent a significant increase in privilege (e.g. going from read-only to write access)
+
+**Mode display.** The approval screen should clearly indicate whether the agent is `delegated` (acting on your behalf) or `autonomous` (operating independently). Users should understand the difference — delegated agents stop when the user revokes them; autonomous agents were never tied to a user in the first place.
+
+### B.3 Agent Management Dashboards
+
+Users need a way to see and manage their agents. The protocol provides the data model (§8) — this section describes what a management surface should expose.
+
+**Agent list.** Show all agents associated with the user, grouped by host. For each agent, display:
+
+- Agent name
+- Status (active, expired, revoked, claimed)
+- Mode (delegated / autonomous)
+- Capabilities granted
+- Last activity timestamp
+- Time until expiry (if applicable)
+
+**Per-agent detail.** Allow the user to drill into a specific agent and see:
+
+- Full capability grant history (what was granted, when, by whom)
+- Recent activity log (capability executions with timestamps)
+- The ability to revoke the agent
+
+**Host management.** Show hosts as "Connected Apps" or similar user-friendly label (§13.6). Allow users to:
+
+- View all agents under a host
+- Revoke a host (which cascades to all its agents, §10.5)
+- See the host's default capabilities
+
+### B.4 Lifecycle Notifications
+
+The protocol does not define a webhook or event model (§16), but operators will want to be notified of lifecycle events. Common events worth surfacing:
+
+| Event | When to notify |
+|---|---|
+| New host registered | A previously unknown host attempted to register an agent |
+| Agent approved | A pending agent was approved by the user |
+| Agent rejected | A pending agent was denied by the user |
+| Agent expired | An agent's session TTL or max lifetime elapsed |
+| Agent revoked | An agent was permanently revoked |
+| Capability escalation requested | An active agent requested additional capabilities |
+| Host linked | A host was linked to a user (triggers claiming) |
+| Autonomous agents claimed | Autonomous agents were claimed as part of host linking |
+
+How these notifications are delivered (email, webhook, in-app, push) is implementation-specific. The protocol provides the state transitions — the server decides which are worth notifying on and through which channel.
+
+### B.5 Pending Agent Cleanup
+
+Agents and hosts that remain in `pending` state after their approval window expires represent abandoned registration attempts. Servers should clean these up periodically (§13.7).
+
+Recommended defaults:
+
+- **Pending agents:** Delete after 24 hours. These are agents whose approval flow was never completed — the user never visited the verification URL or the CIBA notification was ignored.
+- **Pending hosts:** Delete after 7 days. A pending host represents an unknown client that attempted to register but was never approved.
+
+Cleanup means deletion, not revocation — these principals never became active. Deletion removes the record entirely, freeing up any resources (pending approval flows, stored public keys).

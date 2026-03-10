@@ -84,6 +84,26 @@
   border-radius: 9999px;
 }
 
+/* ─── Overview page ──────────────────────────────────────────────────────── */
+
+.overview-prose {
+  font-family: var(--font-serif);
+  font-size: 15px;
+  line-height: 1.85;
+  color: color-mix(in oklch, var(--color-fg) 78%, transparent);
+}
+.overview-prose .text-lead {
+  font-size: 17px;
+  line-height: 1.85;
+  color: color-mix(in oklch, var(--color-fg) 88%, transparent);
+}
+.overview-prose p { margin-bottom: 1rem; }
+.overview-prose p:last-child { margin-bottom: 0; }
+.overview-prose strong {
+  font-weight: 600;
+  color: color-mix(in oklch, var(--color-fg) 90%, transparent);
+}
+
 /* ─── Spec viewer ────────────────────────────────────────────────────────── */
 
 .spec-page-body {

@@ -5,10 +5,10 @@ import Footer from "@/components/Footer.astro";
 
 const cards = [
   {
-    title: "Registry",
-    description: "Official public registry for agent service discovery. Find and list services that support Agent Auth.",
-    href: "/registry",
-    label: "Browse registry",
+    title: "Overview",
+    description: "How Agent Auth works — the key concepts, discovery, registration flow, and design decisions explained.",
+    href: "/overview",
+    label: "Read the overview",
   },
   {
     title: "Implementations",
@@ -23,11 +23,10 @@ const cards = [
     label: "View examples",
   },
   {
-    title: "Community",
-    description: "Join the discussion — ask questions, share implementations, and help shape the protocol.",
-    href: "https://github.com/better-auth/agent-auth-protocol/discussions",
-    label: "Join the community",
-    external: true,
+    title: "Registry",
+    description: "Official public registry for agent service discovery. Find and list services that support Agent Auth.",
+    href: "/registry",
+    label: "Browse registry",
   },
 ];
 ---
@@ -48,36 +47,13 @@ const cards = [
           <p class="text-base sm:text-lg text-[var(--color-muted)] leading-relaxed max-w-lg mb-8">
             An implementation-oriented protocol that gives AI agents their own identity, permissions, and lifecycle, so services can authenticate, authorize, and audit them independently.
           </p>
-          <div class="mb-10"></div>
-          <div class="border border-dashed border-[var(--color-border)] max-w-lg">
-            <details name="faq" class="group border-b border-dashed border-[var(--color-border)] last:border-b-0">
-              <summary class="flex items-center justify-between px-4 py-3 cursor-pointer select-none">
-                <span class="text-[13px] font-medium">Why does this need to exist?</span>
-                <span class="text-[var(--color-muted)] text-xs font-[family-name:var(--font-mono)] ml-3 shrink-0 group-open:rotate-45 transition-transform">+</span>
-              </summary>
-              <div class="faq-content"><div><div class="px-4 pb-3 text-[12px] text-[var(--color-muted)] leading-[1.8]">Today, agents borrow a user's OAuth token or a shared client credential. That collapses the agent into someone else's identity — the server can't tell which agent made a request, can't scope permissions per agent, and can't revoke one without revoking all of them. Agent Auth gives each agent its own cryptographic identity, its own granted capabilities, and its own lifecycle — so services can authenticate, scope, and revoke each one independently.</div></div></div>
-            </details>
-            <details name="faq" class="group border-b border-dashed border-[var(--color-border)] last:border-b-0">
-              <summary class="flex items-center justify-between px-4 py-3 cursor-pointer select-none">
-                <span class="text-[13px] font-medium">How does it work?</span>
-                <span class="text-[var(--color-muted)] text-xs font-[family-name:var(--font-mono)] ml-3 shrink-0 group-open:rotate-45 transition-transform">+</span>
-              </summary>
-              <div class="faq-content"><div><div class="px-4 pb-3 text-[12px] text-[var(--color-muted)] leading-[1.8]">An agent registers with a server and gets its own keypair and identity. The user approves what the agent can do via a device authorization flow — similar to linking a TV app. Once approved, the agent signs a short-lived JWT for every request it makes. The server verifies the signature, checks the agent's permissions, and processes the call. Every request traces back to a specific agent.</div></div></div>
-            </details>
-            <details name="faq" class="group border-b border-dashed border-[var(--color-border)] last:border-b-0">
-              <summary class="flex items-center justify-between px-4 py-3 cursor-pointer select-none">
-                <span class="text-[13px] font-medium">How is this different from MCP or OAuth?</span>
-                <span class="text-[var(--color-muted)] text-xs font-[family-name:var(--font-mono)] ml-3 shrink-0 group-open:rotate-45 transition-transform">+</span>
-              </summary>
-              <div class="faq-content"><div><div class="px-4 pb-3 text-[12px] text-[var(--color-muted)] leading-[1.8]">MCP defines how agents talk to tools. OAuth defines how users authorize apps. Neither models the agent itself as an identity. With MCP alone, agents use the user's tokens — there's no per-agent audit trail, scoping, or revocation. Agent Auth adds the missing layer: it treats the runtime agent as a first-class principal sitting between the user and the service. You can use all three together.</div></div></div>
-            </details>
-            <details name="faq" class="group">
-              <summary class="flex items-center justify-between px-4 py-3 cursor-pointer select-none">
-                <span class="text-[13px] font-medium">Is this tied to Better Auth?</span>
-                <span class="text-[var(--color-muted)] text-xs font-[family-name:var(--font-mono)] ml-3 shrink-0 group-open:rotate-45 transition-transform">+</span>
-              </summary>
-              <div class="faq-content"><div><div class="px-4 pb-3 text-[12px] text-[var(--color-muted)] leading-[1.8]">Agent Auth is an open protocol — Ed25519 keypairs, device authorization, signed JWTs. Better Auth ships the reference implementation that handles everything out of the box, but the protocol is designed to be implementable in any language or framework.</div></div></div>
-            </details>
+          <div class="flex flex-wrap gap-3 mt-8">
+            <a href="/overview" class="inline-flex items-center gap-2 px-4 py-2 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider border border-[var(--color-fg)] bg-[var(--color-fg)] text-[var(--color-bg)] hover:opacity-90 transition-opacity">
+              How it works
+            </a>
+            <a href="/specification" class="inline-flex items-center gap-2 px-4 py-2 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider border border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-fg)] hover:border-[var(--color-fg)] transition-colors">
+              Read the spec
+            </a>
           </div>
         </div>
 
@@ -105,6 +81,283 @@ const cards = [
             <div id="demo-footer" class="border-t border-[var(--color-border)] px-4 py-2 flex items-center justify-center" style="visibility:hidden;">
               <button id="demo-replay-btn" class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)] hover:text-[var(--color-fg)] transition-colors cursor-pointer">↻ Replay</button>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- The problem -->
+  <section class="relative">
+    <div class="mx-auto max-w-[1400px] px-5 sm:px-6 pb-16">
+      <div class="flex items-center gap-3 mb-6">
+        <span class="text-[10px] font-[family-name:var(--font-mono)] tracking-[0.15em] uppercase text-[var(--color-muted)]">Delegated agents</span>
+        <div class="flex-1 border-t border-[var(--color-border)]"></div>
+      </div>
+      <p class="text-[15px] text-[var(--color-body)] leading-[1.8] max-w-2xl mb-8">Agent integrations today reuse a user's API keys, OAuth tokens, or a shared client credential. That collapses the agent into the user's identity — there's no per-agent visibility, scoping, approval, or revocation.</p>
+
+      <!-- Tabbed comparison -->
+      <div class="border border-[var(--color-border)]">
+        <!-- Tabs -->
+        <div class="flex border-b border-[var(--color-border)] bg-[var(--color-surface)] overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          <button class="del-tab px-4 sm:px-5 py-2.5 text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider whitespace-nowrap transition-colors text-[var(--color-fg)] border-b-2 border-[var(--color-fg)]" data-tab="identity">Identity</button>
+          <button class="del-tab px-4 sm:px-5 py-2.5 text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider whitespace-nowrap transition-colors text-[var(--color-muted)] hover:text-[var(--color-fg)] border-b-2 border-transparent" data-tab="permissions">Permissions</button>
+          <button class="del-tab px-4 sm:px-5 py-2.5 text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider whitespace-nowrap transition-colors text-[var(--color-muted)] hover:text-[var(--color-fg)] border-b-2 border-transparent" data-tab="approval">Approval</button>
+          <button class="del-tab px-4 sm:px-5 py-2.5 text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider whitespace-nowrap transition-colors text-[var(--color-muted)] hover:text-[var(--color-fg)] border-b-2 border-transparent" data-tab="revocation">Revocation</button>
+          <button class="del-tab px-4 sm:px-5 py-2.5 text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider whitespace-nowrap transition-colors text-[var(--color-muted)] hover:text-[var(--color-fg)] border-b-2 border-transparent" data-tab="audit">Audit trail</button>
+        </div>
+
+        <!-- Panels -->
+        <div class="del-panel grid grid-cols-2" id="del-identity">
+          <div class="px-6 sm:px-8 py-6 border-r border-[var(--color-border)]">
+            <div class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-red-400 mb-4">Today</div>
+            <div class="flex items-center gap-3 text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">
+              <div class="flex flex-col items-center gap-1.5">
+                <div class="w-9 h-9 border border-[var(--color-border)] flex items-center justify-center text-[9px]">A1</div>
+                <div class="w-9 h-9 border border-[var(--color-border)] flex items-center justify-center text-[9px]">A2</div>
+                <div class="w-9 h-9 border border-[var(--color-border)] flex items-center justify-center text-[9px]">A3</div>
+              </div>
+              <svg class="w-4 h-4 opacity-30 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              <div class="flex-1 border border-dashed border-red-400/30 px-3 py-2.5 text-center">
+                <div class="text-[10px] text-red-400">same token</div>
+                <div class="text-[9px] mt-0.5">user_oauth_xyz</div>
+              </div>
+              <svg class="w-4 h-4 opacity-30 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              <div class="w-14 h-14 border border-[var(--color-border)] flex items-center justify-center text-[9px] text-center leading-tight bg-[var(--color-surface)]">Bank<br/>API</div>
+            </div>
+            <p class="text-[11px] text-[var(--color-muted)] mt-3">All agents share one token. The server sees the user, not the agent.</p>
+          </div>
+          <div class="px-6 sm:px-8 py-6">
+            <div class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-green-500 mb-4">With Agent Auth</div>
+            <div class="flex items-center gap-3 text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">
+              <div class="flex flex-col items-center gap-1.5">
+                <div class="w-9 h-9 border border-green-500/30 flex items-center justify-center text-[9px] text-green-500">A1</div>
+                <div class="w-9 h-9 border border-green-500/30 flex items-center justify-center text-[9px] text-green-500">A2</div>
+                <div class="w-9 h-9 border border-green-500/30 flex items-center justify-center text-[9px] text-green-500">A3</div>
+              </div>
+              <svg class="w-4 h-4 opacity-30 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              <div class="flex-1 flex flex-col gap-1.5">
+                <div class="border border-green-500/20 px-2.5 py-1 text-[9px] bg-green-500/5 flex justify-between"><span><span class="text-green-500">agt_1</span> check_balance</span><span class="text-green-500">✓</span></div>
+                <div class="border border-green-500/20 px-2.5 py-1 text-[9px] bg-green-500/5 flex justify-between"><span><span class="text-green-500">agt_2</span> transfer_funds</span><span class="text-green-500">✓</span></div>
+                <div class="border border-green-500/20 px-2.5 py-1 text-[9px] bg-green-500/5 flex justify-between"><span><span class="text-green-500">agt_3</span> list_transactions</span><span class="text-green-500">✓</span></div>
+              </div>
+              <svg class="w-4 h-4 opacity-30 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              <div class="w-14 h-14 border border-[var(--color-border)] flex items-center justify-center text-[9px] text-center leading-tight bg-[var(--color-surface)]">Bank<br/>API</div>
+            </div>
+            <p class="text-[11px] text-[var(--color-muted)] mt-3">Each agent has its own identity. Every request traces back to a specific agent.</p>
+          </div>
+        </div>
+
+        <div class="del-panel grid grid-cols-2 hidden" id="del-permissions">
+          <div class="px-6 sm:px-8 py-6 border-r border-[var(--color-border)]">
+            <div class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-red-400 mb-4">Today</div>
+            <div class="flex flex-col gap-1.5 text-[10px] font-[family-name:var(--font-mono)]">
+              <div class="border border-dashed border-red-400/30 px-2.5 py-1.5 text-[var(--color-muted)]"><span class="text-red-400">A1</span> read, send, delete</div>
+              <div class="border border-dashed border-red-400/30 px-2.5 py-1.5 text-[var(--color-muted)]"><span class="text-red-400">A2</span> read, send, delete</div>
+              <div class="border border-dashed border-red-400/30 px-2.5 py-1.5 text-[var(--color-muted)]"><span class="text-red-400">A3</span> read, send, delete</div>
+            </div>
+            <p class="text-[11px] text-[var(--color-muted)] mt-3">Every agent gets the user's full permissions. An agent that only needs to read your email can also delete your inbox.</p>
+          </div>
+          <div class="px-6 sm:px-8 py-6">
+            <div class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-green-500 mb-4">With Agent Auth</div>
+            <div class="flex flex-col gap-1.5 text-[10px] font-[family-name:var(--font-mono)]">
+              <div class="border border-green-500/20 px-2.5 py-1.5 bg-green-500/5"><span class="text-green-500">agt_1</span> <span class="text-[var(--color-muted)]">read_email</span></div>
+              <div class="border border-green-500/20 px-2.5 py-1.5 bg-green-500/5"><span class="text-green-500">agt_2</span> <span class="text-[var(--color-muted)]">read_email, send_email</span></div>
+              <div class="border border-green-500/20 px-2.5 py-1.5 bg-green-500/5"><span class="text-green-500">agt_3</span> <span class="text-[var(--color-muted)]">read_email, delete_email</span></div>
+            </div>
+            <p class="text-[11px] text-[var(--color-muted)] mt-3">Each agent gets only the capabilities it was granted.</p>
+          </div>
+        </div>
+
+        <div class="del-panel grid grid-cols-2 hidden" id="del-approval">
+          <div class="px-6 sm:px-8 py-6 border-r border-[var(--color-border)]">
+            <div class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-red-400 mb-4">Today</div>
+            <div class="text-[10px] font-[family-name:var(--font-mono)] text-red-400 mb-1.5">No consent step</div>
+            <p class="text-[11px] text-[var(--color-muted)]">Agents act immediately with whatever the token allows. No way to approve or deny specific actions.</p>
+          </div>
+          <div class="px-6 sm:px-8 py-6">
+            <div class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-green-500 mb-4">With Agent Auth</div>
+            <div class="flex items-center gap-2 text-[10px] font-[family-name:var(--font-mono)] mb-1.5">
+              <span class="text-amber-500 border border-amber-500/20 bg-amber-500/5 px-2 py-0.5">agt_3 requests delete_email</span>
+              <span class="text-[var(--color-muted)] opacity-40">→</span>
+              <span class="text-green-500 border border-green-500/20 bg-green-500/5 px-2 py-0.5">✓ user approved</span>
+            </div>
+            <p class="text-[11px] text-[var(--color-muted)]">Users approve each capability explicitly before the agent can use it.</p>
+          </div>
+        </div>
+
+        <div class="del-panel grid grid-cols-2 hidden" id="del-revocation">
+          <div class="px-6 sm:px-8 py-6 border-r border-[var(--color-border)]">
+            <div class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-red-400 mb-4">Today</div>
+            <div class="flex items-center gap-2.5 text-[10px] font-[family-name:var(--font-mono)]">
+              <div class="flex gap-1.5">
+                <div class="w-8 h-8 border border-red-400/30 flex items-center justify-center text-[8px] text-red-400 line-through">A1</div>
+                <div class="w-8 h-8 border border-red-400/30 flex items-center justify-center text-[8px] text-red-400 line-through">A2</div>
+                <div class="w-8 h-8 border border-red-400/30 flex items-center justify-center text-[8px] text-red-400 line-through">A3</div>
+              </div>
+              <span class="text-[9px] text-red-400">all revoked</span>
+            </div>
+            <p class="text-[11px] text-[var(--color-muted)] mt-3">Revoke the token and every agent loses access. One compromise means rotating everything.</p>
+          </div>
+          <div class="px-6 sm:px-8 py-6">
+            <div class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-green-500 mb-4">With Agent Auth</div>
+            <div class="flex items-center gap-2.5 text-[10px] font-[family-name:var(--font-mono)]">
+              <div class="flex gap-1.5">
+                <div class="w-8 h-8 border border-green-500/30 flex items-center justify-center text-[8px] text-green-500">A1</div>
+                <div class="w-8 h-8 border border-red-400/30 flex items-center justify-center text-[8px] text-red-400 line-through">A2</div>
+                <div class="w-8 h-8 border border-green-500/30 flex items-center justify-center text-[8px] text-green-500">A3</div>
+              </div>
+              <span class="text-[9px] text-[var(--color-muted)]">only <span class="text-red-400">agt_2</span> revoked</span>
+            </div>
+            <p class="text-[11px] text-[var(--color-muted)] mt-3">Revoke one agent or let it expire. Other agents are unaffected — each has its own lifecycle.</p>
+          </div>
+        </div>
+
+        <div class="del-panel grid grid-cols-2 hidden" id="del-audit">
+          <div class="px-6 sm:px-8 py-6 border-r border-[var(--color-border)]">
+            <div class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-red-400 mb-4">Today</div>
+            <div class="border border-dashed border-red-400/30 text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] mb-3">
+              <div class="px-2.5 py-1.5 border-b border-dashed border-red-400/30 flex justify-between"><span class="text-red-400">user_abc</span> <span class="opacity-40">app: my_client</span></div>
+              <div class="px-2.5 py-1 border-b border-dashed border-red-400/15 opacity-70">transferred $250</div>
+              <div class="px-2.5 py-1 border-b border-dashed border-red-400/15 opacity-70">deleted 3 emails</div>
+              <div class="px-2.5 py-1 opacity-70">deployed to prod</div>
+            </div>
+            <p class="text-[11px] text-[var(--color-muted)]">All actions logged under the same user and client. No way to tell which agent did what.</p>
+          </div>
+          <div class="px-6 sm:px-8 py-6">
+            <div class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-green-500 mb-4">With Agent Auth</div>
+            <div class="border border-green-500/20 text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] mb-3 bg-green-500/5">
+              <div class="px-2.5 py-1.5 border-b border-green-500/10 flex justify-between"><span class="text-green-500">agt_1</span> <span class="opacity-50">check_balance</span></div>
+              <div class="px-2.5 py-1 border-b border-green-500/10 text-[var(--color-muted)]">checked balance •••• 1842 <span class="opacity-40">14:03:22</span></div>
+              <div class="px-2.5 py-1.5 border-b border-green-500/10 flex justify-between"><span class="text-green-500">agt_2</span> <span class="opacity-50">transfer_funds</span></div>
+              <div class="px-2.5 py-1 border-b border-green-500/10 text-[var(--color-muted)]">transferred $250 <span class="opacity-40">14:05:41</span></div>
+              <div class="px-2.5 py-1.5 border-b border-green-500/10 flex justify-between"><span class="text-green-500">agt_3</span> <span class="opacity-50">delete_email</span></div>
+              <div class="px-2.5 py-1 text-[var(--color-muted)]">deleted 3 emails <span class="opacity-40">14:12:09</span></div>
+            </div>
+            <p class="text-[11px] text-[var(--color-muted)]">Every action is attributed to a specific agent and capability.</p>
+          </div>
+        </div>
+
+        <!-- Bottom bar -->
+        <div class="border-t border-[var(--color-border)] px-6 sm:px-8 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[var(--color-surface)]">
+          <p class="text-[13px] text-[var(--color-muted)] leading-relaxed max-w-xl">Agent Auth treats each agent as a first-class principal with its own identity, granted capabilities, and lifecycle.</p>
+          <a href="/overview" class="text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)] hover:text-[var(--color-fg)] transition-colors whitespace-nowrap shrink-0">
+            Read the overview →
+          </a>
+        </div>
+      </div>
+
+      <script is:inline>
+      (function() {
+        var tabs = document.querySelectorAll(".del-tab");
+        var panels = document.querySelectorAll(".del-panel");
+        tabs.forEach(function(tab) {
+          tab.addEventListener("click", function() {
+            var target = tab.getAttribute("data-tab");
+            tabs.forEach(function(t) {
+              t.classList.remove("text-[var(--color-fg)]", "border-[var(--color-fg)]");
+              t.classList.add("text-[var(--color-muted)]", "border-transparent");
+            });
+            tab.classList.remove("text-[var(--color-muted)]", "border-transparent");
+            tab.classList.add("text-[var(--color-fg)]", "border-[var(--color-fg)]");
+            panels.forEach(function(p) { p.classList.add("hidden"); });
+            document.getElementById("del-" + target).classList.remove("hidden");
+          });
+        });
+      })();
+      </script>
+    </div>
+  </section>
+
+  <!-- Autonomous agents -->
+  <section class="relative">
+    <div class="mx-auto max-w-[1400px] px-5 sm:px-6 pb-16">
+      <div class="flex items-center gap-3 mb-6">
+        <span class="text-[10px] font-[family-name:var(--font-mono)] tracking-[0.15em] uppercase text-[var(--color-muted)]">Autonomous agents</span>
+        <div class="flex-1 border-t border-[var(--color-border)]"></div>
+      </div>
+      <p class="text-[15px] text-[var(--color-body)] leading-[1.8] max-w-2xl mb-8">Background workers, scheduled jobs, and service-to-service agents need to authenticate without a user session. Existing auth models don't have a way to represent an agent that operates independently and may later be linked to a user.</p>
+
+      <div class="border border-[var(--color-border)]">
+        <div class="grid lg:grid-cols-2">
+          <!-- Autonomous -->
+          <div class="p-6 sm:p-8 border-b lg:border-b-0 lg:border-r border-[var(--color-border)]">
+            <div class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)] mb-4">Autonomous mode</div>
+            <div class="flex flex-col gap-1.5 text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] mb-4">
+              <div class="border border-green-500/20 px-2.5 py-1.5 bg-green-500/5 flex justify-between">
+                <span><span class="text-green-500">agt_bg</span> monitor_alerts</span>
+                <span class="text-[9px] text-[var(--color-muted)]">no user</span>
+              </div>
+              <div class="border border-green-500/20 px-2.5 py-1.5 bg-green-500/5 flex justify-between">
+                <span><span class="text-green-500">agt_cron</span> sync_data</span>
+                <span class="text-[9px] text-[var(--color-muted)]">no user</span>
+              </div>
+              <div class="border border-green-500/20 px-2.5 py-1.5 bg-green-500/5 flex justify-between">
+                <span><span class="text-green-500">agt_svc</span> process_queue</span>
+                <span class="text-[9px] text-[var(--color-muted)]">no user</span>
+              </div>
+            </div>
+            <p class="text-[11px] text-[var(--color-muted)]">Agents register with <code class="text-[10px] px-1 py-0.5 bg-[var(--color-surface)] border border-[var(--color-border)]">mode: "autonomous"</code> and get their own identity and capabilities without a user session. Permissions come from server policy or admin approval.</p>
+          </div>
+
+          <!-- Claiming -->
+          <div class="p-6 sm:p-8">
+            <div class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)] mb-4">Connecting back to a user</div>
+            <div class="flex flex-col gap-1.5 text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] mb-4">
+              <div class="border border-green-500/20 px-2.5 py-1.5 bg-green-500/5">
+                <span class="text-green-500">agt_bg</span> running autonomously…
+              </div>
+              <div class="border border-amber-500/20 px-2.5 py-1.5 bg-amber-500/5">
+                <span class="text-amber-500">host linked</span> → user claims the host
+              </div>
+              <div class="border border-blue-400/20 px-2.5 py-1.5 bg-blue-400/5">
+                <span class="text-blue-400">agt_bg</span> claimed — work attributed to user
+              </div>
+              <div class="border border-green-500/20 px-2.5 py-1.5 bg-green-500/5">
+                <span class="text-green-500">agt_new</span> new delegated agent under user
+              </div>
+            </div>
+            <p class="text-[11px] text-[var(--color-muted)]">When a user later links to the host, autonomous agents are claimed — their activity is attributed to the user, and future agents run in delegated mode with user approval.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Discovery -->
+  <section class="relative">
+    <div class="mx-auto max-w-[1400px] px-5 sm:px-6 pb-16">
+      <div class="flex items-center gap-3 mb-6">
+        <span class="text-[10px] font-[family-name:var(--font-mono)] tracking-[0.15em] uppercase text-[var(--color-muted)]">Discovery</span>
+        <div class="flex-1 border-t border-[var(--color-border)]"></div>
+      </div>
+      <p class="text-[15px] text-[var(--color-body)] leading-[1.8] max-w-2xl mb-8">Connecting an agent to a new service requires finding the right server, editing config files, and providing API keys. Agent Auth standardizes discovery — agents resolve a well-known endpoint or query a registry to find services.</p>
+
+      <div class="border border-[var(--color-border)]">
+        <div class="grid lg:grid-cols-2">
+          <div class="p-6 sm:p-8 border-b lg:border-b-0 lg:border-r border-[var(--color-border)]">
+            <div class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-red-400 mb-4">Today</div>
+            <div class="flex flex-col gap-1.5 text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] mb-3">
+              <div class="border border-dashed border-red-400/30 px-2.5 py-1.5">1. Find the right MCP server</div>
+              <div class="border border-dashed border-red-400/30 px-2.5 py-1.5">2. Add it to your config file</div>
+              <div class="border border-dashed border-red-400/30 px-2.5 py-1.5">3. Create API key, paste it in</div>
+              <div class="border border-dashed border-red-400/30 px-2.5 py-1.5">4. Hope the agent knows how to use it</div>
+            </div>
+            <p class="text-[11px] text-[var(--color-muted)]">Every new service means manual setup. No standard way for agents to find and connect to services.</p>
+          </div>
+          <div class="p-6 sm:p-8">
+            <div class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-green-500 mb-4">With Agent Auth</div>
+            <div class="flex flex-col gap-3 text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] mb-3">
+              <div>
+                <div class="text-[9px] text-[var(--color-muted)] mb-1">By URL</div>
+                <div class="border border-green-500/20 px-2.5 py-1.5 bg-green-500/5"><span class="text-green-500">→</span> "Connect to bank.com" <span class="text-[var(--color-muted)] opacity-50">→</span> <span class="text-green-500">auto-configured</span></div>
+              </div>
+              <div>
+                <div class="text-[9px] text-[var(--color-muted)] mb-1">By intent</div>
+                <div class="border border-green-500/20 px-2.5 py-1.5 bg-green-500/5"><span class="text-green-500">→</span> "Check my bank balance" <span class="text-[var(--color-muted)] opacity-50">→</span> <span class="text-green-500">registry finds services</span></div>
+              </div>
+            </div>
+            <p class="text-[11px] text-[var(--color-muted)]">The agent resolves a well-known configuration endpoint from the URL, or queries a registry to find providers matching the task.</p>
           </div>
         </div>
       </div>
@@ -766,6 +1019,7 @@ const cards = [
       triggerWrap.style.translate = "-50% 100%";
       triggerWrap.style.opacity = "0";
       document.body.style.overflow = "hidden";
+      history.pushState({ askSheet: true }, "", "#ask");
 
       setTimeout(function() {
         if (query) {
@@ -782,6 +1036,9 @@ const cards = [
       triggerWrap.style.translate = "-50% 30%";
       triggerWrap.style.opacity = "1";
       document.body.style.overflow = "";
+      if (location.hash === "#ask") {
+        history.back();
+      }
     }
 
     trigger.addEventListener("click", function() {
@@ -794,6 +1051,16 @@ const cards = [
     document.addEventListener("keydown", function(e) {
       if (e.key === "Escape" && sheet.classList.contains("open")) {
         closeSheet();
+      }
+    });
+
+    window.addEventListener("popstate", function() {
+      if (sheet.classList.contains("open") && location.hash !== "#ask") {
+        if (isStreaming) return;
+        sheet.classList.remove("open");
+        triggerWrap.style.translate = "-50% 30%";
+        triggerWrap.style.opacity = "1";
+        document.body.style.overflow = "";
       }
     });
 

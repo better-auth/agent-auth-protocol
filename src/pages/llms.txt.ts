@@ -261,6 +261,7 @@ Registration errors (POST /agent/register):
 
 ## Further Reading
 
+- [Overview](https://agentauth.dev/overview): Conceptual introduction — problem, core concepts, flow, design decisions, and comparisons
 - [Full Specification (plain text, 150K chars)](https://agentauth.dev/llms-full.txt): Complete v1.0-draft for deep ingestion
 - [Specification (Markdown)](https://agentauth.dev/specification.md): Raw Markdown
 - [Specification (HTML)](https://agentauth.dev/specification): Rendered spec with navigation

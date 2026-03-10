@@ -1,0 +1,716 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import Nav from "@/components/Nav.astro";
+import Footer from "@/components/Footer.astro";
+---
+
+<Layout title="Overview — Agent Auth Protocol">
+  <Nav active="/overview" />
+
+  <main class="flex-1">
+    <div class="mx-auto max-w-[1400px] px-5 sm:px-6 py-16 sm:py-20">
+
+      <!-- Hero -->
+      <div class="mb-24">
+        <p class="text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-[0.2em] text-[var(--color-muted)] mb-4">Overview</p>
+        <div class="flex flex-col lg:flex-row gap-10 lg:gap-16">
+          <div class="lg:flex-1">
+            <h1 class="text-2xl sm:text-3xl md:text-4xl lg:text-[2.75rem] font-semibold tracking-tight leading-[1.15] mb-6">
+              How Agent Auth works
+            </h1>
+            <div class="overview-prose max-w-xl">
+              <p class="text-lead">
+                When you ask Claude, ChatGPT, or Cursor to do something — check your bank balance, create a PR, send a message — it needs to talk to external services. Today it does that using your OAuth token or a shared API key.
+              </p>
+              <p>
+                The problem is the service can't tell <em>which</em> agent is calling. All agents look the same. You can't give one read-only access and another full access. You can't revoke one without revoking all of them.
+              </p>
+              <p>
+                Agent Auth gives each agent task its own cryptographic identity, its own set of permissions, and its own lifecycle. The service sees a distinct principal for each agent and can manage them independently.
+              </p>
+            </div>
+          </div>
+          <div class="lg:w-[440px] xl:w-[480px] shrink-0">
+            <div class="border border-[var(--color-border)] bg-[var(--color-surface)]">
+              <div class="px-4 py-2.5 border-b border-[var(--color-border)] text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)]">Today vs. Agent Auth</div>
+              <div class="p-5 space-y-5">
+                <div>
+                  <div class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-red-400 mb-2">Without Agent Auth</div>
+                  <div class="flex items-center gap-2 text-[12px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">
+                    <div class="flex flex-col items-center gap-1">
+                      <div class="w-8 h-8 border border-[var(--color-border)] flex items-center justify-center text-[9px]">A1</div>
+                      <div class="w-8 h-8 border border-[var(--color-border)] flex items-center justify-center text-[9px]">A2</div>
+                      <div class="w-8 h-8 border border-[var(--color-border)] flex items-center justify-center text-[9px]">A3</div>
+                    </div>
+                    <div class="flex flex-col items-center gap-0.5 mx-1">
+                      <svg class="w-4 h-4 text-[var(--color-muted)] opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                    </div>
+                    <div class="flex-1 border border-dashed border-red-400/30 p-2.5 text-center">
+                      <div class="text-[10px] text-red-400 mb-1">Same token</div>
+                      <div class="text-[9px] text-[var(--color-muted)]">user_oauth_token_xyz</div>
+                    </div>
+                    <div class="flex flex-col items-center gap-0.5 mx-1">
+                      <svg class="w-4 h-4 text-[var(--color-muted)] opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                    </div>
+                    <div class="w-14 h-14 border border-[var(--color-border)] flex items-center justify-center text-[9px] text-center leading-tight bg-[var(--color-bg)]">Bank<br/>API</div>
+                  </div>
+                </div>
+                <div class="border-t border-[var(--color-border)] pt-5">
+                  <div class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-green-500 mb-2">With Agent Auth</div>
+                  <div class="flex items-center gap-2 text-[12px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">
+                    <div class="flex flex-col items-center gap-1">
+                      <div class="w-8 h-8 border border-green-500/30 flex items-center justify-center text-[9px]">A1</div>
+                      <div class="w-8 h-8 border border-green-500/30 flex items-center justify-center text-[9px]">A2</div>
+                      <div class="w-8 h-8 border border-green-500/30 flex items-center justify-center text-[9px]">A3</div>
+                    </div>
+                    <div class="flex flex-col items-center gap-0.5 mx-1">
+                      <svg class="w-4 h-4 text-[var(--color-muted)] opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                    </div>
+                    <div class="flex-1 flex flex-col gap-1">
+                      <div class="border border-green-500/20 px-2 py-1 text-[9px] bg-green-500/5"><span class="text-green-500">agt_1</span> read:balance</div>
+                      <div class="border border-green-500/20 px-2 py-1 text-[9px] bg-green-500/5"><span class="text-green-500">agt_2</span> read + write</div>
+                      <div class="border border-green-500/20 px-2 py-1 text-[9px] bg-green-500/5"><span class="text-green-500">agt_3</span> read:txn</div>
+                    </div>
+                    <div class="flex flex-col items-center gap-0.5 mx-1">
+                      <svg class="w-4 h-4 text-[var(--color-muted)] opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                    </div>
+                    <div class="w-14 h-14 border border-[var(--color-border)] flex items-center justify-center text-[9px] text-center leading-tight bg-[var(--color-bg)]">Bank<br/>API</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- What is an Agent / Host / Server -->
+      <div class="flex items-center gap-3 mb-8">
+        <span class="text-[10px] font-[family-name:var(--font-mono)] tracking-[0.15em] uppercase text-[var(--color-muted)]">Key concepts</span>
+        <div class="flex-1 border-t border-[var(--color-border)]"></div>
+      </div>
+
+      <div class="mb-24">
+        <h2 class="text-xl sm:text-2xl font-semibold tracking-tight mb-4">Agents, hosts, and servers</h2>
+        <p class="text-[15px] text-[var(--color-muted)] leading-[1.85] font-[family-name:var(--font-serif)] max-w-2xl mb-10">Three things you need to understand. The naming might feel unfamiliar at first, but the concepts are simple.</p>
+
+        <div class="grid lg:grid-cols-3 gap-px bg-[var(--color-border)] border border-[var(--color-border)]">
+          <div class="bg-[var(--color-bg)] p-6 sm:p-8">
+            <div class="flex items-center gap-2 mb-1">
+              <h3 class="text-base font-semibold">Agent</h3>
+              <span class="text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] px-1.5 py-0.5 border border-[var(--color-border)]">identity</span>
+            </div>
+            <p class="text-[11px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] mb-4">A single task or session, not the AI tool itself</p>
+            <div class="overview-prose !text-[13px] !leading-relaxed mb-5">
+              <p>An agent is <strong>not</strong> Claude Code or ChatGPT. It's a specific task running <em>inside</em> them.</p>
+              <p>When you ask Cursor to "check my bank balance," that single task becomes an agent. It gets its own ID, its own cryptographic keys, and its own permissions. When the task ends, the agent can expire. A new task creates a new agent.</p>
+              <p>Think of it like browser tabs. Chrome is not the tab — each tab has its own session, cookies, and can be closed independently.</p>
+            </div>
+            <div class="border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
+              <div class="text-[9px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)] mb-2">Example</div>
+              <div class="text-[11px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] space-y-1">
+                <div><span class="text-[var(--color-fg)]">Cursor</span> → agent: "check balance"</div>
+                <div><span class="text-[var(--color-fg)]">Cursor</span> → agent: "transfer $250"</div>
+                <div>Two tasks, two agents, two identities</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-[var(--color-bg)] p-6 sm:p-8">
+            <div class="flex items-center gap-2 mb-1">
+              <h3 class="text-base font-semibold">Host</h3>
+              <span class="text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] px-1.5 py-0.5 border border-[var(--color-border)]">identity</span>
+            </div>
+            <p class="text-[11px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] mb-4">The environment agents run inside</p>
+            <div class="overview-prose !text-[13px] !leading-relaxed mb-5">
+              <p>A host is the <strong>environment</strong> where agents are created and run. It could be Cursor on your MacBook, Claude Code on your laptop, a ChatGPT server in the cloud, or a CI pipeline.</p>
+              <p>The host persists. Agents come and go, but the host stays. When you trust a host once ("yes, Cursor on my laptop can access my bank"), future agents from that host can be auto-approved.</p>
+              <p>Think of it like your phone. You unlock your phone once (trust the host), then individual apps (agents) can make requests without re-authenticating every time.</p>
+            </div>
+            <div class="border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
+              <div class="text-[9px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)] mb-2">Example hosts</div>
+              <div class="text-[11px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] space-y-1">
+                <div>Cursor on your MacBook</div>
+                <div>Claude Code on a remote server</div>
+                <div>A CI/CD pipeline runner</div>
+                <div>An MCP server on your machine</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-[var(--color-bg)] p-6 sm:p-8">
+            <div class="flex items-center gap-2 mb-1">
+              <h3 class="text-base font-semibold">Server</h3>
+              <span class="text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] px-1.5 py-0.5 border border-[var(--color-border)]">participant</span>
+            </div>
+            <p class="text-[11px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] mb-4">The service your agent connects to</p>
+            <div class="overview-prose !text-[13px] !leading-relaxed mb-5">
+              <p>The server is the <strong>service</strong> your agent needs to access — your bank, GitHub, Slack, a deployment platform, anything with an API.</p>
+              <p>The server runs the Agent Auth protocol. It manages registrations, tracks which agents have which capabilities, and verifies every signed request.</p>
+              <p>The server also defines <strong>capabilities</strong> — the specific actions agents can perform. "Check balance," "send message," "create PR" are all capabilities. The agent requests them, the user approves, and the server enforces.</p>
+            </div>
+            <div class="border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
+              <div class="text-[9px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)] mb-2">Example servers</div>
+              <div class="text-[11px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] space-y-1">
+                <div>Your bank's API</div>
+                <div>GitHub / GitLab</div>
+                <div>Slack, Linear, Notion</div>
+                <div>Any service with Agent Auth</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Discovery -->
+      <div class="flex items-center gap-3 mb-8">
+        <span class="text-[10px] font-[family-name:var(--font-mono)] tracking-[0.15em] uppercase text-[var(--color-muted)]">Step 1</span>
+        <div class="flex-1 border-t border-[var(--color-border)]"></div>
+      </div>
+
+      <div class="mb-24">
+        <h2 class="text-xl sm:text-2xl font-semibold tracking-tight mb-4">Discovery — how agents find and connect to services</h2>
+        <div class="overview-prose max-w-2xl mb-10">
+          <p>Right now, connecting an agent to a service requires manual configuration. You need to find the right MCP server, add it to your config, provide API keys, and hope the agent knows how to use it. The agent has no way to look at a service and figure out how to connect on its own.</p>
+          <p>Agent Auth changes this by standardizing discovery. Every Agent Auth server publishes a <code>/.well-known/agent-configuration</code> endpoint — similar to how OAuth servers publish <code>/.well-known/openid-configuration</code>. That endpoint describes everything the agent needs: what modes the server supports, what endpoints to call, and what capabilities are available.</p>
+          <p>This means two concrete things:</p>
+        </div>
+
+        <div class="grid lg:grid-cols-2 gap-px bg-[var(--color-border)] border border-[var(--color-border)] mb-10">
+          <div class="bg-[var(--color-bg)] p-5 sm:p-6">
+            <h3 class="text-[13px] font-semibold mb-2">Given a URL, the agent can figure out the rest</h3>
+            <p class="text-[13px] text-[var(--color-muted)] leading-relaxed mb-3">You tell the agent "connect to bank.com." The agent fetches <code class="text-[11px] bg-[var(--color-surface)] px-1 border border-[var(--color-border)]">bank.com/.well-known/agent-configuration</code>, reads the server's config, lists available capabilities, and knows exactly how to register and authenticate. No manual setup, no config files, no API keys to copy-paste.</p>
+            <p class="text-[12px] text-[var(--color-muted)] leading-relaxed">The well-known endpoint returns the issuer URL, supported algorithms, registration endpoints, capability list endpoints, and approval methods. The agent has everything it needs to proceed to registration.</p>
+          </div>
+          <div class="bg-[var(--color-bg)] p-5 sm:p-6">
+            <h3 class="text-[13px] font-semibold mb-2">The agent can search for services it needs</h3>
+            <p class="text-[13px] text-[var(--color-muted)] leading-relaxed mb-3">You don't even need to know the URL. If you ask an agent to "check my bank balance," it can query an Agent Auth <strong>registry</strong> — a searchable index of servers that support the protocol. The registry returns matching providers with their connection URLs, and the agent (or the user) picks one.</p>
+            <p class="text-[12px] text-[var(--color-muted)] leading-relaxed">This works for both delegated agents (where the user picks) and autonomous agents (where the agent picks based on its task requirements). The registry is a standard part of the protocol (§7.10).</p>
+          </div>
+        </div>
+
+        <div class="grid lg:grid-cols-2 gap-6">
+          <!-- Direct URL discovery -->
+          <div class="border border-[var(--color-border)] overflow-hidden">
+            <div class="px-4 py-2.5 border-b border-[var(--color-border)] bg-[var(--color-surface)]">
+              <div class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)]">Direct URL Discovery</div>
+            </div>
+            <div class="p-5 sm:p-6 min-h-[320px]">
+              <div class="text-[11px] text-[var(--color-muted)] font-[family-name:var(--font-mono)] mb-4 flex items-center gap-2">
+                <span class="text-[var(--color-fg)]">User says:</span> "Connect me to bank.com"
+              </div>
+              <div class="space-y-2">
+                <div class="flex gap-[10px] items-start py-[5px]">
+                  <span class="shrink-0 w-4 mt-px text-center text-[11px] font-[family-name:var(--font-mono)] text-[var(--color-fg)]">›</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[12px] leading-[1.5]">Agent receives URL: bank.com</div>
+                  </div>
+                </div>
+                <div class="flex gap-[10px] items-start py-[5px]">
+                  <span class="shrink-0 w-4 mt-px text-center text-[11px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">›</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[12px] leading-[1.5]">Fetches well-known configuration</div>
+                    <div class="mt-0.5 font-[family-name:var(--font-mono)] text-[10px] text-[var(--color-muted)] overflow-hidden text-ellipsis whitespace-nowrap">GET bank.com/.well-known/agent-configuration</div>
+                  </div>
+                </div>
+                <div class="flex gap-[10px] items-start py-[5px]">
+                  <span class="shrink-0 w-4 mt-px text-center text-[11px] font-[family-name:var(--font-mono)] text-green-500">✓</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[12px] leading-[1.5] font-medium text-[var(--color-fg)]">Server found: "Bank Services"</div>
+                  </div>
+                </div>
+                <div class="flex gap-[10px] items-start py-[5px]">
+                  <span class="shrink-0 w-4 mt-px text-center text-[11px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">›</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[12px] leading-[1.5]">Reads server configuration</div>
+                    <div class="mt-1 whitespace-pre-wrap border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5 font-[family-name:var(--font-mono)] text-[10px] leading-[1.6] text-[var(--color-muted)]">issuer: https://auth.bank.com
+modes: [delegated, autonomous]
+algorithms: [Ed25519]</div>
+                  </div>
+                </div>
+                <div class="flex gap-[10px] items-start py-[5px]">
+                  <span class="shrink-0 w-4 mt-px text-center text-[11px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">›</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[12px] leading-[1.5]">Fetches available capabilities</div>
+                    <div class="mt-0.5 font-[family-name:var(--font-mono)] text-[10px] text-[var(--color-muted)] overflow-hidden text-ellipsis whitespace-nowrap">GET /capability/list</div>
+                  </div>
+                </div>
+                <div class="flex gap-[10px] items-start py-[5px]">
+                  <span class="shrink-0 w-4 mt-px text-center text-[11px] font-[family-name:var(--font-mono)] text-green-500">✓</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[12px] leading-[1.5] font-medium text-[var(--color-fg)]">Capabilities discovered</div>
+                    <div class="mt-0.5 font-[family-name:var(--font-mono)] text-[10px] text-[var(--color-muted)] overflow-hidden text-ellipsis whitespace-nowrap">check_balance, transfer_domestic, transfer_international, list_accounts</div>
+                  </div>
+                </div>
+                <div class="flex gap-[10px] items-start py-[5px]">
+                  <span class="shrink-0 w-4 mt-px text-center text-[11px] font-[family-name:var(--font-mono)] text-[var(--color-fg)]">→</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[12px] leading-[1.5] font-medium text-[var(--color-fg)]">Ready to register an agent and connect</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Registry discovery -->
+          <div class="border border-[var(--color-border)] overflow-hidden">
+            <div class="px-4 py-2.5 border-b border-[var(--color-border)] bg-[var(--color-surface)]">
+              <div class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)]">Registry Search Discovery</div>
+            </div>
+            <div class="p-5 sm:p-6 min-h-[320px]">
+              <div class="text-[11px] text-[var(--color-muted)] font-[family-name:var(--font-mono)] mb-4 flex items-center gap-2">
+                <span class="text-[var(--color-fg)]">User says:</span> "Find me a service to check my balance"
+              </div>
+              <div class="space-y-2">
+                <div class="flex gap-[10px] items-start py-[5px]">
+                  <span class="shrink-0 w-4 mt-px text-center text-[11px] font-[family-name:var(--font-mono)] text-[var(--color-fg)]">›</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[12px] leading-[1.5]">Agent searches: "check bank balance"</div>
+                  </div>
+                </div>
+                <div class="flex gap-[10px] items-start py-[5px]">
+                  <span class="shrink-0 w-4 mt-px text-center text-[11px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">›</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[12px] leading-[1.5]">Queries the Agent Auth registry</div>
+                    <div class="mt-0.5 font-[family-name:var(--font-mono)] text-[10px] text-[var(--color-muted)] overflow-hidden text-ellipsis whitespace-nowrap">GET registry.agentauth.dev/search?q=bank+balance</div>
+                  </div>
+                </div>
+                <div class="flex gap-[10px] items-start py-[5px]">
+                  <span class="shrink-0 w-4 mt-px text-center text-[11px] font-[family-name:var(--font-mono)] text-green-500">✓</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[12px] leading-[1.5] font-medium text-[var(--color-fg)]">Found 3 matching providers</div>
+                  </div>
+                </div>
+                <div class="flex gap-[10px] items-start py-[5px]">
+                  <span class="shrink-0 w-4 mt-px text-center text-[11px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">›</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[12px] leading-[1.5]">Registry results</div>
+                    <div class="mt-1 whitespace-pre-wrap border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5 font-[family-name:var(--font-mono)] text-[10px] leading-[1.6] text-[var(--color-muted)]">1. Bank of America  → auth.bofa.com
+2. Chase Bank       → auth.chase.com
+3. Acme Bank        → auth.acme.com</div>
+                  </div>
+                </div>
+                <div class="flex gap-[10px] items-start py-[5px]">
+                  <span class="shrink-0 w-4 mt-px text-center text-[11px] font-[family-name:var(--font-mono)] text-[var(--color-fg)]">›</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[12px] leading-[1.5]">User picks "Acme Bank" or the agent picks autonomously</div>
+                  </div>
+                </div>
+                <div class="flex gap-[10px] items-start py-[5px]">
+                  <span class="shrink-0 w-4 mt-px text-center text-[11px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">›</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[12px] leading-[1.5]">Fetches Acme Bank configuration</div>
+                    <div class="mt-0.5 font-[family-name:var(--font-mono)] text-[10px] text-[var(--color-muted)] overflow-hidden text-ellipsis whitespace-nowrap">GET auth.acme.com/.well-known/agent-configuration</div>
+                  </div>
+                </div>
+                <div class="flex gap-[10px] items-start py-[5px]">
+                  <span class="shrink-0 w-4 mt-px text-center text-[11px] font-[family-name:var(--font-mono)] text-green-500">✓</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[12px] leading-[1.5] font-medium text-[var(--color-fg)]">Connected: capabilities include `check_balance` and `transfer`</div>
+                  </div>
+                </div>
+                <div class="flex gap-[10px] items-start py-[5px]">
+                  <span class="shrink-0 w-4 mt-px text-center text-[11px] font-[family-name:var(--font-mono)] text-[var(--color-fg)]">→</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[12px] leading-[1.5] font-medium text-[var(--color-fg)]">Ready to register an agent</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Registration -->
+      <div class="flex items-center gap-3 mb-8">
+        <span class="text-[10px] font-[family-name:var(--font-mono)] tracking-[0.15em] uppercase text-[var(--color-muted)]">Step 2</span>
+        <div class="flex-1 border-t border-[var(--color-border)]"></div>
+      </div>
+
+      <div class="mb-24">
+        <h2 class="text-xl sm:text-2xl font-semibold tracking-tight mb-4">Registration — how agents get access</h2>
+        <div class="overview-prose max-w-2xl mb-10">
+          <p>Once an agent discovers a service, it needs to register. Registration creates the agent's identity on the server and gets user approval for the permissions it needs. The user sees what the agent wants access to and decides whether to allow it.</p>
+        </div>
+
+        <div class="border border-[var(--color-border)] overflow-hidden">
+          <div class="px-4 py-2.5 border-b border-[var(--color-border)] bg-[var(--color-surface)]">
+            <div class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)]">Registration & Approval Flow</div>
+          </div>
+          <div class="flex flex-col lg:flex-row">
+            <div class="lg:flex-1 p-5 sm:p-6 min-h-[420px] border-b lg:border-b-0 lg:border-r border-[var(--color-border)]">
+              <div class="space-y-2">
+                <div class="flex gap-[10px] items-start py-[5px]">
+                  <span class="shrink-0 w-4 mt-px text-center text-[11px] font-[family-name:var(--font-mono)] text-[var(--color-fg)]">1</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[12px] leading-[1.5] font-medium text-[var(--color-fg)]">Host generates keypair</div>
+                    <div class="mt-0.5 font-[family-name:var(--font-mono)] text-[10px] text-[var(--color-muted)] overflow-hidden text-ellipsis whitespace-nowrap">First time connecting to this server; creating a persistent identity</div>
+                  </div>
+                </div>
+                <div class="flex gap-[10px] items-start py-[5px]">
+                  <span class="shrink-0 w-4 mt-px text-center text-[11px] font-[family-name:var(--font-mono)] text-[var(--color-fg)]">2</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[12px] leading-[1.5] font-medium text-[var(--color-fg)]">Agent keypair generated</div>
+                    <div class="mt-0.5 font-[family-name:var(--font-mono)] text-[10px] text-[var(--color-muted)] overflow-hidden text-ellipsis whitespace-nowrap">Separate keys for this specific task</div>
+                  </div>
+                </div>
+                <div class="flex gap-[10px] items-start py-[5px]">
+                  <span class="shrink-0 w-4 mt-px text-center text-[11px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">3</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[12px] leading-[1.5]">Signs Host JWT with the host private key</div>
+                    <div class="mt-0.5 font-[family-name:var(--font-mono)] text-[10px] text-[var(--color-muted)] overflow-hidden text-ellipsis whitespace-nowrap">Contains both host and agent public keys</div>
+                  </div>
+                </div>
+                <div class="flex gap-[10px] items-start py-[5px]">
+                  <span class="shrink-0 w-4 mt-px text-center text-[11px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">4</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[12px] leading-[1.5]">Sends registration request</div>
+                    <div class="mt-1 whitespace-pre-wrap border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5 font-[family-name:var(--font-mono)] text-[10px] leading-[1.6] text-[var(--color-muted)]">POST /agent/register
+{
+  name: "Balance Checker",
+  capabilities: ["check_balance"],
+  mode: "delegated"
+}</div>
+                  </div>
+                </div>
+                <div class="flex gap-[10px] items-start py-[5px]">
+                  <span class="shrink-0 w-4 mt-px text-center text-[11px] font-[family-name:var(--font-mono)] text-amber-600">!</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[12px] leading-[1.5]">Server says approval is required</div>
+                    <div class="mt-0.5 font-[family-name:var(--font-mono)] text-[10px] text-[var(--color-muted)] overflow-hidden text-ellipsis whitespace-nowrap">New host; user must approve in browser</div>
+                  </div>
+                </div>
+                <div class="flex gap-[10px] items-start py-[5px]">
+                  <span class="shrink-0 w-4 mt-px text-center text-[11px] font-[family-name:var(--font-mono)] text-amber-600">…</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[12px] leading-[1.5]">Shows approval URL to the user</div>
+                    <div class="mt-1 whitespace-pre-wrap border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5 font-[family-name:var(--font-mono)] text-[10px] leading-[1.6] text-[var(--color-muted)]">verification_uri: https://auth.bank.com/device
+user_code: ABCD-1234</div>
+                  </div>
+                </div>
+                <div class="my-3 border border-[var(--color-border)] rounded-[6px] bg-[var(--color-bg)] overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+                  <div class="flex items-center gap-[5px] px-[10px] py-1 border-b border-[var(--color-border)] bg-[var(--color-surface)]">
+                    <svg class="w-[9px] h-[9px] text-green-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    <span class="font-[family-name:var(--font-mono)] text-[9px] text-[var(--color-muted)]">auth.bank.com/device</span>
+                  </div>
+                  <div class="px-[14px] py-3">
+                    <div class="text-[12px] font-semibold mb-px">Balance Checker</div>
+                    <div class="text-[10px] text-[var(--color-muted)] mb-[10px]">via MacBook Pro (Cursor)</div>
+                    <div class="text-[10px] text-[var(--color-muted)] mb-1.5">This agent wants to:</div>
+                    <div class="flex items-center gap-[6px] py-1">
+                      <span class="text-[10px] text-[var(--color-muted)] shrink-0">•</span>
+                      <span class="text-[11px]">Check your account balances</span>
+                    </div>
+                    <div class="flex gap-2 mt-[10px]">
+                      <button class="flex-1 py-1.5 text-[11px] font-medium bg-green-600 text-white border-0 rounded-[3px]">Approved ✓</button>
+                      <button class="px-[14px] py-1.5 text-[11px] bg-transparent text-[var(--color-muted)] border border-[var(--color-border)] rounded-[3px] cursor-default">Deny</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="flex gap-[10px] items-start py-[5px]">
+                  <span class="shrink-0 w-4 mt-px text-center text-[11px] font-[family-name:var(--font-mono)] text-amber-600">◌</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[12px] leading-[1.5]">Polls for approval</div>
+                    <div class="mt-0.5 font-[family-name:var(--font-mono)] text-[10px] text-[var(--color-muted)] overflow-hidden text-ellipsis whitespace-nowrap">GET /agent/status?agent_id=agt_k7x9m2</div>
+                  </div>
+                </div>
+                <div class="flex gap-[10px] items-start py-[5px]">
+                  <span class="shrink-0 w-4 mt-px text-center text-[11px] font-[family-name:var(--font-mono)] text-green-500">✓</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[12px] leading-[1.5] font-medium text-[var(--color-fg)]">User approved; host is now linked and trusted</div>
+                  </div>
+                </div>
+                <div class="flex gap-[10px] items-start py-[5px]">
+                  <span class="shrink-0 w-4 mt-px text-center text-[11px] font-[family-name:var(--font-mono)] text-green-500">✓</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[12px] leading-[1.5] font-medium text-[var(--color-fg)]">Agent is active and ready to make signed requests</div>
+                    <div class="mt-1 whitespace-pre-wrap border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5 font-[family-name:var(--font-mono)] text-[10px] leading-[1.6] text-[var(--color-muted)]">agent_id: agt_k7x9m2
+status: active
+mode: delegated</div>
+                  </div>
+                </div>
+                <div class="flex gap-[10px] items-start py-[5px]">
+                  <span class="shrink-0 w-4 mt-px text-center text-[11px] font-[family-name:var(--font-mono)] text-[var(--color-fg)]">→</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[12px] leading-[1.5] font-medium text-[var(--color-fg)]">Next time, trusted hosts can auto-approve agents within defaults</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="lg:w-[320px] xl:w-[360px] shrink-0 p-5 sm:p-6 bg-[var(--color-surface)]">
+              <div class="text-[9px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)] mb-4">Live state</div>
+              <div class="space-y-3">
+                <div class="flex justify-between text-[11px] font-[family-name:var(--font-mono)]">
+                  <span class="text-[var(--color-muted)]">host</span>
+                  <span class="text-[var(--color-fg)]">hst_m4a8...</span>
+                </div>
+                <div class="flex justify-between text-[11px] font-[family-name:var(--font-mono)]">
+                  <span class="text-[var(--color-muted)]">agent_id</span>
+                  <span class="text-[var(--color-fg)]">agt_k7x9m2...</span>
+                </div>
+                <div class="flex justify-between text-[11px] font-[family-name:var(--font-mono)]">
+                  <span class="text-[var(--color-muted)]">status</span>
+                  <span class="text-green-500">active</span>
+                </div>
+                <div class="border-t border-[var(--color-border)] pt-3">
+                  <div class="text-[9px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)] mb-2">Capabilities</div>
+                  <div class="space-y-1 text-[11px] font-[family-name:var(--font-mono)]">
+                    <div class="flex items-center gap-1.5 text-green-500">
+                      <span class="w-[5px] h-[5px] rounded-full bg-green-500 shrink-0"></span>
+                      <span>check_balance — active</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="border-t border-[var(--color-border)] pt-3">
+                  <div class="text-[9px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)] mb-2">User</div>
+                  <div class="text-[11px] font-[family-name:var(--font-mono)] text-[var(--color-fg)]">you@email.com</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Signed Requests -->
+      <div class="flex items-center gap-3 mb-8">
+        <span class="text-[10px] font-[family-name:var(--font-mono)] tracking-[0.15em] uppercase text-[var(--color-muted)]">Step 3</span>
+        <div class="flex-1 border-t border-[var(--color-border)]"></div>
+      </div>
+
+      <div class="mb-24">
+        <h2 class="text-xl sm:text-2xl font-semibold tracking-tight mb-4">Signed requests — how agents prove who they are</h2>
+        <div class="flex flex-col lg:flex-row gap-10 lg:gap-16">
+          <div class="lg:flex-1">
+            <div class="overview-prose max-w-xl mb-8">
+              <p>Once registered, every request the agent makes carries a short-lived JWT (60-second TTL) signed with the agent's private key. The server verifies the signature against the agent's stored public key, checks the agent's status and permissions, and processes the call.</p>
+              <p>There are no refresh tokens and no long-lived sessions. The agent signs a new JWT for every request. If a token is intercepted, it's already expired by the time anyone could reuse it.</p>
+            </div>
+          </div>
+          <div class="lg:w-[440px] xl:w-[480px] shrink-0">
+            <div class="border border-[var(--color-border)]">
+              <div class="px-4 py-2.5 border-b border-[var(--color-border)] bg-[var(--color-surface)] text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)]">What happens on every request</div>
+              <div class="p-5 text-[11px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] space-y-3">
+                <div class="flex gap-3 items-start">
+                  <span class="text-[var(--color-fg)] shrink-0 w-4 text-right">1</span>
+                  <span>Agent asks host to sign a JWT</span>
+                </div>
+                <div class="flex gap-3 items-start">
+                  <span class="text-[var(--color-fg)] shrink-0 w-4 text-right">2</span>
+                  <div>
+                    <span>Host signs with agent's private key</span>
+                    <div class="mt-1.5 p-2 border border-[var(--color-border)] bg-[var(--color-bg)] text-[10px] leading-[1.6]">
+                      <div>sub: <span class="text-[var(--color-fg)]">agt_k7x9m2</span></div>
+                      <div>aud: <span class="text-[var(--color-fg)]">auth.bank.com</span></div>
+                      <div>exp: <span class="text-[var(--color-fg)]">60 seconds</span></div>
+                      <div>capabilities: <span class="text-[var(--color-fg)]">[check_balance]</span></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="flex gap-3 items-start">
+                  <span class="text-[var(--color-fg)] shrink-0 w-4 text-right">3</span>
+                  <span>Agent sends request with JWT to server</span>
+                </div>
+                <div class="flex gap-3 items-start">
+                  <span class="text-[var(--color-fg)] shrink-0 w-4 text-right">4</span>
+                  <span>Server verifies signature + checks permissions</span>
+                </div>
+                <div class="flex gap-3 items-start">
+                  <span class="text-green-500 shrink-0 w-4 text-right">✓</span>
+                  <span>Request processed, result returned</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modes -->
+      <div class="flex items-center gap-3 mb-8">
+        <span class="text-[10px] font-[family-name:var(--font-mono)] tracking-[0.15em] uppercase text-[var(--color-muted)]">Agent modes</span>
+        <div class="flex-1 border-t border-[var(--color-border)]"></div>
+      </div>
+
+      <div class="mb-24">
+        <h2 class="text-xl sm:text-2xl font-semibold tracking-tight mb-4">Two agent modes</h2>
+        <p class="text-[15px] text-[var(--color-muted)] leading-[1.85] font-[family-name:var(--font-serif)] max-w-2xl mb-10">The mode is chosen at registration and is immutable after creation. It determines how capabilities get approved and whether a user is in the loop.</p>
+
+        <div class="grid sm:grid-cols-2 gap-px bg-[var(--color-border)] border border-[var(--color-border)]">
+          <div class="bg-[var(--color-bg)] p-6 sm:p-8">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-[10px] font-[family-name:var(--font-mono)] px-2 py-0.5 border border-[var(--color-border)] text-[var(--color-muted)]">DEFAULT</span>
+              <h3 class="text-base font-semibold">Delegated</h3>
+            </div>
+            <div class="overview-prose !text-[13px] !leading-relaxed mb-5">
+              <p>The agent acts on behalf of a specific user. The user sees what the agent is requesting and decides what to allow. When the agent needs more permissions, the user approves through the same device flow used for registration.</p>
+            </div>
+            <div class="text-[11px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] space-y-1">
+              <div>→ Copilots & assistants</div>
+              <div>→ Tool-calling agents in Cursor / Claude</div>
+              <div>→ User-facing automations</div>
+            </div>
+          </div>
+          <div class="bg-[var(--color-bg)] p-6 sm:p-8">
+            <div class="flex items-center gap-2 mb-3">
+              <h3 class="text-base font-semibold">Autonomous</h3>
+            </div>
+            <div class="overview-prose !text-[13px] !leading-relaxed mb-5">
+              <p>The agent operates without a user in the loop. Capabilities are granted by server policy or administrator approval. If the host is later linked to a user, autonomous agents are claimed — their work is attributed to that user and the agents are archived.</p>
+            </div>
+            <div class="text-[11px] font-[family-name:var(--font-mono)] text-[var(--color-muted)] space-y-1">
+              <div>→ Background workers</div>
+              <div>→ Scheduled automations</div>
+              <div>→ Service-to-service agents</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lifecycle -->
+      <div class="flex items-center gap-3 mb-8">
+        <span class="text-[10px] font-[family-name:var(--font-mono)] tracking-[0.15em] uppercase text-[var(--color-muted)]">Lifecycle</span>
+        <div class="flex-1 border-t border-[var(--color-border)]"></div>
+      </div>
+
+      <div class="mb-24">
+        <h2 class="text-xl sm:text-2xl font-semibold tracking-tight mb-4">Agent states and lifetime</h2>
+        <div class="flex flex-col lg:flex-row gap-10 lg:gap-16">
+          <div class="lg:flex-1">
+            <div class="overview-prose max-w-xl mb-8">
+              <p>Every agent moves through a defined set of states. Only <strong>active</strong> agents can authenticate. Three independent clocks govern expiry — the server sets the durations based on its own policy.</p>
+              <p>An expired agent can be reactivated, but reactivation is a security checkpoint: escalated capabilities are dropped and must be re-requested. A revoked agent cannot be reactivated.</p>
+            </div>
+            <div class="border border-[var(--color-border)]">
+              <div class="px-4 py-2.5 border-b border-[var(--color-border)] bg-[var(--color-surface)] text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)]">Lifetime clocks</div>
+              <div class="p-5 text-[12px] font-[family-name:var(--font-mono)] leading-[1.8] text-[var(--color-muted)]">
+                <div><span class="text-[var(--color-fg)]">Session TTL</span> — measured from last request. Agent expires if idle too long.</div>
+                <div><span class="text-[var(--color-fg)]">Max lifetime</span> — measured from last activation. Caps continuous use even for active agents.</div>
+                <div><span class="text-[var(--color-fg)]">Absolute lifetime</span> — measured from creation. Hard cap, never resets, no reactivation.</div>
+              </div>
+            </div>
+          </div>
+          <div class="lg:w-[380px] xl:w-[420px] shrink-0">
+            <div class="border border-[var(--color-border)]">
+              <div class="px-4 py-2.5 border-b border-[var(--color-border)] bg-[var(--color-surface)] text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)]">Agent states</div>
+              <div class="p-5 space-y-2">
+                <div class="flex items-center gap-3 p-2.5 border border-amber-500/20 bg-amber-500/5">
+                  <span class="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span>
+                  <div>
+                    <div class="text-[12px] font-[family-name:var(--font-mono)] text-[var(--color-fg)]">pending</div>
+                    <div class="text-[10px] text-[var(--color-muted)]">Waiting for user to approve</div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-3 p-2.5 border border-green-500/20 bg-green-500/5">
+                  <span class="w-2 h-2 rounded-full bg-green-500 shrink-0"></span>
+                  <div>
+                    <div class="text-[12px] font-[family-name:var(--font-mono)] text-[var(--color-fg)]">active</div>
+                    <div class="text-[10px] text-[var(--color-muted)]">Operational — can make requests</div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-3 p-2.5 border border-[var(--color-border)]">
+                  <span class="w-2 h-2 rounded-full bg-[var(--color-muted)] shrink-0"></span>
+                  <div>
+                    <div class="text-[12px] font-[family-name:var(--font-mono)] text-[var(--color-fg)]">expired</div>
+                    <div class="text-[10px] text-[var(--color-muted)]">Timed out — can be reactivated</div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-3 p-2.5 border border-red-500/20 bg-red-500/5">
+                  <span class="w-2 h-2 rounded-full bg-red-500 shrink-0"></span>
+                  <div>
+                    <div class="text-[12px] font-[family-name:var(--font-mono)] text-[var(--color-fg)]">revoked</div>
+                    <div class="text-[10px] text-[var(--color-muted)]">Permanently killed — start over</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Comparisons -->
+      <div class="flex items-center gap-3 mb-8">
+        <span class="text-[10px] font-[family-name:var(--font-mono)] tracking-[0.15em] uppercase text-[var(--color-muted)]">Comparison</span>
+        <div class="flex-1 border-t border-[var(--color-border)]"></div>
+      </div>
+
+      <div class="mb-24">
+        <h2 class="text-xl sm:text-2xl font-semibold tracking-tight mb-4">Relationship to existing standards</h2>
+        <p class="text-[15px] text-[var(--color-muted)] leading-[1.85] font-[family-name:var(--font-serif)] max-w-2xl mb-10">Agent Auth is not a replacement for OAuth, API keys, or MCP. It addresses a specific gap — agent identity — that sits between the user and the service.</p>
+
+        <div class="border border-[var(--color-border)] overflow-hidden">
+          <table class="w-full text-[12px] border-collapse">
+            <thead>
+              <tr class="bg-[var(--color-surface)]">
+                <th class="text-left px-4 sm:px-5 py-3 font-[family-name:var(--font-mono)] text-[10px] font-medium uppercase tracking-wider text-[var(--color-muted)] border-b border-[var(--color-border)]"></th>
+                <th class="text-left px-4 sm:px-5 py-3 font-[family-name:var(--font-mono)] text-[10px] font-medium uppercase tracking-wider text-[var(--color-muted)] border-b border-[var(--color-border)]">What it does</th>
+                <th class="text-left px-4 sm:px-5 py-3 font-[family-name:var(--font-mono)] text-[10px] font-medium uppercase tracking-wider text-[var(--color-muted)] border-b border-[var(--color-border)]">What it's missing</th>
+                <th class="text-left px-4 sm:px-5 py-3 font-[family-name:var(--font-mono)] text-[10px] font-medium uppercase tracking-wider text-[var(--color-muted)] border-b border-[var(--color-border)] hidden sm:table-cell">Works together?</th>
+              </tr>
+            </thead>
+            <tbody class="text-[var(--color-muted)]">
+              <tr class="border-b border-[color-mix(in_oklch,var(--color-fg)_5%,transparent)]">
+                <td class="px-4 sm:px-5 py-3 text-[var(--color-fg)] font-medium whitespace-nowrap">OAuth 2.0</td>
+                <td class="px-4 sm:px-5 py-3">Authorizes apps to act for users</td>
+                <td class="px-4 sm:px-5 py-3">Can't distinguish between agents sharing a token</td>
+                <td class="px-4 sm:px-5 py-3 hidden sm:table-cell text-green-500">Yes — uses OAuth's device flow</td>
+              </tr>
+              <tr class="border-b border-[color-mix(in_oklch,var(--color-fg)_5%,transparent)]">
+                <td class="px-4 sm:px-5 py-3 text-[var(--color-fg)] font-medium whitespace-nowrap">API Keys</td>
+                <td class="px-4 sm:px-5 py-3">Static credentials for access</td>
+                <td class="px-4 sm:px-5 py-3">No per-agent identity, scoping, or lifecycle</td>
+                <td class="px-4 sm:px-5 py-3 hidden sm:table-cell text-green-500">Replaces static keys</td>
+              </tr>
+              <tr>
+                <td class="px-4 sm:px-5 py-3 text-[var(--color-fg)] font-medium whitespace-nowrap">MCP</td>
+                <td class="px-4 sm:px-5 py-3">Defines how agents talk to tools</td>
+                <td class="px-4 sm:px-5 py-3">No agent identity — borrows user's credentials</td>
+                <td class="px-4 sm:px-5 py-3 hidden sm:table-cell text-green-500">Agent Auth is the auth layer for MCP</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CTA -->
+      <div class="flex items-center gap-3 mb-8">
+        <span class="text-[10px] font-[family-name:var(--font-mono)] tracking-[0.15em] uppercase text-[var(--color-muted)]">Next steps</span>
+        <div class="flex-1 border-t border-[var(--color-border)]"></div>
+      </div>
+
+      <div class="flex flex-col lg:flex-row gap-10 lg:gap-16">
+        <div class="lg:flex-1">
+          <h2 class="text-xl sm:text-2xl font-semibold tracking-tight mb-5">Full specification</h2>
+          <div class="overview-prose max-w-xl mb-8">
+            <p>This page covers the concepts. The specification defines every endpoint, JWT claim, error code, and edge case required to implement or integrate with the protocol.</p>
+          </div>
+          <div class="flex flex-wrap gap-3">
+            <a href="/specification" class="inline-flex items-center gap-2 px-5 py-2.5 text-[12px] font-[family-name:var(--font-mono)] uppercase tracking-wider border border-[var(--color-fg)] bg-[var(--color-fg)] text-[var(--color-bg)] hover:opacity-90 transition-opacity">
+              Read the specification
+              <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </a>
+            <a href="/examples" class="inline-flex items-center gap-2 px-5 py-2.5 text-[12px] font-[family-name:var(--font-mono)] uppercase tracking-wider border border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-fg)] hover:border-[var(--color-fg)] transition-colors">
+              View examples
+            </a>
+            <a href="/implementations" class="inline-flex items-center gap-2 px-5 py-2.5 text-[12px] font-[family-name:var(--font-mono)] uppercase tracking-wider border border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-fg)] hover:border-[var(--color-fg)] transition-colors">
+              Implementations
+            </a>
+          </div>
+        </div>
+        <div class="lg:w-[320px] shrink-0">
+          <div class="border border-[var(--color-border)] p-5">
+            <div class="text-[9px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)] mb-3">Quick links</div>
+            <div class="space-y-2 text-[12px]">
+              <a href="/specification#1-introduction" class="block text-[var(--color-muted)] hover:text-[var(--color-fg)] transition-colors">§1 Introduction</a>
+              <a href="/specification#2-agent" class="block text-[var(--color-muted)] hover:text-[var(--color-fg)] transition-colors">§2 Agent</a>
+              <a href="/specification#3-host" class="block text-[var(--color-muted)] hover:text-[var(--color-fg)] transition-colors">§3 Host</a>
+              <a href="/specification#4-capabilities" class="block text-[var(--color-muted)] hover:text-[var(--color-fg)] transition-colors">§4 Capabilities</a>
+              <a href="/specification#5-authentication" class="block text-[var(--color-muted)] hover:text-[var(--color-fg)] transition-colors">§5 Authentication</a>
+              <a href="/specification#6-server" class="block text-[var(--color-muted)] hover:text-[var(--color-fg)] transition-colors">§6 Server Endpoints</a>
+              <a href="/specification#7-client-tools" class="block text-[var(--color-muted)] hover:text-[var(--color-fg)] transition-colors">§7 Client Tools</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <Footer />
+</Layout>
