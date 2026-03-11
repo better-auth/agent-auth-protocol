@@ -623,12 +623,12 @@ Host-authenticated endpoints (`POST /agent/register`, `GET /agent/status`, `POST
 
 1. Verify the JWT header `typ` is `host+jwt` — reject if it is not
 2. Extract `iss` from JWT
-3. Look up the host:
+3. Verify `aud` matches the server's own `issuer` URL — reject if it doesn't
+4. Look up the host:
    - **By `iss`** — if a host with this identifier is found, use it.
    - **By `host_jwks_url`** (fallback) — if `iss` is not recognized but the JWT contains `host_jwks_url`, look up the host by that URL. If found, this is a key rotation: re-fetch the JWKS, locate the key matching the JWT header `kid`, verify its thumbprint matches `iss`, and update the stored host identifier.
    - **Unknown host** — if neither lookup finds a match, this is a dynamic registration. Extract the signing key from `host_public_key` (or fetch from `host_jwks_url` using the JWT header `kid`). Compute the JWK thumbprint (RFC 7638, SHA-256) and reject if it does not match `iss`.
-4. Verify JWT signature against the host's public key
-5. Verify `aud` matches the server's own `issuer` URL — reject if it doesn't
+5. Verify JWT signature against the host's public key
 6. Check `exp`, `iat` — reject if expired or issued in the future (see §8.2 for clock skew guidance)
 7. Check `jti` replay — reject if the `jti` has been seen within the JWT's lifetime window
 8. Check host status — reject if `revoked` or `rejected`. For `pending` hosts, only registration (§5.3) is allowed
