@@ -51,7 +51,7 @@ export const prerender = true;
             <span class="font-semibold">Agent Auth</span> <span class="font-light text-[color:color-mix(in_oklch,var(--color-fg)_70%,transparent)]">Protocol</span>
           </h1>
           <p class="text-base sm:text-lg text-[var(--color-muted)] leading-relaxed max-w-lg mb-8">
-            A protocol for agent authentication, authorization, and service discovery. It defines how agents establish identity, receive scoped capabilities, and operate with clear attribution.
+            A comprehensive protocol for agent authentication, authorization, and service discovery. It defines how agents establish identity, receive scoped capabilities, and operate with clear attribution.
           </p>
           <div class="flex flex-wrap items-center gap-3">
             <a href="/specification" class="inline-flex items-center gap-2 border border-[var(--color-fg)] bg-[var(--color-fg)] px-4 py-2 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-bg)] transition-opacity hover:opacity-90">
@@ -216,8 +216,19 @@ export const prerender = true;
           </div>
         </div>
       </div>
-      <!-- Discovery (part of autonomous agents) -->
-      <p class="text-[15px] text-[var(--color-body)] leading-[1.8] max-w-2xl mb-8 mt-10">This extends to discovery. Before an autonomous agent can authenticate, it needs to find services without a human pointing it to the right URL. Agent Auth standardizes this — agents resolve a well-known endpoint or query a registry.</p>
+    </div>
+  </section>
+
+  <!-- Discovery -->
+  <section class="relative">
+    <div class="mx-auto max-w-[1400px] px-5 sm:px-6 pb-16">
+      <div class="flex items-center gap-3 mb-6">
+        <span
+          class="inline-flex items-center border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1 text-[10px] sm:text-[11px] font-[family-name:var(--font-mono)] tracking-[0.14em] uppercase text-[var(--color-fg)]"
+        >Discovery</span>
+        <div class="h-px flex-1 bg-gradient-to-r from-[var(--color-border)] to-transparent"></div>
+      </div>
+      <p class="text-[15px] text-[var(--color-body)] leading-[1.8] max-w-2xl mb-8">There is no standard way for a service to advertise that it supports agents, what capabilities it offers, or how an agent should begin authenticating. Every new integration requires hardcoded configuration, prior training data, or a human pointing the agent to the right endpoint.</p>
 
       <div class="border border-[var(--color-border)] bg-[var(--color-bg)]">
         <div class="grid lg:grid-cols-2">

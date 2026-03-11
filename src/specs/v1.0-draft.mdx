@@ -15,9 +15,9 @@ This document is an implementation-oriented comprehensive agent authentication a
 
 ### 1.1 Problem Statement
 
-AI agents are becoming long-lived actors: copilots, background workers, scheduled automations, and multi-step systems that call external services without constant human supervision. Today's auth models were not designed with this in mind. The problem framing falls into two categories.
+AI agents are becoming long-lived actors: copilots, background workers, scheduled automations, and multi-step systems that call external services without constant human supervision. Today's auth models were not designed with this in mind. The problem breaks down into three areas.
 
-1. Problems with agents acting on behalf of a user (Delegated agents)
+1. Agents acting on behalf of a user (Delegated agents)
 
 When an agent acts on behalf of a user, it typically reuses the user's OAuth token or a shared client credential. That collapses the runtime agent into someone else's identity:
 
@@ -25,9 +25,13 @@ When an agent acts on behalf of a user, it typically reuses the user's OAuth tok
 - **No scoping.** Every agent gets the user's full permissions or the client's permissions. You can't give one agent read-only access and another agent write access for a specific time period.
 - **No isolation.** You can't revoke one agent without revoking all of them. A compromised agent means rotating credentials for everything.
 
-2. Problems with agents operating autonomously (Autonomous agents)
+2. Agents operating without a human in the loop (Autonomous agents)
 
 Existing auth models tightly couple the human user and the application. When an agent needs to act on its own — without a user in the loop — there is no identity model for it. The agent is forced to pretend to be a human user: opening a browser, solving a CAPTCHA, and clicking through a signup flow just to use a service. There is no standard way for an agent to register itself, prove its identity, or receive capabilities without impersonating a person.
+
+3. Discovery
+
+There is no standard way for a service to advertise that it supports agents, what capabilities it offers, or how an agent should begin authenticating. Every new integration requires hardcoded configuration, prior training data, or a human pointing the agent to the right endpoint. Agents cannot arrive at an arbitrary service and programmatically orient themselves.
 
 ### 1.2 The Identity Problem
 
