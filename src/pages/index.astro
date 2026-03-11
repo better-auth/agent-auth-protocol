@@ -44,22 +44,45 @@ export const prerender = true;
     </div>
 
     <div class="relative z-10 mx-auto max-w-[1400px] px-5 sm:px-6 py-12 sm:py-14 lg:py-16">
-      <div class="mx-auto flex max-w-5xl flex-col items-center text-center">
-        <h1 class="max-w-4xl text-balance text-4xl font-semibold tracking-[-0.04em] sm:text-5xl md:text-6xl lg:text-[4.15rem] lg:leading-[0.98]">
-          Agent Auth <span class="font-light text-[color:color-mix(in_oklch,var(--color-fg)_70%,transparent)]">Protocol</span>
-        </h1>
+      <div class="flex flex-col lg:flex-row gap-10 lg:gap-12 xl:gap-16">
+        <!-- Left: copy -->
+        <div class="lg:flex-1 lg:pt-8">
+          <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-[3.25rem] tracking-tight leading-[1.1] mb-6">
+            <span class="font-semibold">Agent Auth</span> <span class="font-light text-[color:color-mix(in_oklch,var(--color-fg)_70%,transparent)]">Protocol</span>
+          </h1>
+          <p class="text-base sm:text-lg text-[var(--color-muted)] leading-relaxed max-w-lg mb-8">
+            A protocol for agent authentication, authorization, and service discovery. It defines how agents establish identity, receive scoped capabilities, and operate with clear attribution.
+          </p>
+          <div class="flex flex-wrap items-center gap-3">
+            <a href="/specification" class="inline-flex items-center gap-2 border border-[var(--color-fg)] bg-[var(--color-fg)] px-4 py-2 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-bg)] transition-opacity hover:opacity-90">
+              Read the spec
+            </a>
+            <a href="/overview" class="inline-flex items-center gap-2 border border-[color:color-mix(in_oklch,var(--color-fg)_14%,transparent)] bg-[color:color-mix(in_oklch,var(--color-fg)_4%,transparent)] px-4 py-2 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[color:color-mix(in_oklch,var(--color-fg)_68%,transparent)] transition-colors hover:border-[color:color-mix(in_oklch,var(--color-fg)_28%,transparent)] hover:text-[var(--color-fg)]">
+              Protocol overview
+            </a>
+          </div>
+        </div>
 
-        <p class="mt-4 max-w-2xl text-pretty text-base leading-relaxed text-[color:color-mix(in_oklch,var(--color-fg)_62%,transparent)] sm:text-lg">
-          A protocol for agent authentication, authorization, and service discovery. It defines how agents establish identity, receive scoped capabilities, and operate with clear attribution.
-        </p>
-
-        <div class="mt-6 flex flex-wrap items-center justify-center gap-3">
-          <a href="/specification" class="inline-flex items-center gap-2 border border-[var(--color-fg)] bg-[var(--color-fg)] px-4 py-2 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-bg)] transition-opacity hover:opacity-90">
-            Read the spec
-          </a>
-          <a href="/overview" class="inline-flex items-center gap-2 border border-[color:color-mix(in_oklch,var(--color-fg)_14%,transparent)] bg-[color:color-mix(in_oklch,var(--color-fg)_4%,transparent)] px-4 py-2 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[color:color-mix(in_oklch,var(--color-fg)_68%,transparent)] transition-colors hover:border-[color:color-mix(in_oklch,var(--color-fg)_28%,transparent)] hover:text-[var(--color-fg)]">
-            Protocol overview
-          </a>
+        <!-- Right: interactive demo -->
+        <div class="lg:w-[520px] xl:w-[560px] shrink-0 w-full relative">
+          <div class="border border-[var(--color-border)] bg-[var(--color-bg)] overflow-hidden" id="hero-demo">
+            <div class="px-4 py-3 border-b border-[var(--color-border)]">
+              <div class="flex items-start gap-2.5">
+                <span class="text-[var(--color-muted)] text-[13px] mt-px select-none shrink-0">›</span>
+                <div class="flex-1 min-w-0">
+                  <span class="text-[13px] leading-snug" id="demo-prompt"></span><span id="demo-cursor" class="inline-block w-[1.5px] h-[15px] bg-[var(--color-fg)] align-middle ml-px" style="animation: blink 1s step-end infinite;"></span>
+                </div>
+              </div>
+            </div>
+            <div class="h-[280px] overflow-hidden relative" id="demo-timeline">
+              <div class="px-4 py-2 h-full overflow-y-auto" id="demo-scroll">
+                <div id="demo-steps"></div>
+              </div>
+            </div>
+            <div id="demo-footer" class="border-t border-[var(--color-border)] px-4 py-2 flex items-center justify-center" style="visibility:hidden;">
+              <button id="demo-replay-btn" class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)] hover:text-[var(--color-fg)] transition-colors cursor-pointer">↻ Replay</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -77,7 +100,6 @@ export const prerender = true;
       <div class="flex items-center gap-3 mb-6">
         <span
           class="inline-flex items-center border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1 text-[10px] sm:text-[11px] font-[family-name:var(--font-mono)] tracking-[0.14em] uppercase text-[var(--color-fg)]"
-          style="background-image: radial-gradient(color-mix(in srgb, var(--color-body) 18%, transparent) 0.65px, transparent 0.65px); background-size: 8px 8px;"
         >Delegated agents</span>
         <div class="h-px flex-1 bg-gradient-to-r from-[var(--color-border)] to-transparent"></div>
       </div>
@@ -141,7 +163,6 @@ export const prerender = true;
       <div class="flex items-center gap-3 mb-6">
         <span
           class="inline-flex items-center border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1 text-[10px] sm:text-[11px] font-[family-name:var(--font-mono)] tracking-[0.14em] uppercase text-[var(--color-fg)]"
-          style="background-image: radial-gradient(color-mix(in srgb, var(--color-body) 18%, transparent) 0.65px, transparent 0.65px); background-size: 8px 8px;"
         >Autonomous agents</span>
         <div class="h-px flex-1 bg-gradient-to-r from-[var(--color-border)] to-transparent"></div>
       </div>
@@ -354,6 +375,9 @@ export const prerender = true;
   </div>
 
   <style is:global>
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+    @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+
     details.group .faq-content {
       display: grid;
       grid-template-rows: 0fr;
@@ -551,6 +575,237 @@ export const prerender = true;
     .ask-thinking span:nth-child(3) { animation-delay: 0.4s; }
 
   </style>
+
+  <script is:inline>
+  (function() {
+    var $ = function(id) { return document.getElementById(id); };
+    var stepsEl = $("demo-steps");
+    var scrollEl = $("demo-scroll");
+    var promptEl = $("demo-prompt");
+    var cursorEl = $("demo-cursor");
+    var footerEl = $("demo-footer");
+    var replayBtn = $("demo-replay-btn");
+    if (!stepsEl) return;
+
+    var isRunning = false;
+
+    var balanceFlow = {
+      prompt: "Show me my balance",
+      steps: [
+        { phase: "connect",  text: "Connecting to auth.bank.com…" },
+        { phase: "protocol", text: "Discovering server configuration", detail: "GET /.well-known/agent-configuration" },
+        { phase: "protocol", text: "Registering agent identity", detail: "agent_id: agt_k7x9m2" },
+        { phase: "waiting",  text: "Waiting for user approval…", detail: "Opening browser for authorization" },
+        { phase: "device",   approvalCard: true, agent: "Bank Balance Checker", host: "MacBook Pro", permissions: ["List your bank accounts", "View account balances"] },
+        { phase: "polling",  text: "Agent polling for approval…", detail: "Waiting for browser response", spinner: true },
+        { phase: "approved", text: "User approved — capabilities granted" },
+        { phase: "sign",     text: "Signing request", detail: "EdDSA JWT • sub: agt_k7x9m2 • exp: 60s" },
+        { phase: "verify",   text: "Bank verified agent identity", detail: "Signature valid • Agent active" },
+        { phase: "result",   text: "Balance retrieved", result: true },
+      ],
+      result: { label: "Checking •••• 1842", value: "$4,280.13", meta: "agent: agt_k7x9m2" },
+    };
+
+    var transferFlow = {
+      prompt: "Transfer $250 from checking to savings",
+      steps: [
+        { phase: "protocol", text: "Agent needs additional permission", detail: "Requesting transfer access" },
+        { phase: "waiting",  text: "Waiting for user approval…", detail: "Opening browser for authorization" },
+        { phase: "device",   approvalCard: true, agent: "Bank Balance Checker", host: "MacBook Pro", permissions: ["Transfer funds between your accounts"] },
+        { phase: "polling",  text: "Agent polling for approval…", detail: "Waiting for browser response", spinner: true },
+        { phase: "approved", text: "User approved — transfer capability granted" },
+        { phase: "sign",     text: "Signing transfer request", detail: "EdDSA JWT • sub: agt_k7x9m2 • exp: 60s" },
+        { phase: "verify",   text: "Bank verified and executed transfer", detail: "Signature valid • Transfer processed" },
+        { phase: "result",   text: "Transfer complete", result: true },
+      ],
+      result: { label: "Transfer confirmed", value: "$250.00", meta: "checking •••• 1842 → savings •••• 7391" },
+    };
+
+    var phaseStyles = {
+      connect:  { color: "var(--color-muted)", icon: "◦" },
+      protocol: { color: "var(--color-muted)", icon: "›" },
+      waiting:  { color: "#d97706",            icon: "…" },
+      polling:  { color: "#d97706",            icon: "◌" },
+      device:   { color: "#d97706",            icon: "!" },
+      approved: { color: "#16a34a",            icon: "✓" },
+      sign:     { color: "var(--color-fg)",    icon: "⚿" },
+      verify:   { color: "#16a34a",            icon: "✓" },
+      result:   { color: "#16a34a",            icon: "✓" },
+    };
+
+    function sleep(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }
+    function scrollToBottom() { scrollEl.scrollTop = scrollEl.scrollHeight; }
+
+    async function typeText(el, text) {
+      el.textContent = "";
+      for (var i = 0; i < text.length; i++) {
+        el.textContent += text[i];
+        await sleep(28 + Math.random() * 22);
+      }
+    }
+
+    function addStep(step, animate) {
+      var row = document.createElement("div");
+      row.style.cssText = "display:flex;gap:8px;align-items:flex-start;padding:6px 0;";
+      if (animate) { row.style.opacity = "0"; row.style.transform = "translateY(4px)"; }
+      var style = phaseStyles[step.phase] || phaseStyles.protocol;
+      var iconEl = document.createElement("span");
+      iconEl.style.cssText = "flex-shrink:0;width:14px;font-family:var(--font-mono);font-size:11px;text-align:center;margin-top:1px;color:" + style.color + ";";
+      if (step.spinner) {
+        iconEl.innerHTML = '<span style="display:inline-block;animation:spin 1s linear infinite;">◌</span>';
+      } else {
+        iconEl.textContent = style.icon;
+      }
+      var bodyEl = document.createElement("div");
+      bodyEl.style.cssText = "flex:1;min-width:0;";
+      var labelEl = document.createElement("div");
+      labelEl.style.cssText = "font-size:12px;line-height:1.5;";
+      labelEl.textContent = step.text;
+      bodyEl.appendChild(labelEl);
+      if (step.detail) {
+        var detailEl = document.createElement("div");
+        detailEl.style.cssText = "font-family:var(--font-mono);font-size:10px;color:var(--color-muted);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;";
+        detailEl.textContent = step.detail;
+        bodyEl.appendChild(detailEl);
+      }
+      row.appendChild(iconEl);
+      row.appendChild(bodyEl);
+      stepsEl.appendChild(row);
+      scrollToBottom();
+      if (animate) {
+        requestAnimationFrame(function() { requestAnimationFrame(function() {
+          row.style.transition = "opacity .25s ease,transform .25s ease";
+          row.style.opacity = "1";
+          row.style.transform = "translateY(0)";
+        }); });
+      }
+      return row;
+    }
+
+    function addApprovalCard(step) {
+      return new Promise(function(resolve) {
+        var card = document.createElement("div");
+        card.style.cssText = "margin:6px 0;border:1px solid var(--color-border);border-radius:6px;background:var(--color-bg);opacity:0;transform:translateY(4px);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);";
+        var tabBar = '<div style="display:flex;align-items:center;background:var(--color-surface);border-bottom:1px solid var(--color-border);padding:0 8px;">' +
+          '<div style="display:flex;align-items:center;gap:5px;padding:5px 10px;border-bottom:2px solid var(--color-fg);margin-bottom:-1px;">' +
+            '<svg style="width:9px;height:9px;color:var(--color-muted);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>' +
+            '<span style="font-size:9px;">Authorize Agent</span></div></div>';
+        var urlBar = '<div style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-bottom:1px solid var(--color-border);">' +
+          '<svg style="width:9px;height:9px;color:#16a34a;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>' +
+          '<span style="font-family:var(--font-mono);font-size:9px;color:var(--color-muted);">auth.bank.com/device</span></div>';
+        var page = '<div style="padding:12px 14px;">' +
+          '<div style="font-size:12px;font-weight:600;margin-bottom:1px;">' + step.agent + '</div>' +
+          '<div style="font-size:10px;color:var(--color-muted);margin-bottom:10px;">via ' + step.host + '</div>' +
+          '<div style="font-size:10px;color:var(--color-muted);margin-bottom:6px;">This agent wants to:</div>';
+        for (var i = 0; i < step.permissions.length; i++) {
+          page += '<div style="display:flex;align-items:center;gap:6px;padding:4px 0;"><span style="color:var(--color-muted);font-size:10px;flex-shrink:0;">•</span><span style="font-size:11px;">' + step.permissions[i] + '</span></div>';
+        }
+        page += '<div style="display:flex;gap:8px;margin-top:10px;">' +
+          '<button class="demo-approve-btn" style="flex:1;padding:6px 0;font-size:11px;font-weight:500;background:var(--color-fg);color:var(--color-bg);border:none;cursor:pointer;transition:all 0.2s;border-radius:3px;">Approve</button>' +
+          '<button style="padding:6px 14px;font-size:11px;background:transparent;color:var(--color-muted);border:1px solid var(--color-border);cursor:default;border-radius:3px;">Deny</button></div></div>';
+        card.innerHTML = tabBar + urlBar + page;
+        stepsEl.appendChild(card);
+        scrollToBottom();
+        requestAnimationFrame(function() { requestAnimationFrame(function() {
+          card.style.transition = "opacity .3s ease,transform .3s ease";
+          card.style.opacity = "1";
+          card.style.transform = "translateY(0)";
+        }); });
+        setTimeout(function() {
+          var btn = card.querySelector(".demo-approve-btn");
+          if (btn) {
+            btn.textContent = "Approved ✓";
+            btn.style.background = "#16a34a";
+            btn.style.color = "#fff";
+            setTimeout(function() {
+              card.style.transition = "opacity .3s ease,transform .2s ease";
+              card.style.opacity = "0.4";
+              card.style.transform = "scale(0.98)";
+              setTimeout(function() { resolve(); }, 400);
+            }, 600);
+          }
+        }, 2000);
+      });
+    }
+
+    function addResult(result) {
+      var wrap = document.createElement("div");
+      wrap.style.cssText = "margin-top:6px;padding:10px 12px;border:1px solid var(--color-border);background:var(--color-surface);opacity:0;transform:translateY(4px);";
+      wrap.innerHTML =
+        '<div style="font-size:11px;color:var(--color-muted);font-family:var(--font-mono);">' + result.label + '</div>' +
+        '<div style="font-size:20px;font-weight:600;margin-top:2px;">' + result.value + '</div>' +
+        '<div style="font-size:10px;color:var(--color-muted);font-family:var(--font-mono);margin-top:4px;">' + result.meta + '</div>';
+      stepsEl.appendChild(wrap);
+      scrollToBottom();
+      requestAnimationFrame(function() { requestAnimationFrame(function() {
+        wrap.style.transition = "opacity .3s ease,transform .3s ease";
+        wrap.style.opacity = "1";
+        wrap.style.transform = "translateY(0)";
+      }); });
+    }
+
+    function addUserMessage(text) {
+      return new Promise(async function(resolve) {
+        var row = document.createElement("div");
+        row.style.cssText = "display:flex;gap:8px;align-items:flex-start;padding:8px 0;margin-top:4px;border-top:1px solid var(--color-border);opacity:0;transform:translateY(4px);";
+        var icon = document.createElement("span");
+        icon.style.cssText = "flex-shrink:0;color:var(--color-muted);font-size:13px;margin-top:-1px;";
+        icon.textContent = "›";
+        var body = document.createElement("span");
+        body.style.cssText = "font-size:12px;line-height:1.5;";
+        row.appendChild(icon);
+        row.appendChild(body);
+        stepsEl.appendChild(row);
+        scrollToBottom();
+        requestAnimationFrame(function() { requestAnimationFrame(function() {
+          row.style.transition = "opacity .2s ease,transform .2s ease";
+          row.style.opacity = "1";
+          row.style.transform = "translateY(0)";
+        }); });
+        await sleep(200);
+        for (var i = 0; i < text.length; i++) {
+          body.textContent += text[i];
+          scrollToBottom();
+          await sleep(28 + Math.random() * 22);
+        }
+        resolve();
+      });
+    }
+
+    async function runSteps(steps, result) {
+      for (var i = 0; i < steps.length; i++) {
+        var step = steps[i];
+        if (step.approvalCard) { await sleep(300); await addApprovalCard(step); continue; }
+        var delay = step.phase === "connect" ? 300 : step.phase === "waiting" ? 600 : step.phase === "polling" ? 400 : step.phase === "approved" ? 800 : step.phase === "result" ? 400 : 500;
+        await sleep(delay);
+        addStep(step, true);
+        if (step.result) { await sleep(350); addResult(result); }
+      }
+    }
+
+    async function runFullDemo() {
+      if (isRunning) return;
+      isRunning = true;
+      footerEl.style.visibility = "hidden";
+      stepsEl.innerHTML = "";
+      cursorEl.style.display = "inline-block";
+      await typeText(promptEl, balanceFlow.prompt);
+      cursorEl.style.display = "none";
+      await sleep(400);
+      await runSteps(balanceFlow.steps, balanceFlow.result);
+      await sleep(1500);
+      await addUserMessage(transferFlow.prompt);
+      await sleep(400);
+      await runSteps(transferFlow.steps, transferFlow.result);
+      await sleep(400);
+      footerEl.style.visibility = "visible";
+      isRunning = false;
+    }
+
+    replayBtn.addEventListener("click", function() { runFullDemo(); });
+    setTimeout(function() { runFullDemo(); }, 800);
+  })();
+  </script>
 
   <script is:inline>
   (function() {
