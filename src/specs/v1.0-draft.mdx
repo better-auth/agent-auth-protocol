@@ -15,7 +15,7 @@ This document is an implementation-oriented comprehensive agent authentication a
 
 ### 1.1 Problem Statement
 
-AI agents are becoming long-lived actors: copilots, background workers, scheduled automations, and multi-step systems that call external services without constant human supervision. Today's auth models were not designed with this in mind. The problem framing falls into three categories.
+AI agents are becoming long-lived actors: copilots, background workers, scheduled automations, and multi-step systems that call external services without constant human supervision. Today's auth models were not designed with this in mind. The problem framing falls into two categories.
 
 1. Problems with agents acting on behalf of a user (Delegated agents)
 
@@ -44,7 +44,7 @@ Existing auth models fail because they provide at most one of these properties. 
 
 ### 1.3 Solution
 
-Agent Auth makes the runtime agent a first-class principal with both properties. Instead of borrowing a user's session or a shared application token, each agent is registered with its own identity, granted capabilities, and lifecycle. Every agent is created under a persistent identity called a **host** (§2.7), which the **client**(§6) registers with each server it connects to.
+Agent Auth makes the runtime agent a first-class principal with both properties. Instead of borrowing a user's session or a shared application token, each agent is registered with its own identity, granted capabilities, and lifecycle. Every agent is created under a persistent identity called a **host** (§2.7), which the **client** (§6) registers with each server it connects to.
 
 When the agent needs to act, it authenticates with short-lived signed JWTs tied to that registration. This gives the server something existing auth models are missing: a durable way to identify which specific agent is acting, which host it belongs to, what mode it runs in, what capabilities it holds, and how to suspend, expire, or revoke it without affecting everything else.
 
@@ -55,12 +55,12 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "S
 ### 1.5 Terminology
 - **Agent** — The runtime AI actor that needs to call services. Each agent has its own server-side identity, its own granted capabilities, and its own lifecycle.
 - **Client** — The process that holds a host identity and exposes protocol tools to AI systems (MCP server, CLI, SDK). It manages host and agent keys, talks to servers, and signs JWTs. AI tools like Claude Code or ChatGPT connect to a client.
-- **Host** —  The persistent identity of the client environment where agents run. Each agent is created under a host. A host represents a specific device, application, or runtime on a server, and agents are registered under it. It may be linked to a user or unlinked in the case of autonomous agents.
+- **Host** — The persistent identity of the client environment where agents run. Each agent is created under a host. A host represents a specific device, application, or runtime on a server, and agents are registered under it. It may be linked to a user or unlinked in the case of autonomous agents.
 - **Server** — The service's authorization server. It manages discovery, host and agent registrations, approvals, capability grants, and JWT verification. Also called the auth server.
 - **Capability** — A server-offered action or function that an agent can execute. It is identified by a `name` and a human-readable `description`.
 - **Agent Capability Grant** — A stored grant of one capability to one agent. Carries per-capability state and metadata.
 - **Default capabilities** — The set of capabilities a host or agent is pre-authorized to execute without additional user approval or as a server-side policy.
-- **Registration** — The process by which a client registers an agent identity under a host on a server. A successful registration results in an agent JWT.
+- **Registration** — The process by which a client registers an agent identity under a host on a server. A successful registration results in an agent identity and capability grants (see §5.3).
 - **Reactivation** — Bringing an expired agent back to `active` state. A security checkpoint: capabilities decay to host defaults and lifetime clocks reset.
 - **Approval** — User consent for registration, trust establishment, account linking, or capability escalation. Required when server policy does not allow the request to be auto-approved.
 - **Mode** — How an agent was registered: `"delegated"` (acting on behalf of a user) or `"autonomous"` (operating without a user in the loop).
@@ -111,8 +111,8 @@ Each agent is created under a host. This lets the server reason separately about
                                   +----------->|     Owner     |
                                   |<-----------| Approval      |
                                   |            |    (User)     |
-                                 |            +---------------+
-                                 |
+                                  |            +---------------+
+                                  |
      +-------+          +--------+            +---------------+
      |       |-(F)----->|        |-(G)------->| Authorization |
      | Agent | execute  | Client | POST       |    Server     |
@@ -143,7 +143,7 @@ Agents that need a raw JWT for direct server-to-server use can still call `sign_
 
 **Notes:**
 
-- **Discovery is a pre-step for generic clients.** Multi-provider clients MAY call `list_providers` (§6.2.1), `search_providers` (§6.2.2), and `discover_provider` (§6.2.3) before step (A). 
+- **Discovery is a pre-step for generic clients.** Multi-provider clients MAY call `list_providers` (§6.2.1), `search_providers` (§6.2.2), and `discover_provider` (§6.2.3) before step (A).
 
 ## 2. Core Model
 
@@ -214,7 +214,7 @@ Revocation is permanent — a revoked agent cannot be reactivated. The specific 
 
 A host is the persistent identity of the client environment where agents run. Conceptually, it represents the place the agent is running from: for example, a local Claude Code session on your laptop, a Cursor installation on your desktop, a ChatGPT connector runtime, a background worker, or any other client that manages agents and talks to servers. On the server, that environment is represented as a registered keypair plus metadata.
 
-Every agent is registered under a host. This lets the server reason about the long-lived client environment (`host`) separately from the individual runtime agent (`agent`). For autonomous agents, a host MAY exist without any linked user. For delegated agents, a host MUST be linked to at most one user. 
+Every agent is registered under a host. This lets the server reason about the long-lived client environment (`host`) separately from the individual runtime agent (`agent`). For autonomous agents, a host MAY exist without any linked user. For delegated agents, a host MUST be linked to at most one user.
 
 Hosts carry default capabilities, and agents registered under them can be granted those capabilities without additional approval or as a server-side policy.
 
@@ -246,8 +246,6 @@ When a host becomes linked, all active autonomous agents under that host MUST be
 4. Any resources created or owned by the autonomous agent SHOULD be transferred to the user
 
 Once claimed, the autonomous agent is terminal — it cannot be reactivated. If the user wants to continue using the service, the host registers a new delegated agent. Servers MAY use a system account or anonymous placeholder to hold autonomous agent ownership until a real user claims it.
-
-Operational guidance for the claiming flow — including user-facing presentation, linking UX, and post-claim management — is in [Appendix B.1](#b1-autonomous-agent-claiming).
 
 ### 2.11 Host States
 
@@ -283,7 +281,7 @@ The same capability name can appear in different parts of the protocol for diffe
 - `description` (`string`, required): Human-readable description of what this capability does.
 - `input` (`object`, optional): A JSON Schema describing the shape of the execution arguments a capability requires.
 - `output` (`object`, optional): A JSON Schema describing the shape of the data returned when this capability executes successfully. Agents use this to reason about what information a capability provides, plan multi-step workflows, and chain capability outputs into other capabilities' inputs without trial and error.
-- `grant_status` (`string`, optional): An optional enum indicating whether the capability has been granted to the agent.
+- `grant_status` (`string`, optional): Enum indicating whether the capability has been granted to the agent. Present only when the request is authenticated with an agent JWT.
 
 **Example capability:**
 
@@ -636,7 +634,6 @@ Servers SHOULD publish this endpoint. No authentication required. Returns the se
 
 This endpoint enables generic clients to work with any Agent Auth server. Purpose-built clients (e.g. an MCP server built specifically for one service) MAY skip discovery and use pre-configured endpoints instead.
 
-
 **Response:**
 
 ```json
@@ -780,7 +777,7 @@ Content-Type: application/json
 
 {
   "error": "authentication_required",
-  "error_description": "This server requires a host or agent JWT to list capabilities."
+  "message": "This server requires a host or agent JWT to list capabilities."
 }
 ```
 
@@ -985,6 +982,8 @@ POST /agent/request-capability
 ```
 
 Requests additional capabilities for an existing agent.
+
+**Authorization:** Agent JWT.
 
 **Request headers:**
 
@@ -1649,7 +1648,7 @@ The error value is a machine-readable code (a snake_case string). The message va
 
 Servers MAY return additional error codes beyond those listed. Clients SHOULD handle unknown error codes gracefully by falling back to the HTTP status code.
 
-For device authorization endpoints (§7.1), error responses follow [RFC 8628 §2.11](https://datatracker.ietf.org/doc/html/rfc8628#section-3.5). For CIBA endpoints (§7.2), error responses follow [OpenID CIBA Core §10](https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html#rfc.section.13).
+For device authorization endpoints (§7.1), error responses follow [RFC 8628 §3.5](https://datatracker.ietf.org/doc/html/rfc8628#section-3.5). For CIBA endpoints (§7.2), error responses follow [OpenID CIBA Core §13](https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html#rfc.section.13).
 
 ### 5.14 Resource Server Challenge (Optional)
 
@@ -1841,7 +1840,7 @@ Mode choice matters at registration time. A server MAY support delegated agents,
 |---|---|---|---|
 | `provider` | string | Yes | Provider name (from `list_providers`) or service URL |
 | `name` | string | Yes | Human-readable name for the agent. Displayed in dashboards, approval screens, and audit logs. Clients MAY auto-generate this from context if the agent doesn't provide one. |
-| `capabilities` | string[] | No | Capability names to request. If omitted, the agent is created with no capabilities — the agent can request them later via `request_capability` (§6.6). |
+| `capabilities` | (string \| object)[] | No | Capabilities to request. Each element is either a capability name string (unconstrained) or an object with a capability name and optional constraints for scoped grants (§2.13). If omitted, the agent is created with no capabilities — the agent can request them later via `request_capability` (§6.6). |
 | `mode` | string | No | `"delegated"` (default) or `"autonomous"` |
 | `reason` | string | No | Human-readable reason for the request. Displayed to the user on the approval screen. |
 | `preferred_method` | string | No | Preferred approval method hint (e.g. `"device_authorization"`, `"ciba"`). Passed through to the server on `POST /agent/register` (§5.3). |
@@ -1895,7 +1894,7 @@ Requests additional capabilities for an already-connected agent. This is how an 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `agent_id` | string | Yes | The agent's ID |
-| `capabilities` | string[] | Yes | Additional capability names to request |
+| `capabilities` | (string \| object)[] | Yes | Additional capabilities to request. Each element is either a capability name string (unconstrained) or an object with a capability name and optional constraints for scoped grants (§2.13). |
 | `reason` | string | No | Why the agent needs these capabilities |
 | `preferred_method` | string | No | Preferred approval method hint (e.g. `"device_authorization"`, `"ciba"`). Passed through to the server on `POST /agent/request-capability` (§5.4). |
 | `login_hint` | string | No | Optional user identifier hint for approval methods like CIBA. Passed through to the server on `POST /agent/request-capability` (§5.4). |
@@ -2045,7 +2044,6 @@ Executes a granted capability through the server's execute endpoint (§5.11). Th
 3. Return the result to the agent
 4. For async responses (`status: "pending"`), poll the `status_url` until completion and return the final result
 
-
 ### 6.11 Registry
 
 A registry is a searchable index of services that support Agent Auth. It is a client-side discovery aid, not part of the core server protocol — the registry URL is configured on the client.
@@ -2139,7 +2137,7 @@ The server notifies the user through its notification channel (push notification
 
 The user-facing approval surface (approve, deny, list pending requests) is an implementation concern — the server provides whatever UI or endpoints are appropriate for its platform. These are not protocol endpoints.
 
-Servers implementing CIBA MUST follow the security considerations in [CIBA Core §10](https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html#rfc.section.13) — particularly around rate limiting, user enumeration, and notification fatigue.
+Servers implementing CIBA MUST follow the security considerations in [CIBA Core §14](https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html#rfc.section.14) — particularly around rate limiting, user enumeration, and notification fatigue.
 
 ### 7.3 Real-Time Notification (Optional)
 
@@ -2331,7 +2329,7 @@ The protocol provides per-agent, per-call traceability by design (§11). This is
 
 Autonomous agents (`mode: "autonomous"`) can register and operate without a user in the loop. When a host acquires a `user_id`, autonomous agents under it are automatically claimed and their activity history is attributed to the user (§2.10). The user may not be aware of what the agent did before the host was linked.
 
-- Servers SHOULD provide the user with visibility into the autonomous agent's activity before completing the claiming process. See Appendix B.1 for operational guidance on the claiming flow.
+- Servers SHOULD provide the user with visibility into the autonomous agent's activity before completing the claiming process.
 
 ### 9.4 Capability Requests as Behavioral Signal
 
