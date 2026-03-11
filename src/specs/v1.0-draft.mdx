@@ -54,7 +54,7 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "S
 
 ### 1.5 Terminology
 - **Principal** — An identity the server can authenticate, authorize, audit, and revoke independently. In this protocol, both hosts and agents are principals.
-- **Agent** — The runtime AI actor that needs to call services. Each agent has its own server-side identity, its own granted capabilities, and its own lifecycle.
+- **Agent** — A runtime AI actor scoped to a specific conversation, task, or session that calls external services. Each agent is registered under a host (§2.7), carries its own server-side identity, granted capabilities, and lifecycle, and authenticates with short-lived signed JWTs (§4.3).
 - **Client** — The process that holds a host identity and exposes protocol tools to AI systems (MCP server, CLI, SDK). It manages host and agent keys, talks to servers, and signs JWTs. AI tools like Claude Code or ChatGPT connect to a client.
 - **Host** — The persistent identity of the client environment where agents run. Each agent is created under a host. A host represents a specific device, application, or runtime on a server, and agents are registered under it. It may be linked to a user or unlinked in the case of autonomous agents.
 - **Server** — The service's authorization server. It manages discovery, host and agent registrations, approvals, capability grants, and JWT verification. Also called the auth server.
@@ -150,7 +150,7 @@ Agents that need a raw JWT for direct server-to-server use can still call `sign_
 
 ### 2.1 Agent
 
-An agent is a runtime AI actor that needs to call external services. Each agent has its own server-side identity, its own granted capabilities, and its own lifecycle. Agents are registered under hosts (§2.7–§2.11) and authenticate with short-lived signed JWTs (§4.3).
+An agent is a runtime AI actor scoped to a specific conversation, task, or session, that calls external services. Each agent is registered under a host (§2.7–§2.11), carries its own server-side identity, granted capabilities, and lifecycle, and authenticates with short-lived signed JWTs (§4.3).
 
 ### 2.2 Agent Modes
 
