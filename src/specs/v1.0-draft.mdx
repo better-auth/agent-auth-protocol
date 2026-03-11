@@ -883,6 +883,35 @@ Registration is keyed by the host identity plus the agent public key carried in 
 - If a matching agent exists in `pending` state, the server SHOULD treat the request as an idempotent retry and return the existing agent ID and current or refreshed approval flow instead of creating a second agent.
 - If a matching agent exists in `active`, `rejected`, `revoked`, or `claimed` state, the server SHOULD reject the request with `409 agent_exists`. Clients SHOULD generate a new agent keypair for a new registration attempt.
 
+**Response parameters:**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `agent_id` | string | Yes | The server-assigned agent identifier. |
+| `host_id` | string | Yes | The host this agent is registered under. |
+| `name` | string | Yes | The agent's display name (as provided in the request or server-assigned). |
+| `mode` | string | Yes | `"delegated"` or `"autonomous"`. |
+| `status` | string | Yes | `"active"` (auto-approved) or `"pending"` (approval required). |
+| `agent_capability_grants` | array | Yes | Array of capability grant objects (see below). |
+| `approval` | object | Conditional | Approval flow object (§7.5). Present when `status` is `"pending"`. |
+
+**Capability grant fields in registration, status, reactivation, and request-capability responses:**
+
+When the grant status is `"active"`, each grant object MUST include full capability details (`description`, `input`, and `output` when defined). Grants with constraints MUST include the approved scope — the server MAY have narrowed the agent's proposed constraints or added server-policy constraints, and the returned constraints are the effective ones the agent must operate within. When the grant status is `"pending"`, the grant includes only `capability` and `status`. When the grant status is `"denied"`, the grant includes `capability`, `status`, and an optional human-readable `reason` (see §5.5 for the denied grant format).
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `capability` | string | Yes | Capability identifier. |
+| `status` | string | Yes | `"active"`, `"pending"`, or `"denied"`. |
+| `description` | string | Active grants | Human-readable description. |
+| `input` | object | Active grants | JSON Schema for the capability's input. |
+| `output` | object | Active grants (when defined) | JSON Schema for the capability's output. |
+| `constraints` | object | Active grants (when scoped) | Effective input constraints (§2.13). |
+| `granted_by` | string | No | User or system actor who approved the grant. Servers MAY include this for audit purposes. |
+| `reason` | string | Denied grants | Human-readable explanation of the denial. |
+
+The introspect endpoint (§5.12) is an exception: it returns compact grant objects (`capability` and `status` only) because resource servers need to verify grants, not capability schemas.
+
 **Response (auto-approved):**
 
 ```json
@@ -946,8 +975,6 @@ Registration is keyed by the host identity plus the agent public key carried in 
   ]
 }
 ```
-
-When the agent status is `"active"`, each capability grant MUST include full capability details (description, input, and output when defined). Grants with constraints MUST include the approved scope. The server MAY have narrowed the agent's proposed constraints or added server-policy constraints — the returned constraints are the effective ones the agent must operate within.
 
 **Response (approval required):**
 
@@ -1021,12 +1048,21 @@ Content-Type: application/json
 | `login_hint` | string | No | User identifier hint for approval methods that benefit from the server already knowing who should approve (for example CIBA). The server MAY ignore it or validate it against server policy. |
 | `binding_message` | string | No | Short message shown to the approver when the selected approval method supports it. The server MAY ignore it or replace it with its own message. |
 
+**Response parameters:**
+
+The response returns only the newly requested capability grants — not the agent's full grant set. The agent's overall status does not change (the agent remains `active`); only the individual grant statuses indicate whether approval is pending.
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `agent_id` | string | Yes | The agent identifier. |
+| `agent_capability_grants` | array | Yes | Array of grant objects for the requested capabilities only (grant fields as described in §5.3). |
+| `approval` | object | Conditional | Approval flow object (§7.5). Present when any grant is `"pending"`. |
+
 **Response (auto-approved):**
 
 ```json
 {
   "agent_id": "agt_abc123",
-  "status": "active",
   "agent_capability_grants": [
     {
       "capability": "transfer_international",
@@ -1063,7 +1099,6 @@ Content-Type: application/json
 ```json
 {
   "agent_id": "agt_abc123",
-  "status": "pending",
   "agent_capability_grants": [
     { "capability": "transfer_international", "status": "pending" }
   ],
@@ -1102,13 +1137,33 @@ Authorization: Bearer <host_jwt>
 |---|---|---|---|
 | `agent_id` | string | Yes | The agent's ID |
 
+**Response parameters:**
+
+The status endpoint is the comprehensive view of an agent. It returns the full agent data model (§3.2) plus all capability grants.
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `agent_id` | string | Yes | The agent identifier. |
+| `host_id` | string | Yes | The host this agent is registered under. |
+| `name` | string | Yes | The agent's display name. |
+| `status` | string | Yes | Current agent status (`active`, `pending`, `expired`, `revoked`, `rejected`, `claimed`). |
+| `mode` | string | Yes | `"delegated"` or `"autonomous"`. |
+| `agent_capability_grants` | array | Yes | Array of all capability grant objects for this agent (grant fields as described in §5.3). |
+| `user_id` | string | No | Linked user identifier. Present for delegated agents. |
+| `activated_at` | datetime | No | When the agent was last activated (ISO 8601). |
+| `created_at` | datetime | Yes | When the agent was created (ISO 8601). |
+| `last_used_at` | datetime | No | When the agent last made an authenticated request (ISO 8601). |
+| `expires_at` | datetime | No | When the agent session expires (ISO 8601). |
+
 **Response:**
 
 ```json
 {
   "agent_id": "agt_abc123",
   "host_id": "hst_xyz789",
+  "name": "Bank balance checker",
   "status": "active",
+  "mode": "delegated",
   "agent_capability_grants": [
     {
       "capability": "check_balance",
@@ -1160,7 +1215,6 @@ Authorization: Bearer <host_jwt>
       }
     }
   ],
-  "mode": "delegated",
   "user_id": "user_alice",
   "created_at": "2026-02-25T10:00:00Z",
   "last_used_at": "2026-02-25T14:30:00Z",
@@ -1168,7 +1222,7 @@ Authorization: Bearer <host_jwt>
 }
 ```
 
-The capability grants array in the status response reflects the server's current capability state for this agent. Each grant includes a status value: `"active"` (granted and usable), `"pending"` (awaiting approval), or `"denied"` (user or server rejected). Active grants include full capability details (description, input, output when defined, and constraints when the grant is scoped — see §2.13). Pending grants include only the capability name and status. Denied grants include the capability name, status, and an optional human-readable reason.
+The capability grants array in the status response reflects the server's current capability state for this agent — grant fields are as described in §5.3. The status endpoint is the only endpoint guaranteed to return all grant metadata including `granted_by`.
 
 **Denied grant format:**
 
@@ -1217,6 +1271,17 @@ Reactivates an expired agent. Reactivation is a security checkpoint: the agent's
 4. Determine the host's current default capabilities and grant them to the agent, following the same auto-approval logic as registration (§5.3): if the host is linked and the capabilities fall within its defaults, auto-approve. Otherwise, return `pending` with an approval flow.
 5. Reset the session TTL and max lifetime clocks. Record the new activation time as now.
 6. Transition the agent to `active` (or `pending` if approval is required).
+
+**Response parameters:**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `agent_id` | string | Yes | The agent identifier. |
+| `status` | string | Yes | `"active"` (auto-approved) or `"pending"` (approval required). |
+| `agent_capability_grants` | array | Yes | Array of the agent's new capability grants (grant fields as described in §5.3). |
+| `activated_at` | datetime | Conditional | The new activation time (ISO 8601). Present when `status` is `"active"`. |
+| `expires_at` | datetime | Conditional | The new session expiry (ISO 8601). Present when `status` is `"active"`. |
+| `approval` | object | Conditional | Approval flow object (§7.5). Present when `status` is `"pending"`. |
 
 **Response (auto-approved):**
 
@@ -1575,7 +1640,7 @@ Content-Type: application/json
 | `agent_id` | string | Agent ID (from JWT `sub` claim). Only present when `active: true`. |
 | `host_id` | string | Host that created this agent. Only present when `active: true`. |
 | `user_id` | string? | Linked user, if any. Only present when `active: true`. |
-| `agent_capability_grants` | array | Per-capability grant status. If the JWT contained a `capabilities` claim, only capabilities in that claim are included. Only present when `active: true`. |
+| `agent_capability_grants` | array | Compact grant objects (`capability` and `status` only — not full capability details). Unlike other endpoints (§5.3), introspect omits `description`, `input`, `output`, and `constraints` because resource servers need to verify grants, not capability schemas. If the JWT contained a `capabilities` claim, only capabilities in that claim are included. Only present when `active: true`. |
 | `mode` | string | `"delegated"` or `"autonomous"`. Only present when `active: true`. |
 | `expires_at` | string? | Agent session expiry (ISO 8601). Only present when `active: true`. |
 
@@ -1882,9 +1947,16 @@ The client MAY refuse to sign (e.g. agent is revoked, rate limit exceeded). The 
 ```json
 {
   "token": "eyJhbGciOiJFZERTQSIs...",
-  "expires_at": 1730000060
+  "expires_in": 60
 }
 ```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `token` | string | Yes | The signed agent JWT. |
+| `expires_in` | number | Yes | Lifetime of the JWT in seconds. Matches the JWT's `exp` claim relative to `iat`. |
+
+**Note:** This field is `expires_in` (seconds until expiry), not `expires_at`. Agent session expiry uses ISO 8601 strings (e.g. `"2026-02-26T10:00:00Z"`), while JWT expiry follows the standard `exp` claim convention of relative seconds.
 
 ### 6.6 request_capability
 
@@ -1990,6 +2062,14 @@ Reactivates an expired agent connection. The agent keeps its identity (`agent_id
         "properties": {
           "account_id": { "type": "string", "description": "The bank account ID to check" }
         }
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "account_id": { "type": "string" },
+          "balance": { "type": "number" },
+          "currency": { "type": "string" }
+        }
       }
     },
     {
@@ -2003,6 +2083,15 @@ Reactivates an expired agent connection. The agent keeps its identity (`agent_id
           "amount": { "type": "number" },
           "currency": { "type": "string" },
           "destination_account": { "type": "string" }
+        }
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "transfer_id": { "type": "string" },
+          "status": { "type": "string" },
+          "amount": { "type": "number" },
+          "currency": { "type": "string" }
         }
       }
     }
