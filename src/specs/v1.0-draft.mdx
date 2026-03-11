@@ -33,14 +33,14 @@ Existing auth models tightly couple the human user and the application. When an 
 
 The problems above share a single root cause: agents today do not have identity.
 
-An agent is not the application it runs inside. Claude Code, Cursor, ChatGPT — these are environments where agents run. They are hosts. An agent is the specific runtime AI actor within that environment: a particular conversation, task, or session that acts over time. Two separate chats in the same application are not "the same agent" — they have different contexts, different intents, and should have different permissions.
+An agent is the specific runtime AI actor within that environment: a particular conversation, task, or session that acts over time. Two separate chats in the same application are not "the same agent", they have different contexts, different intents, and should have different permissions.
 
 Identity requires two properties:
 
 - **Continuity** — recognizable as the same actor over time. The server can verify, across multiple requests, that it is dealing with the same agent it registered.
 - **Distinctiveness** — distinguishable from every other actor. Each agent can be individually identified, scoped, audited, and revoked without affecting any other.
 
-Existing auth models fail because they provide at most one of these properties. OAuth tokens give continuity (the same token across requests) but no distinctiveness (every agent behind a client looks identical). Stateless API keys give distinctiveness (you can issue many) but weak continuity (no lifecycle, no state transitions, no revocation boundary). Neither gives an agent an identity — just a credential.
+Existing auth models fail because they provide at most one of these properties. OAuth tokens give continuity (the same token across requests) but no distinctiveness (every agent behind a client looks identical). Stateless API keys give distinctiveness (you can issue many) but weak continuity (no lifecycle, no state transitions, no revocation boundary). Neither gives an agent an identity, just a credential.
 
 ### 1.3 Solution
 

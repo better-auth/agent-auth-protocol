@@ -254,55 +254,15 @@ export const prerender = true;
     </div>
   </section>
 
-  <!-- Ready-made implementation paths -->
+  <!-- Get started -->
   <section class="relative">
-    <div class="mx-auto max-w-[1400px] px-5 sm:px-6 pb-20">
-      <div class="border border-[color:color-mix(in_oklch,var(--color-fg)_12%,transparent)] bg-[color:color-mix(in_oklch,var(--color-fg)_3%,var(--color-bg))] p-5 sm:p-6 lg:p-8">
-        <div class="mb-6 sm:mb-7">
-          <h2 class="text-xl sm:text-2xl font-semibold tracking-tight">Get started</h2>
-        </div>
-
-        <div class="grid gap-4 lg:grid-cols-3">
-          <a href="/specification" class="group relative overflow-hidden border border-[color:color-mix(in_oklch,var(--color-fg)_14%,transparent)] bg-[var(--color-bg)] p-5 sm:p-6 transition-colors hover:border-[color:color-mix(in_oklch,var(--color-fg)_22%,transparent)]">
-            <div class="mb-3 flex items-center justify-between text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-[0.12em] text-[var(--color-muted)]">
-              <span>Spec</span>
-            </div>
-            <h3 class="text-[14px] font-semibold mb-2">Read the specification</h3>
-            <p class="text-[12px] leading-[1.7] text-[var(--color-muted)] mb-4">The full protocol spec — identity model, registration, capabilities, discovery, and JWT verification.</p>
-            <pre class="border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-[11px] font-[family-name:var(--font-mono)] leading-relaxed overflow-x-auto"><code>$ npx agent-auth</code></pre>
-            <span class="mt-4 inline-flex items-center gap-1.5 text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)] group-hover:text-[var(--color-fg)] transition-colors">
-              Open specification
-              <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-            </span>
-          </a>
-
-          <a href="/implementations" class="group relative overflow-hidden border border-[color:color-mix(in_oklch,var(--color-fg)_14%,transparent)] bg-[var(--color-bg)] p-5 sm:p-6 transition-colors hover:border-[color:color-mix(in_oklch,var(--color-fg)_22%,transparent)]">
-            <div class="mb-3 flex items-center justify-between text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-[0.12em] text-[var(--color-muted)]">
-              <span>Plugin</span>
-            </div>
-            <h3 class="text-[14px] font-semibold mb-2">Better Auth plugin</h3>
-            <p class="text-[12px] leading-[1.7] text-[var(--color-muted)] mb-4">Add Agent Auth to your app with the Better Auth plugin. Handles registration, capabilities, and JWT verification.</p>
-            <pre class="border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-[11px] font-[family-name:var(--font-mono)] leading-relaxed overflow-x-auto"><code set:html={'import { agentAuth } from "better-auth/plugins"'}></code></pre>
-            <span class="mt-4 inline-flex items-center gap-1.5 text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)] group-hover:text-[var(--color-fg)] transition-colors">
-              View plugin docs
-              <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-            </span>
-          </a>
-
-          <a href="/registry" class="group relative overflow-hidden border border-[color:color-mix(in_oklch,var(--color-fg)_14%,transparent)] bg-[var(--color-bg)] p-5 sm:p-6 transition-colors hover:border-[color:color-mix(in_oklch,var(--color-fg)_22%,transparent)]">
-            <div class="mb-3 flex items-center justify-between text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-[0.12em] text-[var(--color-muted)]">
-              <span>Registry</span>
-            </div>
-            <h3 class="text-[14px] font-semibold mb-2">Submit your server</h3>
-            <p class="text-[12px] leading-[1.7] text-[var(--color-muted)] mb-4">Register your Agent Auth server so agents can discover it through the registry.</p>
-            <pre class="border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-[11px] font-[family-name:var(--font-mono)] leading-relaxed overflow-x-auto"><code>GET /.well-known/agent-configuration</code></pre>
-            <span class="mt-4 inline-flex items-center gap-1.5 text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)] group-hover:text-[var(--color-fg)] transition-colors">
-              Submit your server
-              <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-            </span>
-          </a>
-        </div>
-      </div>
+    <div class="mx-auto max-w-[1400px] px-5 sm:px-6 pb-16">
+      <h2 class="text-lg sm:text-xl font-semibold tracking-tight mb-4">Get started</h2>
+      <ul class="space-y-2 text-[15px] text-[var(--color-body)] leading-[1.8]">
+        <li><a href="/specification" class="text-[var(--color-fg)] underline underline-offset-3 decoration-[var(--color-border)] hover:decoration-[var(--color-fg)] transition-colors">Read the specification</a> — identity model, registration, capabilities, discovery, and JWT verification.</li>
+        <li><a href="/implementations" class="text-[var(--color-fg)] underline underline-offset-3 decoration-[var(--color-border)] hover:decoration-[var(--color-fg)] transition-colors">Better Auth plugin</a> — add Agent Auth to your app with a single plugin.</li>
+        <li><a href="/registry" class="text-[var(--color-fg)] underline underline-offset-3 decoration-[var(--color-border)] hover:decoration-[var(--color-fg)] transition-colors">Submit your server</a> — register so agents can discover it through the registry.</li>
+      </ul>
     </div>
   </section>
 
