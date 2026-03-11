@@ -580,6 +580,7 @@ Agents authenticate by signing short-lived JWTs per [RFC 7519](https://datatrack
 
 ```json
 {
+  "iss": "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs",
   "sub": "agt_k7x9m2",
   "aud": "https://api.example.com",
   "iat": 1710000000,
@@ -1586,6 +1587,8 @@ Because agent JWTs are short-lived (SHOULD be ≤60 seconds per §8.2), the clie
 
 For streaming capabilities, the server returns a `200` response with `Content-Type: text/event-stream` and streams Server-Sent Events. The client SHOULD expose the stream to the agent when the transport supports it.
 
+**Streaming and JWT expiry.** Unlike polling, an SSE stream can outlive the agent JWT that initiated it. The server authenticates the agent at connection time (the initial `POST /agent/execute` request carries the JWT). Once the stream is established, the server SHOULD enforce a maximum stream duration aligned with its security requirements (e.g. 5 minutes, 1 hour). Servers that require continuous authentication SHOULD terminate the stream when the initiating JWT's `exp` time is reached, requiring the client to reconnect with a fresh JWT. Servers that prioritize long-running streams over continuous auth MAY allow the stream to continue beyond JWT expiry, but MUST check agent and host revocation status periodically (e.g. every 60 seconds) and terminate the stream if the agent or host has been revoked.
+
 **Constraint enforcement:**
 
 If the agent's grant for the requested capability carries constraints (§2.13), the server MUST validate the supplied arguments against those constraints before executing. If any argument violates a constraint, the server MUST reject the request with `403 constraint_violated`. The error response SHOULD include a violations array listing which constraints were violated:
@@ -2162,7 +2165,7 @@ Executes a granted capability through the server's execute endpoint (§5.11). Th
 
 **Behavior:**
 
-1. Sign an agent JWT scoped to this capability
+1. Sign an agent JWT scoped to this capability with `aud` set to the target server's `issuer` URL. See §8.18 for cross-server `aud` enforcement requirements.
 2. Call `POST /capability/execute` (§5.11) with the agent JWT, `capability`, and `arguments`
 3. Return the result to the agent
 4. For async responses (`status: "pending"`), poll the `status_url` until completion and return the final result
@@ -2335,6 +2338,8 @@ Because `iss` is the JWK thumbprint of the signing key, JWKS key rotation change
 
 Hosts that register across many servers SHOULD prefer JWKS-based registration, since key rotation propagates automatically without the client needing to contact each server individually.
 
+**Key delivery mode is fixed at registration.** A host registered with `host_public_key` (inline) MUST NOT later present `host_jwks_url`, and vice versa. Servers MUST reject host JWTs where the key delivery mode differs from the one used at registration. This prevents an attacker who compromises a JWKS endpoint from pivoting to inline key registration to maintain persistent access after the JWKS is remediated. If a host needs to switch modes, it MUST re-register as a new host.
+
 ### 8.8 Agent Key Compromise
 
 If an agent's private key is leaked, anyone holding it can impersonate that agent. This is inherent to any keypair-based system (same as a leaked SSH key or OAuth token). However, unlike bearer tokens, the agent's private key never traverses the wire — it can only leak from the client's local storage.
@@ -2347,6 +2352,25 @@ Mitigations:
 
 After registration, the agent authenticates independently with its own keypair — the host is not involved in every request. If binding agent requests to the host is required, implementations can enforce this at the server level.
 
+### 8.8.1 Host Key Compromise
+
+A compromised host key is significantly more damaging than a compromised agent key. The attacker can:
+
+- **Register arbitrary agents** under the host, gaining new capabilities
+- **Revoke the host** (denial of service to all agents under it)
+- **Rotate the host key** via §5.9 (inline-key hosts), locking out the legitimate owner
+- **Impersonate all future host-authenticated operations** — status checks, capability requests, agent management
+
+The inline key rotation endpoint (§5.9) is unusable during a host key compromise because it requires authentication with the current (compromised) key. The attacker can use it; the legitimate owner cannot.
+
+**Response:**
+
+1. **Revoke the host immediately.** The user (or server admin) MUST revoke the host through an out-of-band mechanism (dashboard, admin API, support). Revocation cascades to all agents under the host (§8.5).
+2. **Re-register.** After revocation, the client generates a new host keypair and registers as a new host. This creates a fresh identity with no connection to the compromised one.
+3. **JWKS hosts.** If using JWKS, revoke the compromised key at the JWKS endpoint. The server will pick up the removal on the next cache refresh. However, if the attacker has access to the JWKS endpoint itself, the endpoint is also compromised — treat this as a full host compromise and revoke.
+
+Servers SHOULD provide an authenticated, out-of-band mechanism (e.g. user dashboard) for users to revoke hosts without needing the host's private key. This is the only reliable recovery path for host key compromise.
+
 ### 8.9 Discovery Security
 
 Discovery of arbitrary URLs is a prompt injection vector. A malicious prompt can trick an agent into calling `discover_provider(url: "https://evil.com")`, which returns a fake configuration. The client then sends the host JWT to the attacker's "register" endpoint.
@@ -2358,6 +2382,7 @@ Mitigations:
 - **Proof on host-authenticated registration.** For **discovered servers** (not pre-configured), clients SHOULD use DPoP or an equivalent request-specific proof on host-authenticated registration requests so they cannot be replayed to a different endpoint.
 - **TLS verification.** Clients MUST verify TLS certificates when fetching discovery endpoints.
 - **Registry integrity.** When using registry-based discovery, clients SHOULD verify that the `issuer` in the fetched discovery document matches the `issuer` from the registry result. A mismatch indicates a poisoned registry entry or a man-in-the-middle attack. See §6.11 for registry-side protections.
+- **Algorithm downgrade protection.** See §8.16.
 
 ### 8.10 Approval Gravity
 
@@ -2366,6 +2391,8 @@ User approval is the primary trust boundary in this protocol — for unknown hos
 **Self-attestation during dynamic registration.** When a host registers for the first time, its JWT is self-signed — the public key is carried inside the JWT itself, and the server has never seen this host before. Anyone can create a valid host identity. The server MUST NOT grant any capabilities or trust the host identity until user approval completes. Until approval, the host and agent exist in `pending` state with no granted access. This is the designed trust model: the cryptographic identity is established immediately, but authorization is deferred entirely to the approval flow.
 
 First-time host approval is the highest-risk moment: the server knows nothing about the host beyond a self-signed keypair. Servers SHOULD present the requested capabilities clearly and warn if the host is requesting unusually broad access.
+
+**Display-text safety.** Several protocol fields shown on approval screens are attacker-controlled: `name`, `reason`, `host_name`, and `binding_message` (CIBA). A malicious host could set `host_name` to `"Apple Security Update"` or `reason` to social-engineering text designed to manipulate the user into approving. Servers MUST sanitize these fields before rendering — strip HTML, limit length, and escape special characters. Servers SHOULD warn users when display names resemble well-known brands or services (e.g. homoglyph detection). Servers MUST NOT render these fields as trusted content (no raw HTML, no markdown interpretation, no clickable links).
 
 Capability escalation deserves the same scrutiny. Servers SHOULD NOT auto-approve high-risk capabilities even for linked hosts. Servers MUST calibrate approval requirements to the sensitivity of their capabilities — the protocol provides the mechanism (approval flows, fresh auth, 2FA), but the server decides which to enforce.
 
@@ -2420,6 +2447,19 @@ For discovery-specific protections (allowlists, user confirmation, TLS verificat
 - Servers SHOULD limit the number of keys in a JWKS response (e.g. 20 keys). An attacker-controlled JWKS with many keys forces the server to attempt signature verification against each one.
 - Servers SHOULD cache JWKS responses per [RFC 7517](https://datatracker.ietf.org/doc/html/rfc7517) cache headers, with a maximum cache duration (e.g. 24 hours) and a minimum refresh interval (e.g. 5 minutes) to prevent cache-busting attacks.
 
+**Server-returned URL validation.** The protections above cover URLs that clients and servers *fetch from external sources*. Clients MUST also validate URLs that the *server returns* to them — `status_url` (§5.11 async polling), `verification_uri` (§7.1 device authorization), and `notification_url` (§10.8.2 real-time approval). A malicious or compromised server could return URLs that:
+
+- Point to the client's local network (client-side SSRF via `status_url`)
+- Serve phishing pages designed to harvest user credentials (via `verification_uri`)
+- Exfiltrate data via DNS or HTTP requests to attacker-controlled domains
+
+Clients MUST apply the following to server-returned URLs:
+
+- **HTTPS only.** Reject `http://` URLs.
+- **Origin validation.** For `status_url`, the URL MUST share the same origin (scheme + host + port) as the server's `issuer` URL. Reject cross-origin polling URLs. For `verification_uri`, the URL SHOULD match the server's origin or a known authorization domain for that server.
+- **IP filtering.** Clients SHOULD block `status_url` values that resolve to private, loopback, or link-local IP ranges (same filtering as §8.12 server-side fetches, applied client-side).
+- **User visibility.** For `verification_uri` shown to users, the client SHOULD display the full URL so the user can verify the domain before entering credentials.
+
 ### 8.13 Rate Limiting
 
 Servers MUST implement rate limiting. Agents can generate high request volumes — both legitimately and due to bugs or compromised keys.
@@ -2464,6 +2504,34 @@ These are optional enhancements. The base protocol's security model (short-lived
 Capability names are server-defined strings and MUST be treated as opaque identifiers by clients. Because the server defines and controls its own capability namespace, capability name squatting (where an attacker pre-registers a capability name to hijack later requests) is not a protocol-level threat — the server is authoritative over its own names.
 
 However, if a server allows hosts to _suggest_ new capability names during registration (an extension behavior, not defined in this specification), the server MUST validate suggested names against its own namespace and reject conflicts. The risk in this scenario is a confused-deputy attack where a malicious host registers a capability name that collides with a legitimate one.
+
+### 8.16 Discovery Downgrade Attacks
+
+The `algorithms` field in discovery (§5.1) tells clients which key types the server accepts. If an attacker can modify the discovery document in transit (e.g. via a compromised cache or DNS hijack), they could remove strong algorithms and force clients to register with weaker ones.
+
+Mitigations:
+
+- **TLS is the primary defense.** Discovery documents are fetched over HTTPS (§8.9), which protects against in-transit modification. This threat is only relevant if TLS is compromised or if a client accepts discovery documents over an insecure channel.
+- **Clients SHOULD reject unexpected algorithm downgrades.** If a client has previously connected to a server that supported `Ed25519` and a subsequent discovery fetch no longer lists it, the client SHOULD warn the user or refuse to proceed rather than silently falling back to a weaker algorithm.
+- **Servers MUST NOT remove algorithms that are still in active use.** Removing an algorithm from `algorithms` MUST NOT invalidate existing registrations (§4.1), but the server SHOULD NOT remove an algorithm unless it has a documented migration path for existing hosts and agents using it.
+
+### 8.17 Constraint Enforcement Atomicity
+
+Constraints (§2.13) are validated at the time the server processes the execution request (§5.11). However, the underlying data or state may change between validation and actual execution — a time-of-check/time-of-use (TOCTOU) gap. For example, a constraint of `max_amount: 1000` is checked against the request's `amount` field, but if the execution involves multiple steps, the effective amount could differ by the time the operation completes.
+
+This is an implementation concern, not a protocol-level issue — the protocol defines *what* constraints mean, not *how* the server executes operations internally. However, servers SHOULD be aware of the TOCTOU risk:
+
+- **Atomic validation.** Where possible, servers SHOULD validate constraints and execute the operation atomically (e.g. within a database transaction).
+- **Re-validation.** For multi-step or asynchronous operations, servers SHOULD re-validate constraints at each step that could violate them, not just at the initial request.
+- **Idempotency.** Servers SHOULD ensure that constraint-validated operations are idempotent where applicable, so that retries after partial failures do not bypass constraints.
+
+### 8.18 Cross-Server Capability Confusion
+
+Each agent JWT includes an `aud` claim set to the server's `issuer` URL (§4.3). This prevents a JWT intended for server A from being accepted by server B — the `aud` check in verification (§4.5 step 3) rejects it. However, this only works if both sides enforce `aud`:
+
+- **Servers MUST reject JWTs where `aud` does not exactly match their own `issuer` URL.** This is already required (§4.5 step 3) but is restated here for emphasis.
+- **Clients MUST set `aud` to the specific server's `issuer` URL for each request.** A client that sets `aud` to a wildcard or reuses JWTs across servers defeats this protection.
+- **Clients MUST NOT reuse a signed JWT across multiple servers.** Even if two servers happen to share a capability name (e.g. `send_email`), the JWT for one is not valid for the other.
 
 ## 9. Privacy Considerations
 
