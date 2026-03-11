@@ -1,0 +1,131 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import Nav from "@/components/Nav.astro";
+import Footer from "@/components/Footer.astro";
+import { Code } from "astro:components";
+
+export const prerender = true;
+---
+
+<Layout title="Registry — Agent Auth Protocol" darkMode>
+  <Nav active="/registry" showThemeToggle />
+
+  <main class="mx-auto max-w-3xl px-5 sm:px-6 py-12 sm:py-16">
+    <article class="docs-prose">
+      <h1>Registry</h1>
+
+      <p>
+        A registry is a searchable index of services that support Agent Auth. It enables agents to discover providers by intent — instead of needing a URL upfront, an agent can search for "banking" or "send emails" and find matching services automatically.
+      </p>
+
+      <h2 id="what-is-the-registry">What is the registry?</h2>
+
+      <p>
+        The registry is a client-side discovery aid, not part of the core server protocol. When an agent calls <code>search_providers</code>, the client queries its configured registry to find matching providers. Registries can be public (open to all services), private (enterprise-only), or bundled with the client as a static list.
+      </p>
+
+      <p>
+        The registry URL is configured on the client. Clients should prefer registry lookups over fetching arbitrary URLs provided by agents, as this provides a trust boundary for discovery (see <a href="/docs/security">Security Considerations</a>).
+      </p>
+
+      <h2 id="registry-implementations">Registry implementations</h2>
+
+      <p>There are several registry implementations available:</p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Registry</th>
+            <th>URL</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>ARM</strong></td>
+            <td><a href="https://arm.directory">arm.directory</a></td>
+            <td>Agent Registry Management — a public registry for Agent Auth providers</td>
+          </tr>
+          <tr>
+            <td><strong>Better Auth Registry</strong></td>
+            <td><a href="https://registry.better-auth.com">registry.better-auth.com</a></td>
+            <td>Registry maintained by the Better Auth team</td>
+          </tr>
+          <tr>
+            <td><strong>Protocol Registry</strong></td>
+            <td><a href="https://registry.agent-auth-protocol.com">registry.agent-auth-protocol.com</a></td>
+            <td>Official protocol registry</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2 id="search-interface">Search interface</h2>
+
+      <p>
+        For generic client interoperability, a registry must implement the following endpoint:
+      </p>
+
+      <Code lang="http" code={`GET {registry_url}/api/search?intent={intent}&limit={limit}`} />
+
+      <table>
+        <thead>
+          <tr>
+            <th>Parameter</th>
+            <th>Type</th>
+            <th>Required</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>intent</code></td>
+            <td>string</td>
+            <td>Yes</td>
+            <td>Natural-language description of what the agent needs (e.g. "send emails", "deploy websites")</td>
+          </tr>
+          <tr>
+            <td><code>limit</code></td>
+            <td>number</td>
+            <td>No</td>
+            <td>Maximum number of results (default: 10)</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>The response returns standard discovery documents for matching providers:</p>
+
+      <Code lang="json" code={`{
+  "providers": [
+    {
+      "version": "1.0-draft",
+      "provider_name": "example",
+      "description": "Example service",
+      "issuer": "https://example.com",
+      "algorithms": ["Ed25519"],
+      "modes": ["delegated", "autonomous"],
+      "approval_methods": ["device_authorization"],
+      "endpoints": { "..." : "..." }
+    }
+  ],
+  "intent": "the original intent",
+  "count": 1
+}`} />
+
+      <p>
+        Each entry in <code>providers</code> is a standard discovery document (the same format returned by <code>/.well-known/agent-configuration</code>). The client can use these to proceed directly to agent connection.
+      </p>
+
+      <h2 id="registering-your-server">Registering your server</h2>
+
+      <p>
+        How services are added to a registry is implementation-specific. A registry may accept submissions via API, require manual review, auto-discover from a crawl, or any other mechanism. The only protocol requirement is the search interface above.
+      </p>
+
+      <p>
+        To get listed, your server needs a valid <code>/.well-known/agent-configuration</code> endpoint. Submit your server to the registries above to make it discoverable by agents.
+      </p>
+    </article>
+  </main>
+
+  <Footer />
+</Layout>

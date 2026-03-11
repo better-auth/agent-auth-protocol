@@ -1,0 +1,158 @@
+---
+import DocsLayout from "@/layouts/DocsLayout.astro";
+
+export const prerender = true;
+
+const headings = [
+	{ depth: 2, slug: "private-keys", text: "Private keys" },
+	{ depth: 2, slug: "jwt-lifetime", text: "JWT lifetime" },
+	{ depth: 2, slug: "replay-protection", text: "Replay protection" },
+	{ depth: 2, slug: "proof-of-possession", text: "Proof of possession" },
+	{ depth: 2, slug: "approval-security", text: "Approval security" },
+	{ depth: 2, slug: "self-authorization", text: "Self-authorization attacks" },
+	{ depth: 2, slug: "discovery-security", text: "Discovery security" },
+	{ depth: 2, slug: "key-compromise", text: "Key compromise" },
+	{ depth: 2, slug: "revocation", text: "Revocation cascade" },
+	{ depth: 2, slug: "rate-limiting", text: "Rate limiting" },
+	{ depth: 2, slug: "url-fetch-protection", text: "URL fetch protection" },
+];
+---
+
+<DocsLayout
+  title="Security Considerations"
+  activeDoc="/docs/security"
+  section="Develop with Agent Auth"
+  headings={headings}
+>
+  <p>
+    This page covers security considerations for implementing and deploying Agent Auth. For the full treatment, see <a href="/specification#8-security-considerations">§8 Security Considerations</a> in the specification.
+  </p>
+
+  <h2 id="private-keys">Private keys</h2>
+
+  <p>
+    Private keys must <strong>never</strong> be transmitted to or stored on the server. The server stores only public keys or JWKS URLs. Clients should store private keys securely — in a keychain, encrypted file, or memory-only.
+  </p>
+
+  <h2 id="jwt-lifetime">JWT lifetime</h2>
+
+  <p>
+    Agent JWTs should expire within <strong>60 seconds</strong>. Short lifetimes limit misuse even without proof of possession. There are no refresh tokens — the client signs a new JWT for every request.
+  </p>
+
+  <h2 id="replay-protection">Replay protection</h2>
+
+  <p>
+    Servers must reject duplicate <code>jti</code> values within the JWT's lifetime window. Every JWT includes a unique <code>jti</code> claim, and the server tracks seen values to prevent replay attacks.
+  </p>
+
+  <h2 id="proof-of-possession">Proof of possession</h2>
+
+  <p>
+    The base protocol does not require proof of possession — short-lived JWTs over TLS are sufficient for many applications. For sensitive operations, servers should support a standard proof-of-possession profile:
+  </p>
+
+  <ul>
+    <li><strong>DPoP</strong> — the client sends a separate DPoP proof JWT on each request</li>
+    <li><strong>mTLS</strong> — the client authenticates with a TLS client certificate</li>
+  </ul>
+
+  <p>
+    This keeps the baseline simple while giving higher-assurance deployments a standards-aligned path.
+  </p>
+
+  <h2 id="approval-security">Approval security</h2>
+
+  <p>
+    User approval is the primary trust boundary. First-time host approval is the highest-risk moment — the server knows nothing about the host beyond a self-signed keypair.
+  </p>
+
+  <ul>
+    <li>Servers should present requested capabilities clearly and warn if the host requests unusually broad access</li>
+    <li>Capability escalation deserves the same scrutiny — servers should not auto-approve high-risk capabilities even for linked hosts</li>
+    <li>Approval pages should require <strong>fresh authentication</strong> — a long-lived session cookie alone is not sufficient</li>
+  </ul>
+
+  <h2 id="self-authorization">Self-authorization attacks</h2>
+
+  <p>
+    Agents often run with access to the user's browser or session (via browser tools, MCP, automation frameworks). This creates a unique threat: an agent could navigate to the device authorization URL and <strong>approve its own registration</strong> without the user being physically present.
+  </p>
+
+  <p>Mitigations, from least to most restrictive:</p>
+
+  <ul>
+    <li><strong>Fresh authentication</strong> — require the user to have authenticated within a short window (e.g. 5 minutes)</li>
+    <li><strong>Biometric passkeys</strong> (WebAuthn) — proves a human is physically present</li>
+    <li><strong>Hardware security keys</strong> — physical interaction required</li>
+    <li><strong>TOTP/OTP from a separate device</strong> — ensures the approver has a second factor the agent can't access</li>
+  </ul>
+
+  <h2 id="discovery-security">Discovery security</h2>
+
+  <p>
+    Discovery of arbitrary URLs is a prompt injection vector. A malicious prompt can trick an agent into calling <code>discover_provider</code> with a fake URL, which returns a fake configuration pointing registration at an attacker's endpoint.
+  </p>
+
+  <p>Mitigations:</p>
+
+  <ul>
+    <li><strong>Registry-first discovery</strong> — clients should resolve new services through a trusted registry rather than arbitrary URLs</li>
+    <li><strong>User confirmation</strong> — if <code>discover_provider</code> is called with a direct URL, require user confirmation before fetching</li>
+    <li><strong>Allowlists</strong> — clients may maintain an allowlist of trusted service URLs</li>
+    <li><strong>TLS verification</strong> — clients must verify TLS certificates when fetching discovery endpoints</li>
+  </ul>
+
+  <h2 id="key-compromise">Key compromise</h2>
+
+  <p>
+    If an agent's private key is leaked, anyone holding it can impersonate that agent. Unlike bearer tokens, the private key never traverses the wire — it can only leak from the client's local storage.
+  </p>
+
+  <p>Mitigations:</p>
+
+  <ul>
+    <li><strong>Host-authorized key rotation</strong> — use <code>POST /agent/rotate-key</code> with a Host JWT to immediately invalidate the compromised key</li>
+    <li><strong>Short TTL</strong> — agents with short session TTL values auto-expire, limiting the window of compromise</li>
+    <li><strong>Immediate revocation</strong> — revoke the agent if compromise is detected</li>
+    <li><strong>Secure storage</strong> — store private keys securely (keychain, encrypted file, memory-only)</li>
+  </ul>
+
+  <h2 id="revocation">Revocation cascade</h2>
+
+  <p>
+    Revoking a host must cascade to all agents under it. This ensures that if a host is compromised, all agents running under it are immediately terminated.
+  </p>
+
+  <h2 id="rate-limiting">Rate limiting</h2>
+
+  <p>
+    Servers must implement rate limiting. Agents can generate high request volumes — both legitimately and due to bugs or compromised keys. Rate limits should apply at multiple levels:
+  </p>
+
+  <ul>
+    <li><strong>Per-agent</strong> — limits individual agent request rates</li>
+    <li><strong>Per-host</strong> — limits total requests from all agents under a host</li>
+    <li><strong>Per-capability</strong> — limits execution of specific high-cost capabilities</li>
+    <li><strong>Global</strong> — overall server protection</li>
+  </ul>
+
+  <h2 id="url-fetch-protection">URL fetch protection</h2>
+
+  <p>
+    Both servers and clients fetch external URLs as part of the protocol. Servers fetching JWKS URLs must apply:
+  </p>
+
+  <ul>
+    <li><strong>IP filtering</strong> — block private, loopback, and link-local ranges</li>
+    <li><strong>DNS rebinding protection</strong> — pin the resolved IP for the request duration</li>
+    <li><strong>HTTPS only</strong> — reject <code>http://</code> URLs</li>
+    <li><strong>Response size limits</strong> — cap response bodies (e.g. 1 MB for JWKS)</li>
+    <li><strong>Timeouts</strong> — enforce connect and read timeouts</li>
+  </ul>
+
+  <div class="next-links">
+    <a href="/specification#8-security-considerations">Full security specification (§8) →</a>
+    <a href="/specification#9-privacy-considerations">Privacy considerations (§9) →</a>
+  </div>
+</DocsLayout>

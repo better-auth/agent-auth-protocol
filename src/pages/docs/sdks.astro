@@ -1,0 +1,122 @@
+---
+import DocsLayout from "@/layouts/DocsLayout.astro";
+import { Code } from "astro:components";
+
+export const prerender = true;
+
+const headings = [
+	{ depth: 2, slug: "typescript", text: "TypeScript" },
+	{ depth: 3, slug: "better-auth-plugin", text: "Better Auth plugin (Server)" },
+	{ depth: 3, slug: "agent-auth-sdk", text: "Agent Auth SDK (Client)" },
+	{ depth: 2, slug: "python", text: "Python" },
+	{ depth: 2, slug: "other-languages", text: "Other languages" },
+];
+---
+
+<DocsLayout
+  title="SDKs"
+  activeDoc="/docs/sdks"
+  section="Develop with Agent Auth"
+  headings={headings}
+>
+  <p>
+    Official and community SDKs for the Agent Auth Protocol. The protocol is simple enough to implement from scratch in any language — Ed25519 keypairs, device authorization flow, signed JWTs, and three database tables.
+  </p>
+
+  <h2 id="typescript">TypeScript</h2>
+
+  <h3 id="better-auth-plugin">Better Auth plugin (Server)</h3>
+
+  <p>
+    Full reference implementation of the Agent Auth server as a Better Auth plugin. Drop-in agent identity, registration, device flow, capability management, and session verification.
+  </p>
+
+  <Code lang="ts" code={`import { betterAuth } from "better-auth";
+import { agentAuth } from "better-auth/plugins";
+
+const auth = betterAuth({
+  plugins: [agentAuth()],
+});`} />
+
+  <ul>
+    <li>Agent registration with Ed25519 key verification</li>
+    <li>Device authorization flow for user approval</li>
+    <li>Capability management and grant tracking</li>
+    <li>Session verification via <code>getAgentSession()</code></li>
+    <li>Lifecycle management (expiry, reactivation, revocation)</li>
+  </ul>
+
+  <p>
+    <a href="https://github.com/better-auth/better-auth">View on GitHub →</a>
+  </p>
+
+  <h3 id="agent-auth-sdk">Agent Auth SDK (Client)</h3>
+
+  <p>
+    Client SDK for agent runtimes. Manages keypairs, signs requests, handles registration and capability escalation. Can run as an MCP server, CLI tool, or embedded library.
+  </p>
+
+  <Code lang="bash" code={`npm install agent-auth`} />
+
+  <ul>
+    <li>Ed25519 key generation and management</li>
+    <li>JWT signing for every request</li>
+    <li>Auto-registration with discovery</li>
+    <li>Capability escalation handling</li>
+    <li>MCP server mode</li>
+    <li>CLI interface</li>
+  </ul>
+
+  <p>
+    <a href="https://github.com/better-auth/agent-auth-protocol">View on GitHub →</a>
+  </p>
+
+  <h2 id="python">Python</h2>
+
+  <p>
+    <strong>Coming soon.</strong> A Python SDK for the Agent Auth Protocol is in development. It will support both server and client implementations.
+  </p>
+
+  <p>
+    In the meantime, you can implement the protocol from scratch in Python using standard libraries for Ed25519 (e.g. <code>cryptography</code>) and JWT (e.g. <code>PyJWT</code>).
+  </p>
+
+  <h2 id="other-languages">Other languages</h2>
+
+  <p>
+    The protocol is open and language-agnostic. To implement it from scratch, you need:
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Component</th>
+        <th>Requirements</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Server</strong></td>
+        <td>3 database tables + Ed25519 JWT verification + device authorization flow</td>
+      </tr>
+      <tr>
+        <td><strong>Client</strong></td>
+        <td>Ed25519 key generation + JWT signing + HTTP request binding</td>
+      </tr>
+      <tr>
+        <td><strong>Standards</strong></td>
+        <td>DPoP-style (RFC 9449) + Device Authorization (RFC 8628)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    If you build an implementation, <a href="https://github.com/better-auth/agent-auth-protocol">submit a PR</a> to be listed here.
+  </p>
+
+  <div class="next-links">
+    <a href="/docs/build-server">Build a server →</a>
+    <a href="/docs/integrate-client">Integrate the client →</a>
+    <a href="/specification">Full specification →</a>
+  </div>
+</DocsLayout>

@@ -1,0 +1,31 @@
+---
+import { sidebar } from "@/data/docs-nav";
+
+interface Props {
+  active: string;
+}
+
+const { active } = Astro.props;
+---
+
+<aside class="docs-sidebar" id="docs-sidebar">
+  <nav class="docs-sidebar-nav">
+    {sidebar.map((section) => (
+      <div class="docs-sidebar-section">
+        <h3 class="docs-sidebar-title">{section.title}</h3>
+        <ul>
+          {section.items.map((item) => (
+            <li>
+              <a
+                href={item.href}
+                class:list={["docs-sidebar-link", { active: active === item.href }]}
+              >
+                {item.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    ))}
+  </nav>
+</aside>

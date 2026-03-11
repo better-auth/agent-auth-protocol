@@ -1,0 +1,81 @@
+---
+import DocsLayout from "@/layouts/DocsLayout.astro";
+
+export const prerender = true;
+
+const headings = [
+	{ depth: 2, slug: "the-problem", text: "The problem" },
+	{ depth: 2, slug: "what-agent-auth-does", text: "What Agent Auth does" },
+	{ depth: 2, slug: "how-it-works", text: "How it works" },
+	{ depth: 2, slug: "learn-more", text: "Learn more" },
+];
+---
+
+<DocsLayout
+  title="What is Agent Auth?"
+  activeDoc="/docs/introduction"
+  section="Get started"
+  headings={headings}
+>
+  <p>
+    Agent Auth is an open protocol that gives AI agents their own identity. Instead of borrowing a user's OAuth token or sharing a single API key, each agent gets its own cryptographic keypair, its own granted capabilities, and its own lifecycle.
+  </p>
+
+  <p>
+    Using Agent Auth, AI applications like Claude, ChatGPT, or Cursor can connect to external services — banks, APIs, deployment pipelines, communication tools — and perform tasks with <strong>clear attribution and scoped permissions</strong>.
+  </p>
+
+  <h2 id="the-problem">The problem</h2>
+
+  <p>
+    When an agent acts on behalf of a user, it typically reuses the user's OAuth token or a shared client credential. That collapses the agent into the user's identity:
+  </p>
+
+  <ul>
+    <li><strong>No visibility</strong> — the server can't tell which agent made a request</li>
+    <li><strong>No scoping</strong> — every agent gets the user's full permissions</li>
+    <li><strong>No isolation</strong> — you can't revoke one agent without revoking all of them</li>
+  </ul>
+
+  <p>
+    For autonomous agents (background workers, scheduled jobs), the problem is worse: there's no identity model at all. The agent is forced to pretend to be a human user just to use a service.
+  </p>
+
+  <h2 id="what-agent-auth-does">What Agent Auth does</h2>
+
+  <p>
+    Agent Auth makes each runtime agent a first-class principal. Instead of borrowing someone else's identity, each agent is registered with its own identity, granted capabilities, and lifecycle. This gives servers something existing auth models are missing: a way to identify which specific agent is acting, what capabilities it holds, and how to manage it independently.
+  </p>
+
+  <ul>
+    <li><strong>Per-agent identity</strong> — every agent gets its own ID and cryptographic keys</li>
+    <li><strong>Scoped capabilities</strong> — agents only get access to the specific actions they need</li>
+    <li><strong>User-controlled approval</strong> — capabilities are approved through a device authorization flow</li>
+    <li><strong>Independent lifecycle</strong> — each agent can be revoked or expired without affecting others</li>
+    <li><strong>Full audit trail</strong> — every action is attributed to a specific agent</li>
+  </ul>
+
+  <h2 id="how-it-works">How it works</h2>
+
+  <p>The core flow is simple:</p>
+
+  <ol>
+    <li>A <strong>client</strong> (e.g. an MCP server, SDK, or CLI) discovers a service via its well-known endpoint</li>
+    <li>The client registers an <strong>agent</strong> with the service's authorization <strong>server</strong></li>
+    <li>The user approves the agent's requested capabilities</li>
+    <li>The agent authenticates with short-lived Ed25519-signed JWTs on every request</li>
+  </ol>
+
+  <p>
+    Agent Auth works alongside existing standards — it uses OAuth's device flow for approval, follows DPoP-style proof-of-possession patterns, and is designed to be the auth layer for MCP.
+  </p>
+
+  <h2 id="learn-more">Learn more</h2>
+
+  <div class="next-links">
+    <a href="/docs/servers">Servers — authorization and capability management →</a>
+    <a href="/docs/client">Client — the agent-server bridge →</a>
+    <a href="/docs/agents">Agents — runtime AI actors →</a>
+    <a href="/docs/build-server">Build a server — get started with Better Auth →</a>
+  </div>
+</DocsLayout>

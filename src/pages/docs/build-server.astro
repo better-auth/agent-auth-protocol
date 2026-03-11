@@ -1,0 +1,193 @@
+---
+import DocsLayout from "@/layouts/DocsLayout.astro";
+import { Code } from "astro:components";
+
+export const prerender = true;
+
+const headings = [
+	{ depth: 2, slug: "better-auth-plugin", text: "Better Auth plugin" },
+	{ depth: 2, slug: "setup", text: "Setup" },
+	{ depth: 2, slug: "define-capabilities", text: "Define capabilities" },
+	{ depth: 2, slug: "verify-agent-requests", text: "Verify agent requests" },
+	{ depth: 2, slug: "approval-flow", text: "Approval flow" },
+	{ depth: 2, slug: "data-model", text: "Data model" },
+	{ depth: 2, slug: "building-from-scratch", text: "Building from scratch" },
+];
+---
+
+<DocsLayout
+  title="Build a server"
+  activeDoc="/docs/build-server"
+  section="Develop with Agent Auth"
+  headings={headings}
+>
+  <p>
+    This guide covers how to add Agent Auth support to your service. The fastest way is using the Better Auth plugin, which handles registration, device flow, capability management, and JWT verification out of the box.
+  </p>
+
+  <h2 id="better-auth-plugin">Better Auth plugin</h2>
+
+  <p>
+    The Better Auth plugin is the reference implementation of the Agent Auth server. It adds all the protocol endpoints to your existing Better Auth setup with a single plugin.
+  </p>
+
+  <Code lang="ts" code={`import { betterAuth } from "better-auth";
+import { agentAuth } from "better-auth/plugins";
+
+export const auth = betterAuth({
+  // ... your existing config
+  plugins: [
+    agentAuth({
+      // optional configuration
+    }),
+  ],
+});`} />
+
+  <p>
+    This adds all the Agent Auth endpoints to your server: discovery, registration, capability management, execution, lifecycle, and introspection.
+  </p>
+
+  <h2 id="setup">Setup</h2>
+
+  <p>Install Better Auth if you haven't already:</p>
+
+  <Code lang="bash" code={`npm install better-auth`} />
+
+  <p>Add the Agent Auth plugin to your auth configuration. The plugin will automatically:</p>
+
+  <ul>
+    <li>Create the necessary database tables (hosts, agents, agent capability grants)</li>
+    <li>Expose the <code>/.well-known/agent-configuration</code> discovery endpoint</li>
+    <li>Handle agent registration with Host JWT verification</li>
+    <li>Manage the device authorization approval flow</li>
+    <li>Verify Agent JWTs on capability execution</li>
+    <li>Enforce capability grants and constraints</li>
+  </ul>
+
+  <h2 id="define-capabilities">Define capabilities</h2>
+
+  <p>
+    Define the capabilities your service offers. Each capability has a name, description, and optional input/output schemas:
+  </p>
+
+  <Code lang="ts" code={`agentAuth({
+  capabilities: [
+    {
+      name: "check_balance",
+      description: "Check the balance of a bank account",
+      input: {
+        type: "object",
+        required: ["account_id"],
+        properties: {
+          account_id: { type: "string", description: "The account ID" }
+        }
+      },
+      output: {
+        type: "object",
+        properties: {
+          balance: { type: "number" },
+          currency: { type: "string" }
+        }
+      }
+    },
+    {
+      name: "transfer_funds",
+      description: "Transfer funds between accounts",
+      input: {
+        type: "object",
+        required: ["from", "to", "amount"],
+        properties: {
+          from: { type: "string" },
+          to: { type: "string" },
+          amount: { type: "number" }
+        }
+      }
+    }
+  ],
+  defaultCapabilities: ["check_balance"],
+})`} />
+
+  <p>
+    Capabilities listed in <code>defaultCapabilities</code> are auto-granted to agents from trusted hosts. All other capabilities require explicit user approval.
+  </p>
+
+  <h2 id="verify-agent-requests">Verify agent requests</h2>
+
+  <p>
+    On your API routes, verify agent sessions with a single call:
+  </p>
+
+  <Code lang="ts" code={`const session = await auth.api.getAgentSession({ headers });
+
+if (session) {
+  const { agent, user } = session;
+
+  // agent.id → "agt_k7x9m2"
+  // agent.status → "active"
+  // agent.mode → "delegated"
+  // agent.agentCapabilityGrants → [{ capability, status }]
+  // user.id → "user_xyz" (for delegated agents)
+}`} />
+
+  <p>
+    This extracts the JWT, verifies the Ed25519 signature, checks the agent's status, and resolves its capability grants. You get back the full agent context including the linked user for delegated agents.
+  </p>
+
+  <h2 id="approval-flow">Approval flow</h2>
+
+  <p>
+    The plugin handles the device authorization flow automatically. When a new host registers a delegated agent, the server returns a verification URL and user code. You need to provide the approval UI — a web page where users can:
+  </p>
+
+  <ol>
+    <li>See which agent is requesting access and from which host</li>
+    <li>Review the requested capabilities</li>
+    <li>Approve or deny the request</li>
+    <li>Optionally trust the host for future auto-approval</li>
+  </ol>
+
+  <p>
+    The approval page should require fresh authentication — a long-lived session cookie alone is not sufficient (see <a href="/docs/security">Security Considerations</a>).
+  </p>
+
+  <h2 id="data-model">Data model</h2>
+
+  <p>The plugin creates three tables:</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Table</th>
+        <th>Purpose</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>hosts</strong></td><td>Persistent client identities with public keys, linked users, and trust status</td></tr>
+      <tr><td><strong>agents</strong></td><td>Per-agent records with status, mode, lifetime clocks, and keypairs</td></tr>
+      <tr><td><strong>agent_capability_grants</strong></td><td>Per-capability grants with status, constraints, and metadata</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="building-from-scratch">Building from scratch</h2>
+
+  <p>
+    If you're not using Better Auth, you can implement the protocol from scratch. You need:
+  </p>
+
+  <ul>
+    <li><strong>3 database tables</strong> — hosts, agents, agent capability grants (see <a href="/specification#3-data-model">§3 Data Model</a>)</li>
+    <li><strong>Ed25519 verification</strong> — verify Host and Agent JWT signatures</li>
+    <li><strong>Device authorization flow</strong> — RFC 8628 for user approval</li>
+    <li><strong>Discovery endpoint</strong> — <code>/.well-known/agent-configuration</code></li>
+    <li><strong>Protocol endpoints</strong> — register, status, capabilities, execute, etc.</li>
+  </ul>
+
+  <p>
+    Read the <a href="/specification">full specification</a> for complete endpoint definitions, JWT claims, error codes, and edge cases.
+  </p>
+
+  <div class="next-links">
+    <a href="/docs/integrate-client">Integrate the client — SDK, CLI and MCP →</a>
+    <a href="/docs/security">Security Considerations →</a>
+  </div>
+</DocsLayout>
