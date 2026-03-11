@@ -53,6 +53,7 @@ When the agent needs to act, it authenticates with short-lived signed JWTs tied 
 The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in BCP 14 [RFC 2119](https://datatracker.ietf.org/doc/html/rfc2119) [RFC 8174](https://datatracker.ietf.org/doc/html/rfc8174) when, and only when, they appear in capitalized form, as shown here.
 
 ### 1.5 Terminology
+- **Principal** — An identity the server can authenticate, authorize, audit, and revoke independently. In this protocol, both hosts and agents are principals.
 - **Agent** — The runtime AI actor that needs to call services. Each agent has its own server-side identity, its own granted capabilities, and its own lifecycle.
 - **Client** — The process that holds a host identity and exposes protocol tools to AI systems (MCP server, CLI, SDK). It manages host and agent keys, talks to servers, and signs JWTs. AI tools like Claude Code or ChatGPT connect to a client.
 - **Host** — The persistent identity of the client environment where agents run. Each agent is created under a host. A host represents a specific device, application, or runtime on a server, and agents are registered under it. It may be linked to a user or unlinked in the case of autonomous agents.
