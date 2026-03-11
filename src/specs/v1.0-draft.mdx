@@ -44,7 +44,7 @@ Existing auth models fail because they provide at most one of these properties. 
 
 ### 1.3 Solution
 
-Agent Auth makes the runtime agent a first-class principal with both properties. Instead of borrowing a user's session or a shared application token, each agent is registered with its own identity, granted capabilities, and lifecycle. Every agent is created under a persistent identity called a **host** (§2.7), which the **client**(§6) registers with each server it connects to.
+Agent Auth makes the runtime agent a first-class principal with both properties. Instead of borrowing a user's session or a shared application token, each agent is registered with its own identity, granted capabilities, and lifecycle. Every agent is created under a persistent identity called a **host** (§2.7), which the **client** (§6) registers with each server it connects to.
 
 When the agent needs to act, it authenticates with short-lived signed JWTs tied to that registration. This gives the server something existing auth models are missing: a durable way to identify which specific agent is acting, which host it belongs to, what mode it runs in, what capabilities it holds, and how to suspend, expire, or revoke it without affecting everything else.
 
@@ -111,8 +111,8 @@ Each agent is created under a host. This lets the server reason separately about
                                   +----------->|     Owner     |
                                   |<-----------| Approval      |
                                   |            |    (User)     |
-                                 |            +---------------+
-                                 |
+                                  |            +---------------+
+                                  |
      +-------+          +--------+            +---------------+
      |       |-(F)----->|        |-(G)------->| Authorization |
      | Agent | execute  | Client | POST       |    Server     |
