@@ -1,0 +1,126 @@
+---
+import Layout from "./Layout.astro";
+import Nav from "@/components/Nav.astro";
+import DocsSidebar from "@/components/DocsSidebar.astro";
+import Footer from "@/components/Footer.astro";
+
+interface Props {
+  title: string;
+  description?: string;
+  activeDoc: string;
+  headings?: { depth: number; slug: string; text: string }[];
+  section?: string;
+}
+
+const { title, description, activeDoc, headings = [], section } = Astro.props;
+---
+
+<Layout title={`${title} — Agent Auth Protocol`} darkMode={true}>
+  <Nav active="/docs" showThemeToggle={true} />
+
+  <div class="docs-mobile-bar md:hidden">
+    <button id="docs-sidebar-toggle" class="docs-mobile-toggle" type="button" aria-label="Toggle navigation">
+      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round">
+        <path d="M4 7h16" />
+        <path d="M4 12h16" />
+        <path d="M4 17h16" />
+      </svg>
+      <span>Menu</span>
+    </button>
+  </div>
+  <div id="docs-sidebar-overlay"></div>
+
+  <div class="docs-shell">
+    <DocsSidebar active={activeDoc} />
+
+    <main class="docs-content" id="docs-content">
+      <article class="docs-article">
+        {section && <p class="docs-breadcrumb">{section}</p>}
+        <h1 class="docs-title">{title}</h1>
+        <div class="docs-prose">
+          <slot />
+        </div>
+      </article>
+      <Footer />
+    </main>
+
+    {headings.length > 0 && (
+      <aside class="docs-toc">
+        <div class="docs-toc-inner">
+          <p class="docs-toc-title">On this page</p>
+          <nav>
+            <ul>
+              {headings.map((h) => (
+                <li>
+                  <a
+                    href={`#${h.slug}`}
+                    class:list={["docs-toc-link", { "docs-toc-indent": h.depth > 2 }]}
+                    data-toc-id={h.slug}
+                  >
+                    {h.text}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </div>
+      </aside>
+    )}
+  </div>
+
+  <script is:inline>
+  (function() {
+    var content = document.getElementById("docs-content");
+    if (!content) return;
+
+    var headings = content.querySelectorAll("h2[id], h3[id]");
+    var tocLinks = document.querySelectorAll("[data-toc-id]");
+    if (!tocLinks.length) return;
+
+    var observer = new IntersectionObserver(
+      function(entries) {
+        var visible = entries.filter(function(e) { return e.isIntersecting; });
+        if (visible.length > 0) {
+          visible.sort(function(a, b) { return a.boundingClientRect.top - b.boundingClientRect.top; });
+          var activeId = visible[0].target.id;
+          tocLinks.forEach(function(link) {
+            link.classList.toggle("active", link.getAttribute("data-toc-id") === activeId);
+          });
+        }
+      },
+      { rootMargin: "-80px 0px -65% 0px", threshold: 0 }
+    );
+
+    headings.forEach(function(h) { observer.observe(h); });
+  })();
+  </script>
+
+  <script is:inline>
+  (function() {
+    var toggle = document.getElementById("docs-sidebar-toggle");
+    var sidebar = document.getElementById("docs-sidebar");
+    var overlay = document.getElementById("docs-sidebar-overlay");
+    if (!toggle || !sidebar) return;
+
+    function open() {
+      sidebar.classList.add("open");
+      overlay && overlay.classList.add("open");
+      document.body.style.overflow = "hidden";
+    }
+    function close() {
+      sidebar.classList.remove("open");
+      overlay && overlay.classList.remove("open");
+      document.body.style.overflow = "";
+    }
+
+    toggle.addEventListener("click", function() {
+      sidebar.classList.contains("open") ? close() : open();
+    });
+    overlay && overlay.addEventListener("click", close);
+
+    sidebar.querySelectorAll("a").forEach(function(a) {
+      a.addEventListener("click", close);
+    });
+  })();
+  </script>
+</Layout>

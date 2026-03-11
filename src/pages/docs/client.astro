@@ -1,0 +1,155 @@
+---
+import DocsLayout from "@/layouts/DocsLayout.astro";
+import { Code } from "astro:components";
+
+export const prerender = true;
+
+const headings = [
+	{ depth: 2, slug: "what-is-a-client", text: "What is a client?" },
+	{ depth: 2, slug: "client-tools", text: "Client tools" },
+	{ depth: 2, slug: "provider-discovery", text: "Provider discovery" },
+	{ depth: 2, slug: "agent-connection", text: "Agent connection" },
+	{ depth: 2, slug: "capability-execution", text: "Capability execution" },
+	{ depth: 2, slug: "key-management", text: "Key management" },
+	{ depth: 2, slug: "deployment-models", text: "Deployment models" },
+];
+---
+
+<DocsLayout
+  title="Client"
+  activeDoc="/docs/client"
+  section="Get started"
+  headings={headings}
+>
+  <p>
+    The client sits between the agent and the server. It manages host and agent keys, communicates with servers, and exposes a standard set of tools that agents call to discover, register, authenticate, and execute capabilities.
+  </p>
+
+  <h2 id="what-is-a-client">What is a client?</h2>
+
+  <p>
+    A client can be an <strong>MCP server</strong>, a <strong>CLI tool</strong>, an <strong>SDK</strong>, or any process that implements the Agent Auth protocol tools. AI tools like Claude Code, Cursor, or ChatGPT connect to a client, and the client handles all protocol communication with the authorization server.
+  </p>
+
+  <p>
+    The protocol does not define how agents communicate with clients. A client may run in the same process as the agent (an embedded SDK), on the same machine (a local MCP server), or remotely. The client-to-server communication is what the protocol standardizes.
+  </p>
+
+  <h2 id="client-tools">Client tools</h2>
+
+  <p>A client exposes these standard tools to agents:</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Tool</th>
+        <th>Purpose</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><code>list_providers</code></td><td>List available providers the client knows about</td></tr>
+      <tr><td><code>search_providers</code></td><td>Search a registry for providers matching an intent</td></tr>
+      <tr><td><code>discover_provider</code></td><td>Discover a provider from a direct URL</td></tr>
+      <tr><td><code>list_capabilities</code></td><td>List capabilities available from a provider</td></tr>
+      <tr><td><code>connect_agent</code></td><td>Register an agent with a server and handle approval</td></tr>
+      <tr><td><code>execute_capability</code></td><td>Execute a capability on a server</td></tr>
+      <tr><td><code>sign_jwt</code></td><td>Sign a raw JWT for direct server-to-server use</td></tr>
+      <tr><td><code>request_capability</code></td><td>Request additional capabilities at runtime</td></tr>
+      <tr><td><code>disconnect_agent</code></td><td>Revoke an agent</td></tr>
+      <tr><td><code>reactivate_agent</code></td><td>Reactivate an expired agent</td></tr>
+      <tr><td><code>agent_status</code></td><td>Check an agent's current status and grants</td></tr>
+    </tbody>
+  </table>
+
+  <p>
+    Single-provider clients (built for one specific service) may omit discovery tools since the provider is implicit.
+  </p>
+
+  <h2 id="provider-discovery">Provider discovery</h2>
+
+  <p>
+    Before connecting, an agent may need to find which provider to use. The client supports three discovery methods:
+  </p>
+
+  <ul>
+    <li><strong><code>list_providers</code></strong> — returns providers the client already knows about (pre-configured or previously discovered)</li>
+    <li><strong><code>search_providers</code></strong> — queries a registry with a natural language intent (e.g. "banking", "send emails")</li>
+    <li><strong><code>discover_provider</code></strong> — fetches a provider's configuration from a direct URL via <code>/.well-known/agent-configuration</code></li>
+  </ul>
+
+  <Code lang="jsonc" code={`// search_providers
+{ "intent": "banking" }
+// → [{ "name": "bank", "description": "Banking services", "issuer": "https://bank.com" }]
+
+// discover_provider
+{ "url": "https://bank.com" }
+// → { "name": "bank", "description": "Banking services", "issuer": "https://bank.com" }`} />
+
+  <h2 id="agent-connection">Agent connection</h2>
+
+  <p>
+    The <code>connect_agent</code> tool handles the full registration flow: generating an agent keypair, sending the registration request with a Host JWT, and managing the approval flow if needed.
+  </p>
+
+  <Code lang="jsonc" code={`// connect_agent
+{
+  "provider": "bank",
+  "capabilities": ["check_balance"],
+  "reason": "User wants to check their bank balance",
+  "mode": "delegated"
+}
+// → {
+//   "agent_id": "agt_k7x9m2",
+//   "status": "active",
+//   "capabilities": [{ "name": "check_balance", "status": "active" }]
+// }`} />
+
+  <p>
+    If approval is required, the client facilitates the device flow — presenting the verification URL and user code — and polls until the agent is active.
+  </p>
+
+  <h2 id="capability-execution">Capability execution</h2>
+
+  <p>
+    Once connected, agents execute capabilities through the client. The client signs a fresh Agent JWT for each request:
+  </p>
+
+  <Code lang="jsonc" code={`// execute_capability
+{
+  "provider": "bank",
+  "capability": "check_balance",
+  "arguments": { "account_id": "acc_123" }
+}
+// → { "account_id": "acc_123", "balance": 1250.00, "currency": "USD" }`} />
+
+  <h2 id="key-management">Key management</h2>
+
+  <p>
+    The client manages two types of keypairs:
+  </p>
+
+  <ul>
+    <li><strong>Host keypair</strong> — persistent, one per server. Used to sign Host JWTs for registration and management operations. Stored securely on the client.</li>
+    <li><strong>Agent keypair</strong> — per-agent, created at connection time. Used to sign Agent JWTs for capability execution. Can be stored in memory or persisted depending on the client.</li>
+  </ul>
+
+  <p>
+    Both use Ed25519 (the only algorithm defined in this spec version). The private keys never leave the client — the server only stores public keys.
+  </p>
+
+  <h2 id="deployment-models">Deployment models</h2>
+
+  <p>A client can be deployed in several ways:</p>
+
+  <ul>
+    <li><strong>MCP server</strong> — the most common model. The client runs as an MCP server that AI tools connect to. Agent Auth tools are exposed as MCP tools.</li>
+    <li><strong>Embedded SDK</strong> — the client runs in the same process as the agent, integrated directly into the application code.</li>
+    <li><strong>CLI tool</strong> — a command-line interface that manages agents and can be scripted into workflows.</li>
+    <li><strong>Remote service</strong> — the client runs as a hosted service. Agents connect over a network with their own auth layer.</li>
+  </ul>
+
+  <div class="next-links">
+    <a href="/docs/build-server">Build a server with Better Auth →</a>
+    <a href="/docs/integrate-client">Integrate the client — SDK, CLI and MCP →</a>
+  </div>
+</DocsLayout>

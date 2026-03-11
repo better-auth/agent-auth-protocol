@@ -1,0 +1,120 @@
+---
+import DocsLayout from "@/layouts/DocsLayout.astro";
+
+export const prerender = true;
+
+const headings = [
+	{ depth: 2, slug: "what-is-a-host", text: "What is a host?" },
+	{ depth: 2, slug: "host-establishment", text: "Host establishment" },
+	{ depth: 2, slug: "host-linking", text: "Host linking" },
+	{ depth: 2, slug: "host-states", text: "Host states" },
+	{ depth: 2, slug: "default-capabilities", text: "Default capabilities" },
+	{
+		depth: 2,
+		slug: "autonomous-agent-claiming",
+		text: "Autonomous agent claiming",
+	},
+];
+---
+
+<DocsLayout
+  title="Host"
+  activeDoc="/docs/host"
+  section="Concepts"
+  headings={headings}
+>
+  <p>
+    A host is the persistent identity of the client environment where agents run. It represents the <em>place</em> the agent is running from — a Claude Code session, a Cursor installation, a ChatGPT connector, or a background worker. On the server, it's a registered keypair plus metadata.
+  </p>
+
+  <h2 id="what-is-a-host">What is a host?</h2>
+
+  <p>
+    Every agent is registered under a host. This lets the server reason about the long-lived client environment separately from the individual runtime agent. Two different conversations in Claude Code are two different agents, but they share the same host.
+  </p>
+
+  <p>
+    A host is an identity record, not a running process. A client uses its host identity when registering agents, checking status, or performing host-authenticated operations like key rotation and revocation.
+  </p>
+
+  <p>
+    For delegated agents, a host must be linked to at most one user. For autonomous agents, a host may exist without any linked user.
+  </p>
+
+  <h2 id="host-establishment">Host establishment</h2>
+
+  <p>Hosts are created in one of two ways:</p>
+
+  <ul>
+    <li><strong>Dynamic registration</strong> — the host is first seen as part of agent registration. If the server doesn't recognize the host's public key, it creates a new host in <code>pending</code> state and waits for user approval.</li>
+    <li><strong>Pre-registration</strong> — a user or administrator registers the host before any agent exists, through the server's dashboard, admin API, or another mechanism.</li>
+  </ul>
+
+  <p>
+    In both cases, the result is the same host record: a keypair (or JWKS URL), an optional linked user, and a set of default capabilities.
+  </p>
+
+  <h2 id="host-linking">Host linking</h2>
+
+  <p>
+    Linking binds an unlinked host to a specific user. This happens through:
+  </p>
+
+  <ul>
+    <li><strong>Server-side linking</strong> — the server links the host through its dashboard, admin API, or another implementation-specific mechanism</li>
+    <li><strong>Delegated registration approval</strong> — an unknown host registers a delegated agent, the user approves, and the server links the host to the approving user</li>
+  </ul>
+
+  <p>
+    Once linked, future delegated agents from this host can be auto-approved for default capabilities. A host cannot be linked to more than one user.
+  </p>
+
+  <h2 id="host-states">Host states</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>State</th>
+        <th>Meaning</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>active</strong></td><td>Operational — can register agents</td></tr>
+      <tr><td><strong>pending</strong></td><td>Awaiting approval (agents registered under it also stay pending)</td></tr>
+      <tr><td><strong>revoked</strong></td><td>Permanently disabled — all agents under it are also revoked</td></tr>
+      <tr><td><strong>rejected</strong></td><td>Approval denied — all agents under it are also rejected</td></tr>
+    </tbody>
+  </table>
+
+  <p>
+    A <code>pending</code> host can register agents, but those agents remain <code>pending</code> until the host itself is approved. A host in a terminal state (<code>revoked</code> or <code>rejected</code>) cannot register agents, and all existing agents under it are terminated.
+  </p>
+
+  <h2 id="default-capabilities">Default capabilities</h2>
+
+  <p>
+    Hosts carry a set of default capabilities. When an agent is registered under a trusted (linked, active) host requesting only default capabilities, the server can auto-approve without user interaction. This makes repeat agent creation seamless while keeping escalation under user control.
+  </p>
+
+  <h2 id="autonomous-agent-claiming">Autonomous agent claiming</h2>
+
+  <p>
+    When an unlinked host becomes linked to a user, all active autonomous agents under that host are <strong>claimed</strong>:
+  </p>
+
+  <ol>
+    <li>Each autonomous agent's capabilities are revoked</li>
+    <li>Each agent's status is set to <code>claimed</code></li>
+    <li>Activity history is attributed to the user</li>
+    <li>Any resources created by the agent are transferred to the user</li>
+  </ol>
+
+  <p>
+    A claimed agent is terminal — it cannot be reactivated. If the user wants to continue, the host registers a new delegated agent.
+  </p>
+
+  <div class="next-links">
+    <a href="/docs/agents">Agents — runtime AI actors →</a>
+    <a href="/docs/discovery">Discovery — finding services →</a>
+  </div>
+</DocsLayout>

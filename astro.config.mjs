@@ -9,6 +9,9 @@ export default defineConfig({
   adapter: vercel(),
   integrations: [sitemap()],
   devToolbar: { enabled: false },
+  redirects: {
+    '/overview': '/docs/introduction',
+  },
   vite: {
     plugins: [tailwindcss()],
   },

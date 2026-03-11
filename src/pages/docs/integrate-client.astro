@@ -1,0 +1,165 @@
+---
+import DocsLayout from "@/layouts/DocsLayout.astro";
+import { Code } from "astro:components";
+
+export const prerender = true;
+
+const headings = [
+	{ depth: 2, slug: "sdk", text: "SDK" },
+	{ depth: 2, slug: "cli", text: "CLI" },
+	{ depth: 2, slug: "mcp-integration", text: "MCP integration" },
+	{ depth: 2, slug: "connect-and-execute", text: "Connect and execute" },
+	{ depth: 2, slug: "handling-approval", text: "Handling approval" },
+	{ depth: 2, slug: "capability-escalation", text: "Capability escalation" },
+];
+---
+
+<DocsLayout
+  title="Integrate the client"
+  activeDoc="/docs/integrate-client"
+  section="Develop with Agent Auth"
+  headings={headings}
+>
+  <p>
+    The Agent Auth client sits between your agent and the server. It manages keys, handles registration, signs JWTs, and exposes protocol tools. There are three ways to integrate: the SDK (for embedding in your application), the CLI (for scripting and automation), and MCP (for AI tool ecosystems).
+  </p>
+
+  <h2 id="sdk">SDK</h2>
+
+  <p>
+    The Agent Auth SDK is a TypeScript library you embed directly in your application. It manages keypairs, handles discovery and registration, and signs requests automatically.
+  </p>
+
+  <Code lang="bash" code={`npm install agent-auth`} />
+
+  <Code lang="ts" code={`import { AgentAuthClient } from "agent-auth";
+
+const client = new AgentAuthClient({
+  // optional: pre-configure providers
+  providers: [
+    { name: "bank", issuer: "https://auth.bank.com" }
+  ],
+  // optional: configure registry for search
+  registry: "https://registry.agent-auth-protocol.com"
+});`} />
+
+  <p>
+    The SDK handles host keypair generation and storage, agent keypair management, JWT signing, discovery, and the full registration flow including approval polling.
+  </p>
+
+  <h2 id="cli">CLI</h2>
+
+  <p>
+    The CLI is a command-line tool for managing agents, testing connections, and scripting Agent Auth workflows:
+  </p>
+
+  <Code lang="bash" code={`# Discover a provider
+npx agent-auth discover https://bank.com
+
+# Connect an agent
+npx agent-auth connect bank --capabilities check_balance
+
+# Execute a capability
+npx agent-auth execute bank check_balance --args '{"account_id": "acc_123"}'
+
+# Check agent status
+npx agent-auth status bank
+
+# Disconnect
+npx agent-auth disconnect bank`} />
+
+  <p>
+    The CLI stores host keypairs locally and manages agent state across invocations. It's useful for testing your server implementation and for scripting agent workflows in CI/CD pipelines.
+  </p>
+
+  <h2 id="mcp-integration">MCP integration</h2>
+
+  <p>
+    The most common deployment model is running the client as an <strong>MCP server</strong>. AI tools like Claude Code, Cursor, and ChatGPT connect to MCP servers to access tools. When the Agent Auth client runs as an MCP server, all protocol tools are exposed as MCP tools that agents can call directly.
+  </p>
+
+  <Code lang="bash" code={`# Run as MCP server
+npx agent-auth serve`} />
+
+  <p>Or configure in your MCP settings:</p>
+
+  <Code lang="json" code={`{
+  "mcpServers": {
+    "agent-auth": {
+      "command": "npx",
+      "args": ["agent-auth", "serve"]
+    }
+  }
+}`} />
+
+  <p>
+    This exposes all the standard tools — <code>list_providers</code>, <code>search_providers</code>, <code>connect_agent</code>, <code>execute_capability</code>, etc. — as MCP tools that any connected AI agent can use.
+  </p>
+
+  <p>
+    The MCP server model means agents don't need to know anything about Agent Auth. They just call MCP tools, and the client handles all the authentication, key management, and protocol details.
+  </p>
+
+  <h2 id="connect-and-execute">Connect and execute</h2>
+
+  <p>The typical flow from an agent's perspective:</p>
+
+  <Code lang="ts" code={`// 1. Discover or select a provider
+const providers = await client.listProviders();
+
+// 2. Connect (register an agent)
+const agent = await client.connect({
+  provider: "bank",
+  capabilities: ["check_balance"],
+  reason: "User wants to check their balance",
+  mode: "delegated"
+});
+// → { agent_id: "agt_k7x9m2", status: "active", capabilities: [...] }
+
+// 3. Execute capabilities
+const result = await client.execute({
+  provider: "bank",
+  capability: "check_balance",
+  arguments: { account_id: "acc_123" }
+});
+// → { balance: 1250.00, currency: "USD" }`} />
+
+  <h2 id="handling-approval">Handling approval</h2>
+
+  <p>
+    When connecting to a new server for the first time, user approval is typically required. The client handles this by:
+  </p>
+
+  <ol>
+    <li>Receiving the verification URI and user code from the server</li>
+    <li>Presenting this to the user (opening a browser, displaying in terminal, etc.)</li>
+    <li>Polling the server's status endpoint until approved</li>
+    <li>Returning the active agent to the caller</li>
+  </ol>
+
+  <p>
+    Once the host is trusted, future agents requesting default capabilities are auto-approved — no user interaction needed.
+  </p>
+
+  <h2 id="capability-escalation">Capability escalation</h2>
+
+  <p>
+    If an agent needs additional capabilities at runtime:
+  </p>
+
+  <Code lang="ts" code={`const result = await client.requestCapability({
+  provider: "bank",
+  capabilities: ["transfer_funds"],
+  reason: "User asked to transfer money"
+});
+// Triggers approval flow if needed, returns updated grants`} />
+
+  <p>
+    Escalated capabilities always require explicit user approval, even from trusted hosts.
+  </p>
+
+  <div class="next-links">
+    <a href="/docs/sdks">SDKs — available implementations →</a>
+    <a href="/docs/security">Security Considerations →</a>
+  </div>
+</DocsLayout>

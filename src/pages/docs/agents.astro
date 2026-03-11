@@ -1,0 +1,157 @@
+---
+import DocsLayout from "@/layouts/DocsLayout.astro";
+
+export const prerender = true;
+
+const headings = [
+	{ depth: 2, slug: "what-is-an-agent", text: "What is an agent?" },
+	{ depth: 2, slug: "agent-modes", text: "Agent modes" },
+	{ depth: 2, slug: "agent-states", text: "Agent states" },
+	{ depth: 2, slug: "lifetime-clocks", text: "Lifetime clocks" },
+	{ depth: 2, slug: "reactivation", text: "Reactivation" },
+	{ depth: 2, slug: "revocation", text: "Revocation" },
+	{ depth: 2, slug: "authentication", text: "Authentication" },
+];
+---
+
+<DocsLayout
+  title="Agents"
+  activeDoc="/docs/agents"
+  section="Concepts"
+  headings={headings}
+>
+  <p>
+    An agent is a runtime AI actor that needs to call external services. Each agent has its own server-side identity, its own granted capabilities, and its own lifecycle. Agents are the core principal in Agent Auth — the entity that <em>is</em> authenticated.
+  </p>
+
+  <h2 id="what-is-an-agent">What is an agent?</h2>
+
+  <p>
+    An agent is <strong>not</strong> the application it runs inside. Claude Code, Cursor, ChatGPT — these are hosts. An agent is the specific runtime AI actor within that environment: a particular conversation, task, or session that acts over time. Two separate chats in the same application are different agents with different contexts, intents, and permissions.
+  </p>
+
+  <p>
+    Identity requires two properties:
+  </p>
+
+  <ul>
+    <li><strong>Continuity</strong> — recognizable as the same actor over time. The server can verify across multiple requests that it's dealing with the same agent.</li>
+    <li><strong>Distinctiveness</strong> — distinguishable from every other actor. Each agent can be individually scoped, audited, and revoked without affecting others.</li>
+  </ul>
+
+  <p>
+    Agent Auth provides both by giving each agent its own Ed25519 keypair, registration, and capability set.
+  </p>
+
+  <h2 id="agent-modes">Agent modes</h2>
+
+  <p>
+    An agent operates in one of two modes, chosen at registration and immutable after creation:
+  </p>
+
+  <ul>
+    <li>
+      <strong>Delegated</strong> (default) — acts on behalf of a specific user. The user approves capabilities through a device flow. Use for copilots, assistants, and tool-calling agents.
+      <br /><em>Example: an email assistant that requests permission to read your inbox and send replies.</em>
+    </li>
+    <li>
+      <strong>Autonomous</strong> — operates without a user in the loop. Capabilities are granted by server policy or admin approval. Use for background workers, scheduled jobs, and service-to-service agents.
+      <br /><em>Example: a deployment agent that provisions infrastructure and deploys a website.</em>
+    </li>
+  </ul>
+
+  <p>
+    A server may support delegated agents, autonomous agents, or both. Supported modes are advertised via <a href="/docs/discovery">discovery</a>.
+  </p>
+
+  <h2 id="agent-states">Agent states</h2>
+
+  <p>
+    Every agent is in exactly one state at any time. Only <code>active</code> agents can authenticate and make requests.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>State</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>pending</strong></td><td>Awaiting user approval — cannot authenticate</td></tr>
+      <tr><td><strong>active</strong></td><td>Operational — each request extends the session TTL</td></tr>
+      <tr><td><strong>expired</strong></td><td>Timed out — can be reactivated with re-approval</td></tr>
+      <tr><td><strong>revoked</strong></td><td>Permanently terminated — cannot be reactivated</td></tr>
+      <tr><td><strong>rejected</strong></td><td>User denied the registration</td></tr>
+      <tr><td><strong>claimed</strong></td><td>Autonomous agent claimed when host was linked to a user</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="lifetime-clocks">Lifetime clocks</h2>
+
+  <p>
+    Three independent clocks govern agent lifetimes. The durations are server policy.
+  </p>
+
+  <ul>
+    <li><strong>Session TTL</strong> — measured from the last request. Protects against abandoned agents. If the agent stops making requests, it expires.</li>
+    <li><strong>Max lifetime</strong> — measured from the last activation. Caps continuous use. Prevents compromised agents from running indefinitely.</li>
+    <li><strong>Absolute lifetime</strong> — measured from creation. A hard limit. Once elapsed, the agent is permanently revoked.</li>
+  </ul>
+
+  <p>
+    <strong>Example:</strong> A server uses a 30-minute session TTL, 24-hour max lifetime, and 7-day absolute lifetime. If the agent goes idle for 30 minutes, it expires. If it runs continuously for 24 hours, it also expires and must reactivate. After 7 days from creation, it's permanently revoked.
+  </p>
+
+  <h2 id="reactivation">Reactivation</h2>
+
+  <p>
+    An expired agent can be reactivated, but reactivation is a <strong>security checkpoint</strong>. On reactivation:
+  </p>
+
+  <ul>
+    <li>Capabilities reset to the host's defaults — escalated capabilities are dropped</li>
+    <li>Session TTL and max lifetime clocks reset</li>
+    <li>The absolute lifetime clock does <strong>not</strong> reset</li>
+  </ul>
+
+  <p>
+    If the absolute lifetime has already elapsed, reactivation fails and a new agent must be created.
+  </p>
+
+  <h2 id="revocation">Revocation</h2>
+
+  <p>An agent can be revoked by:</p>
+
+  <ul>
+    <li><strong>Itself</strong> — through the client's <code>disconnect_agent</code> tool</li>
+    <li><strong>Its host</strong> — the host under which it was registered</li>
+    <li><strong>The user</strong> — through the server's management UI or API</li>
+    <li><strong>An admin</strong> — as defined by the server</li>
+  </ul>
+
+  <p>
+    Revocation is permanent. A revoked agent cannot be reactivated; a new agent must be created. Revoking a <a href="/docs/host">host</a> cascades to all agents under it.
+  </p>
+
+  <h2 id="authentication">Authentication</h2>
+
+  <p>
+    Active agents authenticate by signing short-lived JWTs with their Ed25519 private key. Each JWT:
+  </p>
+
+  <ul>
+    <li>Expires within 60 seconds</li>
+    <li>Contains the agent ID (<code>sub</code>), server URL (<code>aud</code>), and a unique ID (<code>jti</code>)</li>
+    <li>Is signed fresh for every request — no refresh tokens</li>
+  </ul>
+
+  <p>
+    The server verifies the signature against the agent's stored public key, checks the claims, and rejects duplicate <code>jti</code> values for replay protection.
+  </p>
+
+  <div class="next-links">
+    <a href="/docs/discovery">Discovery — finding services →</a>
+    <a href="/docs/build-server">Build a server →</a>
+  </div>
+</DocsLayout>

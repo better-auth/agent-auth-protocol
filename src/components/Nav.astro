@@ -1,15 +1,19 @@
 ---
 interface Props {
-  active?: string;
-  showThemeToggle?: boolean;
+	active?: string;
+	showThemeToggle?: boolean;
 }
 const { active, showThemeToggle = false } = Astro.props;
 
 const links = [
-  { label: "Docs", href: "/overview" },
-  { label: "Specification", href: "/specification" },
-  { label: "Registry", href: "/registry" },
-  { label: "GitHub", href: "https://github.com/better-auth/agent-auth-protocol", external: true },
+	{ label: "Documentation", href: "/docs/introduction", matchPrefix: "/docs" },
+	{ label: "Specification", href: "/specification" },
+	{ label: "Registry", href: "/registry", matchPrefix: "/registry" },
+	{
+		label: "GitHub",
+		href: "https://github.com/better-auth/agent-auth-protocol",
+		external: true,
+	},
 ];
 ---
 
@@ -27,7 +31,7 @@ const links = [
           rel={link.external ? "noopener noreferrer" : undefined}
           class:list={[
             "inline-flex items-center gap-1 shrink-0 px-3 sm:px-4 py-2.5 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider whitespace-nowrap transition-colors",
-            active === link.href
+            (active === link.href || (link.matchPrefix && active?.startsWith(link.matchPrefix)))
               ? "text-[var(--color-fg)]"
               : "text-[var(--color-muted)] hover:text-[var(--color-fg)]",
           ]}
@@ -179,7 +183,7 @@ const links = [
           rel={link.external ? "noopener noreferrer" : undefined}
           class:list={[
             "inline-flex items-center gap-1.5 py-3 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider transition-colors",
-            active === link.href
+            (active === link.href || (link.matchPrefix && active?.startsWith(link.matchPrefix)))
               ? "text-[var(--color-fg)]"
               : "text-[var(--color-muted)] hover:text-[var(--color-fg)]",
           ]}

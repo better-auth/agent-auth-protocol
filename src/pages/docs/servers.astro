@@ -1,0 +1,206 @@
+---
+import DocsLayout from "@/layouts/DocsLayout.astro";
+import { Code } from "astro:components";
+
+export const prerender = true;
+
+const headings = [
+	{ depth: 2, slug: "what-is-a-server", text: "What is a server?" },
+	{ depth: 2, slug: "discovery-endpoint", text: "Discovery endpoint" },
+	{ depth: 2, slug: "agent-registration", text: "Agent registration" },
+	{ depth: 2, slug: "capability-management", text: "Capability management" },
+	{ depth: 2, slug: "capability-execution", text: "Capability execution" },
+	{ depth: 2, slug: "jwt-verification", text: "JWT verification" },
+	{ depth: 2, slug: "lifecycle-management", text: "Lifecycle management" },
+	{ depth: 2, slug: "approval-methods", text: "Approval methods" },
+];
+---
+
+<DocsLayout
+  title="Servers"
+  activeDoc="/docs/servers"
+  section="Get started"
+  headings={headings}
+>
+  <p>
+    The server is the service's authorization server. It manages discovery, host and agent registrations, approvals, capability grants, and JWT verification. This page covers what a server does and the endpoints it exposes.
+  </p>
+
+  <h2 id="what-is-a-server">What is a server?</h2>
+
+  <p>
+    A server is any service that implements the Agent Auth protocol — your bank, GitHub, Slack, a deployment platform, or any API. The server manages which agents can access it, what they can do, and verifies every request.
+  </p>
+
+  <p>The server's responsibilities:</p>
+
+  <ul>
+    <li>Publish a discovery endpoint so clients can auto-configure</li>
+    <li>Register hosts and agents with Ed25519 key verification</li>
+    <li>Manage capability grants and approval flows</li>
+    <li>Verify signed JWTs on every request</li>
+    <li>Enforce agent lifecycle (expiry, reactivation, revocation)</li>
+  </ul>
+
+  <h2 id="discovery-endpoint">Discovery endpoint</h2>
+
+  <p>
+    Servers publish a <code>/.well-known/agent-configuration</code> endpoint (no authentication required) that returns the full configuration:
+  </p>
+
+  <Code lang="http" code={`GET /.well-known/agent-configuration`} />
+
+  <Code lang="json" code={`{
+  "version": "1.0-draft",
+  "provider_name": "bank",
+  "description": "Banking services",
+  "issuer": "https://auth.bank.com",
+  "algorithms": ["Ed25519"],
+  "modes": ["delegated", "autonomous"],
+  "approval_methods": ["device_authorization", "ciba"],
+  "endpoints": {
+    "register": "/agent/register",
+    "capabilities": "/capability/list",
+    "execute": "/capability/execute",
+    "status": "/agent/status",
+    "reactivate": "/agent/reactivate",
+    "revoke": "/agent/revoke"
+  }
+}`} />
+
+  <p>
+    This tells the client everything it needs: what modes the server supports, which algorithms to use, what endpoints to call, and how approval works.
+  </p>
+
+  <h2 id="agent-registration">Agent registration</h2>
+
+  <p>
+    Clients register agents via <code>POST /agent/register</code> with a Host JWT. The server creates the agent, evaluates its requested capabilities, and either auto-approves (for trusted hosts with default capabilities) or returns an approval flow.
+  </p>
+
+  <Code lang="http" code={`POST /agent/register
+Authorization: Bearer <Host JWT>`} />
+
+  <Code lang="json" code={`{
+  "name": "Balance Checker",
+  "capabilities": ["check_balance"],
+  "mode": "delegated"
+}`} />
+
+  <p>Response:</p>
+
+  <Code lang="json" code={`{
+  "agent_id": "agt_k7x9m2",
+  "host_id": "hst_m4a8",
+  "status": "pending",
+  "approval": {
+    "method": "device_authorization",
+    "verification_uri": "https://auth.bank.com/device",
+    "user_code": "ABCD-1234"
+  }
+}`} />
+
+  <p>
+    If the host is already trusted and the requested capabilities are within defaults, the server returns <code>"status": "active"</code> directly.
+  </p>
+
+  <h2 id="capability-management">Capability management</h2>
+
+  <p>
+    Servers define capabilities — named actions that agents can execute. The capability list endpoint lets agents discover what's available:
+  </p>
+
+  <Code lang="json" code={`{
+  "capabilities": [
+    {
+      "name": "check_balance",
+      "description": "Check account balances",
+      "input": {
+        "type": "object",
+        "properties": { "account_id": { "type": "string" } }
+      },
+      "output": {
+        "type": "object",
+        "properties": { "balance": { "type": "number" } }
+      }
+    }
+  ]
+}`} />
+
+  <p>
+    Active agents can request additional capabilities at runtime via <code>POST /agent/request-capability</code>, triggering a new approval flow. Capability grants can carry <strong>constraints</strong> — restrictions on input values that turn a broad capability into a narrow authorization.
+  </p>
+
+  <h2 id="capability-execution">Capability execution</h2>
+
+  <p>
+    The standard way to execute capabilities is through the server's execute endpoint:
+  </p>
+
+  <Code lang="http" code={`POST /capability/execute
+Authorization: Bearer <Agent JWT>`} />
+
+  <Code lang="json" code={`{
+  "capability": "check_balance",
+  "arguments": { "account_id": "acc_123" }
+}`} />
+
+  <p>Response:</p>
+
+  <Code lang="json" code={`{
+  "result": {
+    "account_id": "acc_123",
+    "balance": 1250.00,
+    "currency": "USD"
+  }
+}`} />
+
+  <p>
+    The server validates the JWT, checks the agent's grants, enforces any constraints, and executes the capability.
+  </p>
+
+  <h2 id="jwt-verification">JWT verification</h2>
+
+  <p>On every request, the server:</p>
+
+  <ol>
+    <li>Extracts the JWT from the <code>Authorization</code> header</li>
+    <li>Verifies the Ed25519 signature against the agent's stored public key</li>
+    <li>Checks <code>aud</code> matches the server's issuer URL</li>
+    <li>Validates <code>exp</code>, <code>iat</code>, and <code>jti</code> for replay protection</li>
+    <li>Confirms the agent is <code>active</code></li>
+    <li>Resolves granted capabilities and enforces constraints</li>
+  </ol>
+
+  <p>
+    JWTs have a 60-second TTL and a unique <code>jti</code> claim. The server must reject duplicate <code>jti</code> values within the lifetime window.
+  </p>
+
+  <h2 id="lifecycle-management">Lifecycle management</h2>
+
+  <p>The server manages agent lifecycle through several endpoints:</p>
+
+  <ul>
+    <li><code>GET /agent/status</code> — check agent status and capability grants</li>
+    <li><code>POST /agent/reactivate</code> — reactivate an expired agent (security checkpoint: escalated capabilities are dropped)</li>
+    <li><code>POST /agent/revoke</code> — permanently revoke an agent</li>
+    <li><code>POST /agent/rotate-key</code> — rotate an agent's keypair</li>
+    <li><code>POST /host/revoke</code> — revoke a host and cascade to all its agents</li>
+    <li><code>POST /host/rotate-key</code> — rotate a host's keypair</li>
+  </ul>
+
+  <h2 id="approval-methods">Approval methods</h2>
+
+  <p>When a registration or capability request requires user consent, the server returns an approval object. The protocol supports:</p>
+
+  <ul>
+    <li><strong>Device Authorization</strong> (RFC 8628) — the user visits a URL and enters a code, like logging into a streaming app on a TV</li>
+    <li><strong>CIBA</strong> (Client Initiated Backchannel Authentication) — the server pushes a notification to the user's device</li>
+    <li><strong>Server-defined</strong> — custom approval methods for specific use cases</li>
+  </ul>
+
+  <div class="next-links">
+    <a href="/docs/client">Client — the agent-server bridge →</a>
+    <a href="/docs/build-server">Build a server with Better Auth →</a>
+  </div>
+</DocsLayout>
