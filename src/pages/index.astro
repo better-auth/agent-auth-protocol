@@ -4,33 +4,6 @@ import Nav from "@/components/Nav.astro";
 import Footer from "@/components/Footer.astro";
 
 export const prerender = true;
-
-const cards = [
-  {
-    title: "Overview",
-    description: "How Agent Auth works — the key concepts, discovery, registration flow, and design decisions explained.",
-    href: "/overview",
-    label: "Read the overview",
-  },
-  {
-    title: "Implementations",
-    description: "Libraries, SDKs, and server implementations of Agent Auth across languages and frameworks.",
-    href: "/implementations",
-    label: "View implementations",
-  },
-  {
-    title: "Examples",
-    description: "Real integration patterns — from basic registration to multi-step approval flows and capability escalation.",
-    href: "/examples",
-    label: "View examples",
-  },
-  {
-    title: "Registry",
-    description: "Official public registry for agent service discovery. Find and list services that support Agent Auth.",
-    href: "/registry",
-    label: "Browse registry",
-  },
-];
 ---
 
 <Layout title="Agent Auth Protocol — AI Agent Identity & Authorization" darkMode={true}>
@@ -77,15 +50,15 @@ const cards = [
         </h1>
 
         <p class="mt-4 max-w-2xl text-pretty text-base leading-relaxed text-[color:color-mix(in_oklch,var(--color-fg)_62%,transparent)] sm:text-lg">
-          An implementation-oriented protocol that gives AI agents their own identity, permissions, and lifecycle, so services can authenticate, authorize, and audit them independently.
+          A protocol for agent authentication, authorization, and service discovery. It defines how agents establish identity, receive scoped capabilities, and operate with clear attribution.
         </p>
 
         <div class="mt-6 flex flex-wrap items-center justify-center gap-3">
-          <a href="/overview" class="inline-flex items-center gap-2 border border-[var(--color-fg)] bg-[var(--color-fg)] px-4 py-2 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-bg)] transition-opacity hover:opacity-90">
-            How it works
-          </a>
-          <a href="/specification" class="inline-flex items-center gap-2 border border-[color:color-mix(in_oklch,var(--color-fg)_14%,transparent)] bg-[color:color-mix(in_oklch,var(--color-fg)_4%,transparent)] px-4 py-2 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[color:color-mix(in_oklch,var(--color-fg)_68%,transparent)] transition-colors hover:border-[color:color-mix(in_oklch,var(--color-fg)_28%,transparent)] hover:text-[var(--color-fg)]">
+          <a href="/specification" class="inline-flex items-center gap-2 border border-[var(--color-fg)] bg-[var(--color-fg)] px-4 py-2 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-bg)] transition-opacity hover:opacity-90">
             Read the spec
+          </a>
+          <a href="/overview" class="inline-flex items-center gap-2 border border-[color:color-mix(in_oklch,var(--color-fg)_14%,transparent)] bg-[color:color-mix(in_oklch,var(--color-fg)_4%,transparent)] px-4 py-2 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[color:color-mix(in_oklch,var(--color-fg)_68%,transparent)] transition-colors hover:border-[color:color-mix(in_oklch,var(--color-fg)_28%,transparent)] hover:text-[var(--color-fg)]">
+            Protocol overview
           </a>
         </div>
       </div>
@@ -102,8 +75,11 @@ const cards = [
   <section class="relative">
     <div class="mx-auto max-w-[1400px] px-5 sm:px-6 pb-16">
       <div class="flex items-center gap-3 mb-6">
-        <span class="text-[11px] font-[family-name:var(--font-mono)] tracking-[0.15em] uppercase text-[var(--color-body)]">Delegated agents</span>
-        <div class="flex-1 border-t border-[var(--color-border)]"></div>
+        <span
+          class="inline-flex items-center border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1 text-[10px] sm:text-[11px] font-[family-name:var(--font-mono)] tracking-[0.14em] uppercase text-[var(--color-fg)]"
+          style="background-image: radial-gradient(color-mix(in srgb, var(--color-body) 18%, transparent) 0.65px, transparent 0.65px); background-size: 8px 8px;"
+        >Delegated agents</span>
+        <div class="h-px flex-1 bg-gradient-to-r from-[var(--color-border)] to-transparent"></div>
       </div>
       <p class="text-[15px] text-[var(--color-body)] leading-[1.8] max-w-2xl mb-8">Agent integrations today reuse a user's API keys, OAuth tokens, or a shared client credential. That collapses the agent into the user's identity — there's no per-agent visibility, scoping, approval, or revocation.</p>
 
@@ -163,10 +139,13 @@ const cards = [
   <section class="relative">
     <div class="mx-auto max-w-[1400px] px-5 sm:px-6 pb-16">
       <div class="flex items-center gap-3 mb-6">
-        <span class="text-[11px] font-[family-name:var(--font-mono)] tracking-[0.15em] uppercase text-[var(--color-body)]">Autonomous agents</span>
-        <div class="flex-1 border-t border-[var(--color-border)]"></div>
+        <span
+          class="inline-flex items-center border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1 text-[10px] sm:text-[11px] font-[family-name:var(--font-mono)] tracking-[0.14em] uppercase text-[var(--color-fg)]"
+          style="background-image: radial-gradient(color-mix(in srgb, var(--color-body) 18%, transparent) 0.65px, transparent 0.65px); background-size: 8px 8px;"
+        >Autonomous agents</span>
+        <div class="h-px flex-1 bg-gradient-to-r from-[var(--color-border)] to-transparent"></div>
       </div>
-      <p class="text-[15px] text-[var(--color-body)] leading-[1.8] max-w-2xl mb-8">Background workers, scheduled jobs, and service-to-service agents need to authenticate without a user session. Existing auth models don't have a way to represent an agent that operates independently and may later be linked to a user.</p>
+      <p class="text-[15px] text-[var(--color-body)] leading-[1.8] max-w-2xl mb-8">Background workers, scheduled jobs, and service-to-service agents need to authenticate without a user session. Today they usually inherit a human user's credentials, so user and agent collapse into one principal and the server cannot tell who acted. Browser signup and CAPTCHA loops are symptoms of this same identity gap.</p>
 
       <div class="border border-[var(--color-border)] bg-[var(--color-bg)]">
         <div class="grid lg:grid-cols-2">
@@ -174,95 +153,50 @@ const cards = [
           <div class="p-6 sm:p-8 border-b lg:border-b-0 lg:border-r border-[var(--color-border)]">
             <div class="text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-red-500 mb-4">Today</div>
             <div class="border border-[var(--color-border)] bg-[var(--color-surface)] p-3 sm:p-4 mb-3">
-              <div class="flex flex-wrap items-center gap-2 text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-body)]">
-                <div class="inline-flex items-center gap-2 border border-[var(--color-border)] bg-[var(--color-bg)] px-2.5 py-2">
-                  <svg class="h-3.5 w-3.5 text-[var(--color-fg)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="5" y="8" width="14" height="10" rx="3" />
-                    <path d="M12 4v4" />
-                    <path d="M8 18v2" />
-                    <path d="M16 18v2" />
-                    <circle cx="9.5" cy="13" r="1" />
-                    <circle cx="14.5" cy="13" r="1" />
-                    <path d="M10 15.5h4" />
-                  </svg>
-                  <span class="text-[var(--color-fg)]">agent</span>
+              <div class="flex flex-col sm:flex-row items-center gap-3 text-[11px] sm:text-[12px] font-[family-name:var(--font-mono)] text-[var(--color-body)]">
+                <div class="flex flex-col items-center gap-1.5">
+                  <div class="w-11 h-11 border border-[var(--color-border)] flex items-center justify-center text-[10px]">A1</div>
+                  <div class="w-11 h-11 border border-[var(--color-border)] flex items-center justify-center text-[10px]">A2</div>
+                  <div class="w-11 h-11 border border-[var(--color-border)] flex items-center justify-center text-[10px]">A3</div>
                 </div>
-                <span class="text-red-500">→</span>
-                <div class="inline-flex items-center gap-2 border border-[var(--color-border)] bg-[var(--color-bg)] px-2.5 py-2">
-                  <svg class="h-3.5 w-3.5 text-[var(--color-fg)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="4" width="18" height="14" rx="2" />
-                    <path d="M8 20h8" />
-                    <path d="M12 18v2" />
-                  </svg>
-                  <span class="text-[var(--color-fg)]">browser</span>
+                <svg class="w-5 h-5 rotate-90 sm:rotate-0 opacity-60 shrink-0 text-[var(--color-body)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                <div class="w-full flex-1 border border-dashed border-red-400/30 px-3 py-2.5 text-center">
+                  <div class="text-[11px] text-red-500">impersonation window</div>
+                  <div class="text-[10px] mt-0.5 text-[var(--color-body)]">shared user credential C</div>
                 </div>
-                <span class="text-red-500">→</span>
-                <div class="inline-flex items-center border border-dashed border-[var(--color-border)] bg-[var(--color-bg)] px-2.5 py-2 text-[var(--color-fg)]">
-                  signup
-                </div>
-                <span class="text-red-500">→</span>
-                <div class="inline-flex items-center border border-dashed border-[var(--color-border)] bg-[var(--color-bg)] px-2.5 py-2 text-[var(--color-fg)]">
-                  CAPTCHA
-                </div>
-                <span class="text-red-500">→</span>
-                <div class="inline-flex items-center border border-[var(--color-border)] bg-[var(--color-bg)] px-2.5 py-2">
-                  <span class="text-[var(--color-fg)]">user account</span>
-                </div>
+                <svg class="w-5 h-5 rotate-90 sm:rotate-0 opacity-60 shrink-0 text-[var(--color-body)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                <div class="shrink-0 w-16 h-16 border border-[var(--color-border)] flex items-center justify-center text-[10px] text-center leading-tight bg-[var(--color-bg)]">Server<br/>/ API</div>
               </div>
             </div>
-            <p class="text-[12px] text-[var(--color-body)] leading-relaxed">Agents often have to pass through a human signup path, so the server ends up seeing a user account instead of the agent itself.</p>
+            <p class="text-[12px] text-[var(--color-body)] leading-relaxed">Autonomous agents are routed through the same impersonation path and shared user credential. The server sees one principal and cannot tell which agent acted.</p>
           </div>
 
           <!-- With Agent Auth -->
           <div class="p-6 sm:p-8">
             <div class="text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-green-600 mb-4">With Agent Auth</div>
             <div class="border border-[var(--color-border)] bg-[var(--color-surface)] p-3 sm:p-4 mb-3">
-              <div class="flex flex-wrap items-center gap-2 text-[10px] font-[family-name:var(--font-mono)] text-[var(--color-body)]">
-                <div class="inline-flex items-center gap-2 border border-[var(--color-border)] bg-[var(--color-bg)] px-2.5 py-2">
-                  <svg class="h-3.5 w-3.5 text-[var(--color-fg)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="5" y="8" width="14" height="10" rx="3" />
-                    <path d="M12 4v4" />
-                    <path d="M8 18v2" />
-                    <path d="M16 18v2" />
-                    <circle cx="9.5" cy="13" r="1" />
-                    <circle cx="14.5" cy="13" r="1" />
-                    <path d="M10 15.5h4" />
-                  </svg>
-                  <span class="text-[var(--color-fg)]">agent</span>
+              <div class="flex flex-col sm:flex-row items-center gap-3 text-[11px] sm:text-[12px] font-[family-name:var(--font-mono)] text-[var(--color-body)]">
+                <div class="flex flex-col items-center gap-1.5">
+                  <div class="w-11 h-11 border border-green-500/30 flex items-center justify-center text-[10px] text-green-600">A1</div>
+                  <div class="w-11 h-11 border border-green-500/30 flex items-center justify-center text-[10px] text-green-600">A2</div>
+                  <div class="w-11 h-11 border border-green-500/30 flex items-center justify-center text-[10px] text-green-600">A3</div>
                 </div>
-                <span class="text-green-600">→</span>
-                <div class="inline-flex items-center border border-[var(--color-border)] bg-[var(--color-bg)] px-2.5 py-2 text-[var(--color-fg)]">
-                  register autonomous
+                <svg class="w-5 h-5 rotate-90 sm:rotate-0 opacity-60 shrink-0 text-[var(--color-body)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                <div class="w-full flex-1 flex flex-col gap-1.5">
+                  <div class="border border-green-500/20 px-3 py-1.5 text-[10px] bg-green-500/5 flex justify-between"><span><span class="text-green-600">auto_1</span> own auth context</span><span class="text-green-600">✓</span></div>
+                  <div class="border border-green-500/20 px-3 py-1.5 text-[10px] bg-green-500/5 flex justify-between"><span><span class="text-green-600">auto_2</span> own auth context</span><span class="text-green-600">✓</span></div>
+                  <div class="border border-green-500/20 px-3 py-1.5 text-[10px] bg-green-500/5 flex justify-between"><span><span class="text-green-600">auto_3</span> own auth context</span><span class="text-green-600">✓</span></div>
                 </div>
-                <span class="text-green-600">→</span>
-                <div class="inline-flex items-center border border-[var(--color-border)] bg-[var(--color-bg)] px-2.5 py-2 text-[var(--color-fg)]">
-                  agt_bg_42
-                </div>
-                <span class="text-green-600">→</span>
-                <div class="inline-flex items-center border border-[var(--color-border)] bg-[var(--color-bg)] px-2.5 py-2 text-[var(--color-fg)]">
-                  policy / admin
-                </div>
-                <span class="text-green-600">→</span>
-                <div class="inline-flex items-center border border-[var(--color-border)] bg-[var(--color-bg)] px-2.5 py-2">
-                  <span class="text-[var(--color-fg)]">autonomous agent</span>
-                </div>
+                <svg class="w-5 h-5 rotate-90 sm:rotate-0 opacity-60 shrink-0 text-[var(--color-body)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                <div class="shrink-0 w-16 h-16 border border-[var(--color-border)] flex items-center justify-center text-[10px] text-center leading-tight bg-[var(--color-bg)]">Server<br/>/ API</div>
               </div>
             </div>
-            <p class="text-[12px] text-[var(--color-body)] leading-relaxed">Agents get their own registration path and first-class identity. If a user links later, those agents can still be claimed cleanly.</p>
+            <p class="text-[12px] text-[var(--color-body)] leading-relaxed">Each autonomous agent gets its own identity and credential path, so the server can attribute actions to the exact agent instance.</p>
           </div>
         </div>
       </div>
-    </div>
-  </section>
-
-  <!-- Discovery -->
-  <section class="relative">
-    <div class="mx-auto max-w-[1400px] px-5 sm:px-6 pb-16">
-      <div class="flex items-center gap-3 mb-6">
-        <span class="text-[11px] font-[family-name:var(--font-mono)] tracking-[0.15em] uppercase text-[var(--color-body)]">Discovery</span>
-        <div class="flex-1 border-t border-[var(--color-border)]"></div>
-      </div>
-      <p class="text-[15px] text-[var(--color-body)] leading-[1.8] max-w-2xl mb-8">Connecting an agent to a new service requires finding the right server, editing config files, and providing API keys. Agent Auth standardizes discovery — agents resolve a well-known endpoint or query a registry to find services.</p>
+      <!-- Discovery (part of autonomous agents) -->
+      <p class="text-[15px] text-[var(--color-body)] leading-[1.8] max-w-2xl mb-8 mt-10">This extends to discovery. Before an autonomous agent can authenticate, it needs to find services without a human pointing it to the right URL. Agent Auth standardizes this — agents resolve a well-known endpoint or query a registry.</p>
 
       <div class="border border-[var(--color-border)] bg-[var(--color-bg)]">
         <div class="grid lg:grid-cols-2">
@@ -320,30 +254,54 @@ const cards = [
     </div>
   </section>
 
-  <!-- Cards -->
+  <!-- Ready-made implementation paths -->
   <section class="relative">
     <div class="mx-auto max-w-[1400px] px-5 sm:px-6 pb-20">
-      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-px bg-[var(--color-border)] border border-[var(--color-border)]">
-        {cards.map((card) => (
-          <a
-            href={card.href}
-            target={card.external ? "_blank" : undefined}
-            rel={card.external ? "noopener noreferrer" : undefined}
-            class="group bg-[var(--color-bg)] p-5 flex flex-col gap-3 hover:bg-[var(--color-surface)] transition-colors"
-          >
-            <div class="flex items-center justify-between">
-              <h3 class="text-[13px] font-semibold">{card.title}</h3>
-              <svg class="w-3 h-3 text-[var(--color-muted)] opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+      <div class="border border-[color:color-mix(in_oklch,var(--color-fg)_12%,transparent)] bg-[color:color-mix(in_oklch,var(--color-fg)_3%,var(--color-bg))] p-5 sm:p-6 lg:p-8">
+        <div class="mb-6 sm:mb-7">
+          <h2 class="text-xl sm:text-2xl font-semibold tracking-tight">Get started</h2>
+        </div>
+
+        <div class="grid gap-4 lg:grid-cols-3">
+          <a href="/specification" class="group relative overflow-hidden border border-[color:color-mix(in_oklch,var(--color-fg)_14%,transparent)] bg-[var(--color-bg)] p-5 sm:p-6 transition-colors hover:border-[color:color-mix(in_oklch,var(--color-fg)_22%,transparent)]">
+            <div class="mb-3 flex items-center justify-between text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-[0.12em] text-[var(--color-muted)]">
+              <span>Spec</span>
             </div>
-            <p class="text-[12px] leading-[1.7] text-[var(--color-muted)] flex-1">{card.description}</p>
-            <span class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)] group-hover:text-[var(--color-fg)] transition-colors flex items-center gap-1.5">
-              {card.label}
-              {card.external && (
-                <svg class="w-2.5 h-2.5 opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-              )}
+            <h3 class="text-[14px] font-semibold mb-2">Read the specification</h3>
+            <p class="text-[12px] leading-[1.7] text-[var(--color-muted)] mb-4">The full protocol spec — identity model, registration, capabilities, discovery, and JWT verification.</p>
+            <pre class="border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-[11px] font-[family-name:var(--font-mono)] leading-relaxed overflow-x-auto"><code>$ npx agent-auth</code></pre>
+            <span class="mt-4 inline-flex items-center gap-1.5 text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)] group-hover:text-[var(--color-fg)] transition-colors">
+              Open specification
+              <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
             </span>
           </a>
-        ))}
+
+          <a href="/implementations" class="group relative overflow-hidden border border-[color:color-mix(in_oklch,var(--color-fg)_14%,transparent)] bg-[var(--color-bg)] p-5 sm:p-6 transition-colors hover:border-[color:color-mix(in_oklch,var(--color-fg)_22%,transparent)]">
+            <div class="mb-3 flex items-center justify-between text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-[0.12em] text-[var(--color-muted)]">
+              <span>Plugin</span>
+            </div>
+            <h3 class="text-[14px] font-semibold mb-2">Better Auth plugin</h3>
+            <p class="text-[12px] leading-[1.7] text-[var(--color-muted)] mb-4">Add Agent Auth to your app with the Better Auth plugin. Handles registration, capabilities, and JWT verification.</p>
+            <pre class="border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-[11px] font-[family-name:var(--font-mono)] leading-relaxed overflow-x-auto"><code set:html={'import { agentAuth } from "better-auth/plugins"'}></code></pre>
+            <span class="mt-4 inline-flex items-center gap-1.5 text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)] group-hover:text-[var(--color-fg)] transition-colors">
+              View plugin docs
+              <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </span>
+          </a>
+
+          <a href="/registry" class="group relative overflow-hidden border border-[color:color-mix(in_oklch,var(--color-fg)_14%,transparent)] bg-[var(--color-bg)] p-5 sm:p-6 transition-colors hover:border-[color:color-mix(in_oklch,var(--color-fg)_22%,transparent)]">
+            <div class="mb-3 flex items-center justify-between text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-[0.12em] text-[var(--color-muted)]">
+              <span>Registry</span>
+            </div>
+            <h3 class="text-[14px] font-semibold mb-2">Submit your server</h3>
+            <p class="text-[12px] leading-[1.7] text-[var(--color-muted)] mb-4">Register your Agent Auth server so agents can discover it through the registry.</p>
+            <pre class="border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-[11px] font-[family-name:var(--font-mono)] leading-relaxed overflow-x-auto"><code>GET /.well-known/agent-configuration</code></pre>
+            <span class="mt-4 inline-flex items-center gap-1.5 text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)] group-hover:text-[var(--color-fg)] transition-colors">
+              Submit your server
+              <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </span>
+          </a>
+        </div>
       </div>
     </div>
   </section>
