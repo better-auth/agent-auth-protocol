@@ -100,37 +100,34 @@ Each agent is created under a host. This lets the server reason separately about
 ### 1.7 Protocol Flow
 
 ```
-     +-------+          +--------+            +---------------+
-     |       |-(A)----->|        |-(B)------->|               |
-     | Agent | connect  | Client | register   | Authorization |
-     |       |          |        | (Host JWT  |    Server     |
-     |       |<-(E)-----|        |  + agent   |               |
-     +-------+ agent_id +--------+  pub key)  +-------+-------+
-               + grants           |<-(C)------|
-                                  |  agent_id + grants
-                                  |  (active or pending)
-                                  |
-                                  |  [If Pending]
-                                  |            +---------------+
-                                  |   (D)      |   Resource    |
-                                  +----------->|     Owner     |
-                                  |<-----------| Approval      |
-                                  |            |    (User)     |
-                                  |            +---------------+
-                                  |
-     +-------+          +--------+            +---------------+
-     |       |-(F)----->|        |-(G)------->| Authorization |
-     | Agent | execute  | Client | POST       |    Server     |
-     |       | capability|       | /capability|               |
-     +-------+<-(J)-----|        | /execute   |               |
-                result   +--------+<-(I)------|               |
-                                   result     +---------------+
-                                      |
-                                 (H) validate JWT,
-                                     check grants,
-                                     execute capability
+     +-------+                +--------+                            +---------------+
+     |       |-----(A)------->|        |-----------(B)------------->|               |
+     | Agent |    connect     | Client |     Host JWT +             | Authorization |
+     |       |                |        |     agent public key       |    Server     |
+     |       |<----(E)--------|        |<----------(C)--------------|               |
+     +-------+   agent_id +   +--------+     agent_id + grants      +---------------+
+                  grants                   (active or pending)
+                                            |
+                                            |  [If Pending]
+                                            |                       +---------------+
+                                            |----------(D)--------->|   Resource    |
+                                            |  user_code +          |    Owner      |
+                                            |  verification_uri     |    (User)     |
+                                            |<------approval--------|               |
+                                            |                       +---------------+
 
-              Figure 1: Agent Auth Abstract Protocol Flow
+     +-------+                +--------+                            +---------------+
+     |       |-----(F)------->|        |-----------(G)------------->|               |
+     | Agent |    execute     | Client |     Agent JWT +            | Authorization |
+     |       |    capability  |        |     POST /execute          |    Server     |
+     |       |<----(J)--------|        |<----------(I)--------------|               |
+     +-------+    result      +--------+     result                 +---------------+
+                                               |
+                                       (H) validate JWT,
+                                           check grants,
+                                           execute capability
+
+                    Figure 1: Agent Auth Abstract Protocol Flow
 ```
 
 - **(A)** Agent requests connection via client tools (`connect_agent` with requested capabilities, reason, and mode).
