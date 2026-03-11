@@ -800,22 +800,18 @@
 	content: "HTTP";
 }
 
+.spec-content .table-wrapper {
+	overflow-x: auto;
+	margin: 1rem 0;
+	border: 1px solid var(--color-border);
+}
 .spec-content table {
 	width: 100%;
 	border-collapse: collapse;
 	font-size: 13px;
 	line-height: 1.6;
-	margin: 1rem 0;
-	border: 1px solid var(--color-border);
-	overflow: hidden;
-	display: block;
-	overflow-x: auto;
-}
-.spec-content thead,
-.spec-content tbody {
-	display: table;
-	width: 100%;
-	table-layout: auto;
+	margin: 0;
+	border: none;
 }
 .spec-content th {
 	text-align: left;

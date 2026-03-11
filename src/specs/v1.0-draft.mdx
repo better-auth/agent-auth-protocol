@@ -15,7 +15,7 @@ This document is an implementation-oriented comprehensive agent authentication a
 
 ### 1.1 Problem Statement
 
-AI agents are becoming long-lived actors: copilots, background workers, scheduled automations, and multi-step systems that call external services without constant human supervision. Today's auth models were not designed with this in mind. The problem framing falls into three categories.
+AI agents are becoming long-lived actors: copilots, background workers, scheduled automations, and multi-step systems that call external services without constant human supervision. Today's auth models were not designed with this in mind. The problem framing falls into two categories.
 
 1. Problems with agents acting on behalf of a user (Delegated agents)
 
@@ -33,18 +33,18 @@ Existing auth models tightly couple the human user and the application. When an 
 
 The problems above share a single root cause: agents today do not have identity.
 
-An agent is not the application it runs inside. Claude Code, Cursor, ChatGPT — these are environments where agents run. They are hosts. An agent is the specific runtime AI actor within that environment: a particular conversation, task, or session that acts over time. Two separate chats in the same application are not "the same agent" — they have different contexts, different intents, and should have different permissions.
+An agent is the specific runtime AI actor within that environment: a particular conversation, task, or session that acts over time. Two separate chats in the same application are not "the same agent", they have different contexts, different intents, and should have different permissions.
 
 Identity requires two properties:
 
 - **Continuity** — recognizable as the same actor over time. The server can verify, across multiple requests, that it is dealing with the same agent it registered.
 - **Distinctiveness** — distinguishable from every other actor. Each agent can be individually identified, scoped, audited, and revoked without affecting any other.
 
-Existing auth models fail because they provide at most one of these properties. OAuth tokens give continuity (the same token across requests) but no distinctiveness (every agent behind a client looks identical). Stateless API keys give distinctiveness (you can issue many) but weak continuity (no lifecycle, no state transitions, no revocation boundary). Neither gives an agent an identity — just a credential.
+Existing auth models fail because they provide at most one of these properties. OAuth tokens give continuity (the same token across requests) but no distinctiveness (every agent behind a client looks identical). Stateless API keys give distinctiveness (you can issue many) but weak continuity (no lifecycle, no state transitions, no revocation boundary). Neither gives an agent an identity, just a credential.
 
 ### 1.3 Solution
 
-Agent Auth makes the runtime agent a first-class principal with both properties. Instead of borrowing a user's session or a shared application token, each agent is registered with its own identity, granted capabilities, and lifecycle. Every agent is created under a persistent identity called a **host** (§2.7), which the **client**(§6) registers with each server it connects to.
+Agent Auth makes the runtime agent a first-class principal with both properties. Instead of borrowing a user's session or a shared application token, each agent is registered with its own identity, granted capabilities, and lifecycle. Every agent is created under a persistent identity called a **host** (§2.7), which the **client** (§6) registers with each server it connects to.
 
 When the agent needs to act, it authenticates with short-lived signed JWTs tied to that registration. This gives the server something existing auth models are missing: a durable way to identify which specific agent is acting, which host it belongs to, what mode it runs in, what capabilities it holds, and how to suspend, expire, or revoke it without affecting everything else.
 
@@ -53,14 +53,15 @@ When the agent needs to act, it authenticates with short-lived signed JWTs tied 
 The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in BCP 14 [RFC 2119](https://datatracker.ietf.org/doc/html/rfc2119) [RFC 8174](https://datatracker.ietf.org/doc/html/rfc8174) when, and only when, they appear in capitalized form, as shown here.
 
 ### 1.5 Terminology
-- **Agent** — The runtime AI actor that needs to call services. Each agent has its own server-side identity, its own granted capabilities, and its own lifecycle.
+- **Principal** — An identity the server can authenticate, authorize, audit, and revoke independently. In this protocol, both hosts and agents are principals.
+- **Agent** — A runtime AI actor scoped to a specific conversation, task, or session that calls external services. Each agent is registered under a host (§2.7), carries its own server-side identity, granted capabilities, and lifecycle, and authenticates with short-lived signed JWTs (§4.3).
 - **Client** — The process that holds a host identity and exposes protocol tools to AI systems (MCP server, CLI, SDK). It manages host and agent keys, talks to servers, and signs JWTs. AI tools like Claude Code or ChatGPT connect to a client.
-- **Host** —  The persistent identity of the client environment where agents run. Each agent is created under a host. A host represents a specific device, application, or runtime on a server, and agents are registered under it. It may be linked to a user or unlinked in the case of autonomous agents.
+- **Host** — The persistent identity of the client environment where agents run. Each agent is created under a host. A host represents a specific device, application, or runtime on a server, and agents are registered under it. It may be linked to a user or unlinked in the case of autonomous agents.
 - **Server** — The service's authorization server. It manages discovery, host and agent registrations, approvals, capability grants, and JWT verification. Also called the auth server.
 - **Capability** — A server-offered action or function that an agent can execute. It is identified by a `name` and a human-readable `description`.
 - **Agent Capability Grant** — A stored grant of one capability to one agent. Carries per-capability state and metadata.
 - **Default capabilities** — The set of capabilities a host or agent is pre-authorized to execute without additional user approval or as a server-side policy.
-- **Registration** — The process by which a client registers an agent identity under a host on a server. A successful registration results in an agent JWT.
+- **Registration** — The process by which a client registers an agent identity under a host on a server. A successful registration results in an agent identity and capability grants (see §5.3).
 - **Reactivation** — Bringing an expired agent back to `active` state. A security checkpoint: capabilities decay to host defaults and lifetime clocks reset.
 - **Approval** — User consent for registration, trust establishment, account linking, or capability escalation. Required when server policy does not allow the request to be auto-approved.
 - **Mode** — How an agent was registered: `"delegated"` (acting on behalf of a user) or `"autonomous"` (operating without a user in the loop).
@@ -111,8 +112,8 @@ Each agent is created under a host. This lets the server reason separately about
                                   +----------->|     Owner     |
                                   |<-----------| Approval      |
                                   |            |    (User)     |
-                                 |            +---------------+
-                                 |
+                                  |            +---------------+
+                                  |
      +-------+          +--------+            +---------------+
      |       |-(F)----->|        |-(G)------->| Authorization |
      | Agent | execute  | Client | POST       |    Server     |
@@ -143,13 +144,13 @@ Agents that need a raw JWT for direct server-to-server use can still call `sign_
 
 **Notes:**
 
-- **Discovery is a pre-step for generic clients.** Multi-provider clients MAY call `list_providers` (§6.2.1), `search_providers` (§6.2.2), and `discover_provider` (§6.2.3) before step (A). 
+- **Discovery is a pre-step for generic clients.** Multi-provider clients MAY call `list_providers` (§6.2.1), `search_providers` (§6.2.2), and `discover_provider` (§6.2.3) before step (A).
 
 ## 2. Core Model
 
 ### 2.1 Agent
 
-An agent is a runtime AI actor that needs to call external services. Each agent has its own server-side identity, its own granted capabilities, and its own lifecycle. Agents are registered under hosts (§2.7–§2.11) and authenticate with short-lived signed JWTs (§4.3).
+An agent is a runtime AI actor scoped to a specific conversation, task, or session, that calls external services. Each agent is registered under a host (§2.7–§2.11), carries its own server-side identity, granted capabilities, and lifecycle, and authenticates with short-lived signed JWTs (§4.3).
 
 ### 2.2 Agent Modes
 
@@ -214,7 +215,7 @@ Revocation is permanent — a revoked agent cannot be reactivated. The specific 
 
 A host is the persistent identity of the client environment where agents run. Conceptually, it represents the place the agent is running from: for example, a local Claude Code session on your laptop, a Cursor installation on your desktop, a ChatGPT connector runtime, a background worker, or any other client that manages agents and talks to servers. On the server, that environment is represented as a registered keypair plus metadata.
 
-Every agent is registered under a host. This lets the server reason about the long-lived client environment (`host`) separately from the individual runtime agent (`agent`). For autonomous agents, a host MAY exist without any linked user. For delegated agents, a host MUST be linked to at most one user. 
+Every agent is registered under a host. This lets the server reason about the long-lived client environment (`host`) separately from the individual runtime agent (`agent`). For autonomous agents, a host MAY exist without any linked user. For delegated agents, a host MUST be linked to at most one user.
 
 Hosts carry default capabilities, and agents registered under them can be granted those capabilities without additional approval or as a server-side policy.
 
@@ -246,8 +247,6 @@ When a host becomes linked, all active autonomous agents under that host MUST be
 4. Any resources created or owned by the autonomous agent SHOULD be transferred to the user
 
 Once claimed, the autonomous agent is terminal — it cannot be reactivated. If the user wants to continue using the service, the host registers a new delegated agent. Servers MAY use a system account or anonymous placeholder to hold autonomous agent ownership until a real user claims it.
-
-Operational guidance for the claiming flow — including user-facing presentation, linking UX, and post-claim management — is in [Appendix B.1](#b1-autonomous-agent-claiming).
 
 ### 2.11 Host States
 
@@ -283,7 +282,7 @@ The same capability name can appear in different parts of the protocol for diffe
 - `description` (`string`, required): Human-readable description of what this capability does.
 - `input` (`object`, optional): A JSON Schema describing the shape of the execution arguments a capability requires.
 - `output` (`object`, optional): A JSON Schema describing the shape of the data returned when this capability executes successfully. Agents use this to reason about what information a capability provides, plan multi-step workflows, and chain capability outputs into other capabilities' inputs without trial and error.
-- `grant_status` (`string`, optional): An optional enum indicating whether the capability has been granted to the agent.
+- `grant_status` (`string`, optional): Enum indicating whether the capability has been granted to the agent. Present only when the request is authenticated with an agent JWT.
 
 **Example capability:**
 
@@ -636,7 +635,6 @@ Servers SHOULD publish this endpoint. No authentication required. Returns the se
 
 This endpoint enables generic clients to work with any Agent Auth server. Purpose-built clients (e.g. an MCP server built specifically for one service) MAY skip discovery and use pre-configured endpoints instead.
 
-
 **Response:**
 
 ```json
@@ -780,7 +778,7 @@ Content-Type: application/json
 
 {
   "error": "authentication_required",
-  "error_description": "This server requires a host or agent JWT to list capabilities."
+  "message": "This server requires a host or agent JWT to list capabilities."
 }
 ```
 
@@ -885,6 +883,35 @@ Registration is keyed by the host identity plus the agent public key carried in 
 - If a matching agent exists in `pending` state, the server SHOULD treat the request as an idempotent retry and return the existing agent ID and current or refreshed approval flow instead of creating a second agent.
 - If a matching agent exists in `active`, `rejected`, `revoked`, or `claimed` state, the server SHOULD reject the request with `409 agent_exists`. Clients SHOULD generate a new agent keypair for a new registration attempt.
 
+**Response parameters:**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `agent_id` | string | Yes | The server-assigned agent identifier. |
+| `host_id` | string | Yes | The host this agent is registered under. |
+| `name` | string | Yes | The agent's display name (as provided in the request or server-assigned). |
+| `mode` | string | Yes | `"delegated"` or `"autonomous"`. |
+| `status` | string | Yes | `"active"` (auto-approved) or `"pending"` (approval required). |
+| `agent_capability_grants` | array | Yes | Array of capability grant objects (see below). |
+| `approval` | object | Conditional | Approval flow object (§7.5). Present when `status` is `"pending"`. |
+
+**Capability grant fields in registration, status, reactivation, and request-capability responses:**
+
+When the grant status is `"active"`, each grant object MUST include full capability details (`description`, `input`, and `output` when defined). Grants with constraints MUST include the approved scope — the server MAY have narrowed the agent's proposed constraints or added server-policy constraints, and the returned constraints are the effective ones the agent must operate within. When the grant status is `"pending"`, the grant includes only `capability` and `status`. When the grant status is `"denied"`, the grant includes `capability`, `status`, and an optional human-readable `reason` (see §5.5 for the denied grant format).
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `capability` | string | Yes | Capability identifier. |
+| `status` | string | Yes | `"active"`, `"pending"`, or `"denied"`. |
+| `description` | string | Active grants | Human-readable description. |
+| `input` | object | Active grants | JSON Schema for the capability's input. |
+| `output` | object | Active grants (when defined) | JSON Schema for the capability's output. |
+| `constraints` | object | Active grants (when scoped) | Effective input constraints (§2.13). |
+| `granted_by` | string | No | User or system actor who approved the grant. Servers MAY include this for audit purposes. |
+| `reason` | string | Denied grants | Human-readable explanation of the denial. |
+
+The introspect endpoint (§5.12) is an exception: it returns compact grant objects (`capability` and `status` only) because resource servers need to verify grants, not capability schemas.
+
 **Response (auto-approved):**
 
 ```json
@@ -949,8 +976,6 @@ Registration is keyed by the host identity plus the agent public key carried in 
 }
 ```
 
-When the agent status is `"active"`, each capability grant MUST include full capability details (description, input, and output when defined). Grants with constraints MUST include the approved scope. The server MAY have narrowed the agent's proposed constraints or added server-policy constraints — the returned constraints are the effective ones the agent must operate within.
-
 **Response (approval required):**
 
 ```json
@@ -985,6 +1010,8 @@ POST /agent/request-capability
 ```
 
 Requests additional capabilities for an existing agent.
+
+**Authorization:** Agent JWT.
 
 **Request headers:**
 
@@ -1021,12 +1048,21 @@ Content-Type: application/json
 | `login_hint` | string | No | User identifier hint for approval methods that benefit from the server already knowing who should approve (for example CIBA). The server MAY ignore it or validate it against server policy. |
 | `binding_message` | string | No | Short message shown to the approver when the selected approval method supports it. The server MAY ignore it or replace it with its own message. |
 
+**Response parameters:**
+
+The response returns only the newly requested capability grants — not the agent's full grant set. The agent's overall status does not change (the agent remains `active`); only the individual grant statuses indicate whether approval is pending.
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `agent_id` | string | Yes | The agent identifier. |
+| `agent_capability_grants` | array | Yes | Array of grant objects for the requested capabilities only (grant fields as described in §5.3). |
+| `approval` | object | Conditional | Approval flow object (§7.5). Present when any grant is `"pending"`. |
+
 **Response (auto-approved):**
 
 ```json
 {
   "agent_id": "agt_abc123",
-  "status": "active",
   "agent_capability_grants": [
     {
       "capability": "transfer_international",
@@ -1063,7 +1099,6 @@ Content-Type: application/json
 ```json
 {
   "agent_id": "agt_abc123",
-  "status": "pending",
   "agent_capability_grants": [
     { "capability": "transfer_international", "status": "pending" }
   ],
@@ -1102,13 +1137,33 @@ Authorization: Bearer <host_jwt>
 |---|---|---|---|
 | `agent_id` | string | Yes | The agent's ID |
 
+**Response parameters:**
+
+The status endpoint is the comprehensive view of an agent. It returns the full agent data model (§3.2) plus all capability grants.
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `agent_id` | string | Yes | The agent identifier. |
+| `host_id` | string | Yes | The host this agent is registered under. |
+| `name` | string | Yes | The agent's display name. |
+| `status` | string | Yes | Current agent status (`active`, `pending`, `expired`, `revoked`, `rejected`, `claimed`). |
+| `mode` | string | Yes | `"delegated"` or `"autonomous"`. |
+| `agent_capability_grants` | array | Yes | Array of all capability grant objects for this agent (grant fields as described in §5.3). |
+| `user_id` | string | No | Linked user identifier. Present for delegated agents. |
+| `activated_at` | datetime | No | When the agent was last activated (ISO 8601). |
+| `created_at` | datetime | Yes | When the agent was created (ISO 8601). |
+| `last_used_at` | datetime | No | When the agent last made an authenticated request (ISO 8601). |
+| `expires_at` | datetime | No | When the agent session expires (ISO 8601). |
+
 **Response:**
 
 ```json
 {
   "agent_id": "agt_abc123",
   "host_id": "hst_xyz789",
+  "name": "Bank balance checker",
   "status": "active",
+  "mode": "delegated",
   "agent_capability_grants": [
     {
       "capability": "check_balance",
@@ -1160,7 +1215,6 @@ Authorization: Bearer <host_jwt>
       }
     }
   ],
-  "mode": "delegated",
   "user_id": "user_alice",
   "created_at": "2026-02-25T10:00:00Z",
   "last_used_at": "2026-02-25T14:30:00Z",
@@ -1168,7 +1222,7 @@ Authorization: Bearer <host_jwt>
 }
 ```
 
-The capability grants array in the status response reflects the server's current capability state for this agent. Each grant includes a status value: `"active"` (granted and usable), `"pending"` (awaiting approval), or `"denied"` (user or server rejected). Active grants include full capability details (description, input, output when defined, and constraints when the grant is scoped — see §2.13). Pending grants include only the capability name and status. Denied grants include the capability name, status, and an optional human-readable reason.
+The capability grants array in the status response reflects the server's current capability state for this agent — grant fields are as described in §5.3. The status endpoint is the only endpoint guaranteed to return all grant metadata including `granted_by`.
 
 **Denied grant format:**
 
@@ -1217,6 +1271,17 @@ Reactivates an expired agent. Reactivation is a security checkpoint: the agent's
 4. Determine the host's current default capabilities and grant them to the agent, following the same auto-approval logic as registration (§5.3): if the host is linked and the capabilities fall within its defaults, auto-approve. Otherwise, return `pending` with an approval flow.
 5. Reset the session TTL and max lifetime clocks. Record the new activation time as now.
 6. Transition the agent to `active` (or `pending` if approval is required).
+
+**Response parameters:**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `agent_id` | string | Yes | The agent identifier. |
+| `status` | string | Yes | `"active"` (auto-approved) or `"pending"` (approval required). |
+| `agent_capability_grants` | array | Yes | Array of the agent's new capability grants (grant fields as described in §5.3). |
+| `activated_at` | datetime | Conditional | The new activation time (ISO 8601). Present when `status` is `"active"`. |
+| `expires_at` | datetime | Conditional | The new session expiry (ISO 8601). Present when `status` is `"active"`. |
+| `approval` | object | Conditional | Approval flow object (§7.5). Present when `status` is `"pending"`. |
 
 **Response (auto-approved):**
 
@@ -1575,7 +1640,7 @@ Content-Type: application/json
 | `agent_id` | string | Agent ID (from JWT `sub` claim). Only present when `active: true`. |
 | `host_id` | string | Host that created this agent. Only present when `active: true`. |
 | `user_id` | string? | Linked user, if any. Only present when `active: true`. |
-| `agent_capability_grants` | array | Per-capability grant status. If the JWT contained a `capabilities` claim, only capabilities in that claim are included. Only present when `active: true`. |
+| `agent_capability_grants` | array | Compact grant objects (`capability` and `status` only — not full capability details). Unlike other endpoints (§5.3), introspect omits `description`, `input`, `output`, and `constraints` because resource servers need to verify grants, not capability schemas. If the JWT contained a `capabilities` claim, only capabilities in that claim are included. Only present when `active: true`. |
 | `mode` | string | `"delegated"` or `"autonomous"`. Only present when `active: true`. |
 | `expires_at` | string? | Agent session expiry (ISO 8601). Only present when `active: true`. |
 
@@ -1649,7 +1714,7 @@ The error value is a machine-readable code (a snake_case string). The message va
 
 Servers MAY return additional error codes beyond those listed. Clients SHOULD handle unknown error codes gracefully by falling back to the HTTP status code.
 
-For device authorization endpoints (§7.1), error responses follow [RFC 8628 §2.11](https://datatracker.ietf.org/doc/html/rfc8628#section-3.5). For CIBA endpoints (§7.2), error responses follow [OpenID CIBA Core §10](https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html#rfc.section.13).
+For device authorization endpoints (§7.1), error responses follow [RFC 8628 §3.5](https://datatracker.ietf.org/doc/html/rfc8628#section-3.5). For CIBA endpoints (§7.2), error responses follow [OpenID CIBA Core §13](https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html#rfc.section.13).
 
 ### 5.14 Resource Server Challenge (Optional)
 
@@ -1841,7 +1906,7 @@ Mode choice matters at registration time. A server MAY support delegated agents,
 |---|---|---|---|
 | `provider` | string | Yes | Provider name (from `list_providers`) or service URL |
 | `name` | string | Yes | Human-readable name for the agent. Displayed in dashboards, approval screens, and audit logs. Clients MAY auto-generate this from context if the agent doesn't provide one. |
-| `capabilities` | string[] | No | Capability names to request. If omitted, the agent is created with no capabilities — the agent can request them later via `request_capability` (§6.6). |
+| `capabilities` | (string \| object)[] | No | Capabilities to request. Each element is either a capability name string (unconstrained) or an object with a capability name and optional constraints for scoped grants (§2.13). If omitted, the agent is created with no capabilities — the agent can request them later via `request_capability` (§6.6). |
 | `mode` | string | No | `"delegated"` (default) or `"autonomous"` |
 | `reason` | string | No | Human-readable reason for the request. Displayed to the user on the approval screen. |
 | `preferred_method` | string | No | Preferred approval method hint (e.g. `"device_authorization"`, `"ciba"`). Passed through to the server on `POST /agent/register` (§5.3). |
@@ -1882,9 +1947,16 @@ The client MAY refuse to sign (e.g. agent is revoked, rate limit exceeded). The 
 ```json
 {
   "token": "eyJhbGciOiJFZERTQSIs...",
-  "expires_at": 1730000060
+  "expires_in": 60
 }
 ```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `token` | string | Yes | The signed agent JWT. |
+| `expires_in` | number | Yes | Lifetime of the JWT in seconds. Matches the JWT's `exp` claim relative to `iat`. |
+
+**Note:** This field is `expires_in` (seconds until expiry), not `expires_at`. Agent session expiry uses ISO 8601 strings (e.g. `"2026-02-26T10:00:00Z"`), while JWT expiry follows the standard `exp` claim convention of relative seconds.
 
 ### 6.6 request_capability
 
@@ -1895,7 +1967,7 @@ Requests additional capabilities for an already-connected agent. This is how an 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `agent_id` | string | Yes | The agent's ID |
-| `capabilities` | string[] | Yes | Additional capability names to request |
+| `capabilities` | (string \| object)[] | Yes | Additional capabilities to request. Each element is either a capability name string (unconstrained) or an object with a capability name and optional constraints for scoped grants (§2.13). |
 | `reason` | string | No | Why the agent needs these capabilities |
 | `preferred_method` | string | No | Preferred approval method hint (e.g. `"device_authorization"`, `"ciba"`). Passed through to the server on `POST /agent/request-capability` (§5.4). |
 | `login_hint` | string | No | Optional user identifier hint for approval methods like CIBA. Passed through to the server on `POST /agent/request-capability` (§5.4). |
@@ -1990,6 +2062,14 @@ Reactivates an expired agent connection. The agent keeps its identity (`agent_id
         "properties": {
           "account_id": { "type": "string", "description": "The bank account ID to check" }
         }
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "account_id": { "type": "string" },
+          "balance": { "type": "number" },
+          "currency": { "type": "string" }
+        }
       }
     },
     {
@@ -2003,6 +2083,15 @@ Reactivates an expired agent connection. The agent keeps its identity (`agent_id
           "amount": { "type": "number" },
           "currency": { "type": "string" },
           "destination_account": { "type": "string" }
+        }
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "transfer_id": { "type": "string" },
+          "status": { "type": "string" },
+          "amount": { "type": "number" },
+          "currency": { "type": "string" }
         }
       }
     }
@@ -2044,7 +2133,6 @@ Executes a granted capability through the server's execute endpoint (§5.11). Th
 2. Call `POST /capability/execute` (§5.11) with the agent JWT, `capability`, and `arguments`
 3. Return the result to the agent
 4. For async responses (`status: "pending"`), poll the `status_url` until completion and return the final result
-
 
 ### 6.11 Registry
 
@@ -2139,7 +2227,7 @@ The server notifies the user through its notification channel (push notification
 
 The user-facing approval surface (approve, deny, list pending requests) is an implementation concern — the server provides whatever UI or endpoints are appropriate for its platform. These are not protocol endpoints.
 
-Servers implementing CIBA MUST follow the security considerations in [CIBA Core §10](https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html#rfc.section.13) — particularly around rate limiting, user enumeration, and notification fatigue.
+Servers implementing CIBA MUST follow the security considerations in [CIBA Core §14](https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html#rfc.section.14) — particularly around rate limiting, user enumeration, and notification fatigue.
 
 ### 7.3 Real-Time Notification (Optional)
 
@@ -2331,7 +2419,7 @@ The protocol provides per-agent, per-call traceability by design (§11). This is
 
 Autonomous agents (`mode: "autonomous"`) can register and operate without a user in the loop. When a host acquires a `user_id`, autonomous agents under it are automatically claimed and their activity history is attributed to the user (§2.10). The user may not be aware of what the agent did before the host was linked.
 
-- Servers SHOULD provide the user with visibility into the autonomous agent's activity before completing the claiming process. See Appendix B.1 for operational guidance on the claiming flow.
+- Servers SHOULD provide the user with visibility into the autonomous agent's activity before completing the claiming process.
 
 ### 9.4 Capability Requests as Behavioral Signal
 
