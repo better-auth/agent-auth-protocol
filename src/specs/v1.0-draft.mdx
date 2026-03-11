@@ -877,6 +877,10 @@ Registers a new agent through a host.
 | `login_hint` | string | No | User identifier hint for approval methods that benefit from the server already knowing who should approve (for example CIBA). The server MAY ignore it, validate it against its own rules, or reject it if the format is unsupported. |
 | `binding_message` | string | No | Short message shown to the approver when the selected approval method supports it. Intended to help the user confirm what they are approving. The server MAY ignore it or display a server-generated message instead. |
 
+**Atomicity:**
+
+When the host is unknown and the server creates a new host record as part of agent registration (§2.8), the host creation and agent creation MUST be atomic. If agent creation fails for any reason (e.g. `invalid_capabilities`, `unsupported_mode`), the server MUST NOT persist the host record. This prevents orphaned host records that could alter the behavior of subsequent registration attempts — for example, a failed first attempt leaving a host record that causes the server to treat the next attempt as a known host rather than a first-time registration.
+
 **Idempotency and retry semantics:**
 
 Registration is keyed by the host identity plus the agent public key carried in the host JWT.
