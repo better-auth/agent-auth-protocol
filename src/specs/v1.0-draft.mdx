@@ -212,6 +212,8 @@ An agent can be revoked by:
 
 Revocation is permanent — a revoked agent cannot be reactivated. The specific endpoints and mechanisms are defined in §5.7 and §6.7. Host revocation and its effect on agents is covered in §2.7–§2.11.
 
+**User deletion.** When a user account is deleted, the server MUST revoke all hosts linked to that user and cascade revocation to all agents under those hosts (§8.5). The server SHOULD also clean up any pending approvals, capability grants, and activity logs associated with the user in accordance with the server's data retention policy (§9.2).
+
 ### 2.7 Host
 
 A host is the persistent identity of the client environment where agents run. Conceptually, it represents the place the agent is running from: for example, a local Claude Code session on your laptop, a Cursor installation on your desktop, a ChatGPT connector runtime, a background worker, or any other client that manages agents and talks to servers. On the server, that environment is represented as a registered keypair plus metadata.
@@ -237,6 +239,8 @@ Linking binds an unlinked host to a specific user. It happens through one of two
 2. **Delegated registration approval** — an unknown host registers a delegated agent (§5.3). The user approves the registration, and the server links the host to the approving user.
 
 Once linked, future delegated agents through this host can be auto-approved for the host's default capabilities. A host MUST NOT be linked to more than one user.
+
+**Host unlinking.** A server MAY allow a user to unlink a host (e.g. through a dashboard "disconnect app" action). When a host is unlinked, the server MUST revoke all delegated agents under that host, since they derived their authority from the now-removed user linkage. The host itself returns to an unlinked state and MAY continue to provision autonomous agents if the server's policy allows it. Servers that do not support host unlinking SHOULD require the user to revoke the host entirely instead.
 
 ### 2.10 Autonomous Agent Claiming
 
@@ -332,6 +336,8 @@ The same capability name can appear in different parts of the protocol for diffe
   }
 }
 ```
+
+**Capability removal.** A server MAY remove or rename capabilities at any time. Existing grants for a removed capability become inoperative — the server MUST NOT execute them. When an agent attempts to execute a removed capability, the server MUST return `403` with error code `capability_not_granted`. Servers SHOULD include a human-readable `message` indicating the capability was removed (e.g. `"The capability 'transfer_domestic' has been removed"`). The protocol does not require servers to proactively notify hosts or agents when capabilities are removed — agents discover the change on the next execution attempt or capability listing.
 
 ### 2.13 Scoped Grants (Constraints)
 
@@ -489,7 +495,7 @@ Implementations MAY use flat arrays on the agent model instead of a separate tab
 
 The core protocol models an agent as having one effective user context at a time (`agent.user_id`). A capability grant MAY still record a different `granted_by` value for audit purposes — for example, an admin or another authorized reviewer may approve a capability request — but that does not change which user the agent is acting for.
 
-More advanced workflows where a single agent accumulates authority from multiple end users, targets specific users for approval, or selects a subject at execution time are not part of the core protocol. Those patterns are defined, if at all, by extension profiles such as the Cross-User Grant Profile (§10.8.1).
+More advanced workflows where a single agent accumulates authority from multiple end users, targets specific users for approval, or selects a subject at execution time are not part of the core protocol. Those patterns are defined, if at all, by extension profiles such as the Cross-User Grant Profile (§10.9.1).
 
 ## 4. Authentication
 
@@ -673,13 +679,15 @@ This endpoint enables generic clients to work with any Agent Auth server. Purpos
 | `issuer` | string | Yes | Base URL of the authorization server |
 | `algorithms` | string[] | Yes | Supported key types for registration. In this spec version, only `Ed25519` is defined. |
 | `modes` | string[] | Yes | Supported registration modes: `"delegated"`, `"autonomous"`, or both |
-| `approval_methods` | string[] | Yes | How user approval works. Defined core values: `"device_authorization"` (RFC 8628), `"ciba"` (Client Initiated Backchannel Authentication). Servers MAY include additional custom methods defined by extension profiles (see §10.8.3). Clients SHOULD ignore methods they don't recognize. |
+| `approval_methods` | string[] | Yes | How user approval works. Defined core values: `"device_authorization"` (RFC 8628), `"ciba"` (Client Initiated Backchannel Authentication). Servers MAY include additional custom methods defined by extension profiles (see §10.9.3). Clients SHOULD ignore methods they don't recognize. |
 | `endpoints` | object | Yes | Server API endpoint paths, relative to `issuer` |
 | `jwks_uri` | string | No | URL to the server's JWKS (JSON Web Key Set). Enables clients to verify server-signed responses in future protocol extensions. Servers that plan to sign responses SHOULD include this. |
 
 Capabilities are listed via `/capability/list` (§5.2), described in detail via `/capability/describe` (§5.2.1), and executed through `POST /capability/execute` (§5.11). The discovery document covers identity and authorization configuration only.
 
 Approval methods are negotiated through `POST /agent/register` (§5.3), `POST /agent/request-capability` (§5.4), and `POST /agent/reactivate` (§5.6). The server communicates the chosen method in the returned approval object — approval initiation is not a separate discovery-advertised endpoint in the core protocol.
+
+**Caching.** Servers SHOULD include HTTP `Cache-Control` headers on the discovery response per [RFC 9111](https://datatracker.ietf.org/doc/html/rfc9111), following the metadata caching model established by [RFC 9728 §7.10](https://datatracker.ietf.org/doc/html/rfc9728#section-7.10) (OAuth 2.0 Protected Resource Metadata). A `max-age` of 3600 (one hour) is RECOMMENDED for most deployments. Clients MUST respect standard HTTP cache directives when present. When no `Cache-Control` header is present, clients SHOULD apply a default cache lifetime of one hour. See §10.5 for client-side caching guidance.
 
 #### 5.1.1 Versioning
 
@@ -2232,11 +2240,11 @@ Servers implementing CIBA MUST follow the security considerations in [CIBA Core 
 
 ### 7.3 Real-Time Notification (Optional)
 
-Polling is the baseline for all core approval methods. Real-time approval notification is defined as an extension profile in §10.8.2. Core clients MUST function correctly using polling alone.
+Polling is the baseline for all core approval methods. Real-time approval notification is defined as an extension profile in §10.9.2. Core clients MUST function correctly using polling alone.
 
 ### 7.4 Server-Defined
 
-Custom approval methods are not part of the core protocol. They are defined, if at all, by extension profiles such as the Server-Defined Approval Profile (§10.8.3).
+Custom approval methods are not part of the core protocol. They are defined, if at all, by extension profiles such as the Server-Defined Approval Profile (§10.9.3).
 
 ### 7.5 Method Selection
 
@@ -2452,7 +2460,17 @@ The `jti` replay cache does not need persistence. Replay detection only matters 
 
 Servers that fetch JWKS URLs SHOULD cache the response and refresh periodically (recommended: every 5 minutes or on `kid` miss). Servers SHOULD handle JWKS URL unavailability gracefully — use previously cached keys and return a clear error if the URL is unreachable and no cached keys exist.
 
-### 10.5 Client Key Storage
+### 10.5 Discovery Caching
+
+The discovery document (§5.1) changes infrequently — endpoint paths, supported algorithms, and registration modes are typically stable across deployments. Clients SHOULD cache the discovery document locally and re-fetch no more than once per hour under normal operation.
+
+Clients SHOULD force a re-fetch when they receive an unexpected `404` or `410` on a previously-working endpoint, as this may indicate the server has updated or removed its endpoint paths. If the discovery endpoint is temporarily unreachable, clients SHOULD continue using the last successfully fetched document rather than failing immediately.
+
+Clients MUST respect HTTP `Cache-Control` headers when present (§5.1). When no cache headers are provided, clients SHOULD apply a default cache lifetime of one hour. Clients MUST NOT cache indefinitely — a maximum cache lifetime of 24 hours is RECOMMENDED even for stable deployments, to ensure eventual consistency with server-side changes.
+
+Purpose-built clients that skip discovery and use pre-configured endpoints (as noted in §5.1) are not affected by this guidance.
+
+### 10.6 Client Key Storage
 
 Clients SHOULD store private keys securely:
 - **Desktop/server:** OS keychain, encrypted file, or hardware security module
@@ -2461,19 +2479,19 @@ Clients SHOULD store private keys securely:
 
 The protocol does not mandate a storage mechanism. The security of the system depends on the client protecting its private keys.
 
-### 10.6 User-Facing Terminology
+### 10.7 User-Facing Terminology
 
 The protocol uses "host" to describe the client's persistent identity on a server. This term is precise for implementers but not meaningful to end users. In user-facing surfaces — dashboards, approval screens, settings pages — servers SHOULD present hosts using familiar labels such as "Connected Apps," "Applications," or "Authorized Apps." The protocol term "host" is for the spec and wire format; the display name is an implementation choice.
 
-### 10.7 Pending Agent Cleanup
+### 10.8 Pending Agent Cleanup
 
 Servers SHOULD periodically clean up agents that remain in `pending` state beyond a server-defined threshold (e.g. 24 hours, 7 days). Cleaned-up pending agents are deleted, not revoked — they never became active. Hosts in `pending` state should be cleaned up similarly.
 
-### 10.8 Extension Profiles
+### 10.9 Extension Profiles
 
 The following profiles are outside the core interoperability surface of this specification. Clients and servers MAY implement them by agreement, but conformant implementations MUST NOT assume support unless the relevant profile is explicitly documented by the server.
 
-#### 10.8.1 Cross-User Grant Profile
+#### 10.9.1 Cross-User Grant Profile
 
 This profile allows a capability grant's approver (`granted_by`) to be different from the agent's effective user context (`agent.user_id`) in ways that affect authorization semantics, not just audit history.
 
@@ -2485,7 +2503,7 @@ Examples include:
 
 This profile requires additional protocol surface beyond the core specification, such as targeting fields, approval-routing rules, introspection extensions, and execution semantics that tell the resource server whose authority is being exercised. Those details are intentionally left to profile-specific definitions.
 
-#### 10.8.2 Real-Time Approval Notification Profile
+#### 10.9.2 Real-Time Approval Notification Profile
 
 This profile augments the core polling model with a notification URL in the approval object:
 
@@ -2504,7 +2522,7 @@ This profile augments the core polling model with a notification URL in the appr
 
 The client connects to the notification URL via SSE and receives an event when the approval completes, is denied, or expires. If that URL is absent or the connection fails, the client MUST fall back to polling `GET /agent/status`.
 
-#### 10.8.3 Server-Defined Approval Profile
+#### 10.9.3 Server-Defined Approval Profile
 
 This profile allows servers to expose approval methods beyond the core `"device_authorization"` and `"ciba"` set. Extension-defined methods appear in the discovery approval-methods list and in the returned approval method value.
 
