@@ -56,6 +56,10 @@ When the agent needs to act, it authenticates with short-lived signed JWTs tied 
 
 The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in BCP 14 [RFC 2119](https://datatracker.ietf.org/doc/html/rfc2119) [RFC 8174](https://datatracker.ietf.org/doc/html/rfc8174) when, and only when, they appear in capitalized form, as shown here.
 
+### 1.4.1 Type Notation
+
+In tables throughout this specification, a trailing `?` on a type (e.g. `string?`) indicates the field is **nullable** — it may be present with a `null` value. This is distinct from "optional" (the field may be omitted entirely). A field marked as nullable and optional (e.g. `string?` with Required = "No") may be either absent or present with a `null` value.
+
 ### 1.5 Terminology
 - **Principal** — An identity the server can authenticate, authorize, audit, and revoke independently. In this protocol, both hosts and agents are principals.
 - **Agent** — A runtime AI actor scoped to a specific conversation, task, or session that calls external services. Each agent is registered under a host (§2.7), carries its own server-side identity, granted capabilities, and lifecycle, and authenticates with short-lived signed JWTs (§4.3).
@@ -373,6 +377,8 @@ Supported operators:
 
 Operators MAY be combined on a single field: `{ "min": 0, "max": 1000 }` means the value must be between 0 and 1000 inclusive. Exact values and operator objects MUST NOT be combined on the same field.
 
+**Unknown operators.** If a server encounters a constraint operator it does not recognize (e.g. from a future protocol extension or a client proposing new operators), the server MUST reject the grant or execution request with `400 unknown_constraint_operator` rather than silently ignoring the unknown operator. Ignoring an unknown constraint could grant broader access than intended. The error response SHOULD include an `unknown_operators` array listing the unrecognized operator names. Clients receiving a grant with unknown operators SHOULD treat the constraint as opaque and not attempt to interpret it locally.
+
 **Example: constrained grant**
 
 ```json
@@ -521,10 +527,11 @@ Removing an algorithm from the discovery list MUST NOT invalidate existing agent
 
 ### 4.2 Host JWT
 
-Hosts authenticate by signing short-lived JWTs per [RFC 7519](https://datatracker.ietf.org/doc/html/rfc7519) with the host's private key. The JWT header MUST include `kid` when using a JWKS URL.
+Hosts authenticate by signing short-lived JWTs per [RFC 7519](https://datatracker.ietf.org/doc/html/rfc7519) with the host's private key. The JWT header MUST set `typ` to `host+jwt` and MUST include `kid` when using a JWKS URL. Servers MUST reject host-authenticated requests where the JWT `typ` is not `host+jwt`.
 
 | Claim | Type | Required | Description |
 |---|---|---|---|
+| `iss` | string | Yes | Host identifier. MUST be the JWK thumbprint ([RFC 7638](https://datatracker.ietf.org/doc/html/rfc7638)) of the host's signing public key, computed using SHA-256. This is always the thumbprint of the key used to sign this JWT, regardless of whether the key is provided inline (`host_public_key`) or via JWKS (`host_jwks_url`). |
 | `aud` | string | Yes | Server's `issuer` URL from discovery. |
 | `iat` | number | Yes | Issued-at timestamp. |
 | `exp` | number | Yes | Expiration timestamp. |
@@ -535,10 +542,17 @@ Hosts authenticate by signing short-lived JWTs per [RFC 7519](https://datatracke
 | `agent_jwks_url` | string | Conditional | JWKS URL for the agent's public keys. Required for registration (§5.3) unless `agent_public_key` is provided. Not required on other endpoints. |
 | `agent_kid` | string | Conditional | Key ID for the agent's key in the agent JWKS. Required when `agent_jwks_url` is provided. |
 
+**Host identity and `iss` verification:**
+
+- **Inline-key hosts** (`host_public_key`): The server identifies the host by `iss` (the key's thumbprint). For known hosts, `iss` MUST match the stored identifier. Key rotation via §5.9 updates the stored identifier atomically.
+- **JWKS-based hosts** (`host_jwks_url`): The server identifies the host by the `host_jwks_url` value, which is stable across key rotations. The `iss` claim MUST still match the thumbprint of the signing key (identified by `kid` in the JWT header), but when the host rotates its signing key, `iss` changes. The server resolves this by looking up the host by `host_jwks_url`, then re-fetching the JWKS to discover the new key (see §8.7).
+- **New hosts** (registration): The server MUST compute the JWK thumbprint of the presented signing key and verify it matches `iss` — reject if they differ.
+
 **Example Host JWT payload (for registration):**
 
 ```json
 {
+  "iss": "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs",
   "aud": "https://api.example.com",
   "iat": 1710000000,
   "exp": 1710000060,
@@ -552,10 +566,11 @@ Host and agent JWKS URLs MUST point to different endpoints. Servers that fetch J
 
 ### 4.3 Agent JWT
 
-Agents authenticate by signing short-lived JWTs per [RFC 7519](https://datatracker.ietf.org/doc/html/rfc7519). JWTs SHOULD expire within 60 seconds.
+Agents authenticate by signing short-lived JWTs per [RFC 7519](https://datatracker.ietf.org/doc/html/rfc7519). The JWT header MUST set `typ` to `agent+jwt`. JWTs SHOULD expire within 60 seconds. Servers MUST reject agent-authenticated requests where the JWT `typ` is not `agent+jwt`.
 
 | Claim | Type | Required | Description |
 |---|---|---|---|
+| `iss` | string | Yes | The host's identifier as known by this server — the JWK thumbprint of the host's current signing key (same value as the host JWT `iss`). Allows the server to resolve the agent's parent host without a database lookup on `sub` first. |
 | `sub` | string | Yes | Agent ID. |
 | `aud` | string | Yes | Server's `issuer` URL from discovery. |
 | `iat` | number | Yes | Issued-at timestamp. |
@@ -567,6 +582,7 @@ Agents authenticate by signing short-lived JWTs per [RFC 7519](https://datatrack
 
 ```json
 {
+  "iss": "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs",
   "sub": "agt_k7x9m2",
   "aud": "https://api.example.com",
   "iat": 1710000000,
@@ -579,6 +595,7 @@ Agents authenticate by signing short-lived JWTs per [RFC 7519](https://datatrack
 
 ```json
 {
+  "iss": "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs",
   "sub": "agt_k7x9m2",
   "aud": "https://api.example.com",
   "iat": 1710000000,
@@ -599,20 +616,41 @@ For higher-security deployments, servers MAY require a standard proof-of-possess
 
 ### 4.5 Verification
 
-1. Extract `sub` from JWT (agent ID)
-2. Verify `aud` matches the server's own `issuer` URL — reject if it doesn't
-3. Look up the agent by `sub`
-4. Look up the agent's host — reject if the host is revoked or pending
-5. Check agent status — reject if revoked, expired, or pending
-6. Verify JWT signature against the agent's stored public key (or JWKS)
-7. Check `exp`, `iat`, `jti` replay
-8. If proof of possession is required by server policy, validate the DPoP proof or mTLS binding and ensure it matches the JWT's `cnf` claim
-9. Resolve the agent's granted capabilities
-10. If `capabilities` claim is present in the JWT, intersect with granted capabilities — reject if the requested operation is not in the intersection
-11. If the matching grant carries `constraints` (§2.13), validate that the request arguments satisfy all constraints — reject with `constraint_violated` if any are violated
-12. Process the request
+1. Verify the JWT header `typ` is `agent+jwt` — reject if it is not (prevents token confusion with host JWTs)
+2. Extract `iss` and `sub` from JWT
+3. Verify `aud` matches the server's own `issuer` URL — reject if it doesn't
+4. Look up the host by `iss`. If not found, fall back to looking up the agent by `sub` first, then resolve its parent host — this handles the race window during JWKS key rotation where the agent uses the new `iss` before the server has updated the host's identifier (see §8.7). If the fallback was used, verify that `iss` corresponds to a valid key in the host's JWKS (the signature check in step 7 serves as this verification — if `iss` is not the thumbprint of the actual signing key, the signature will fail). Reject if the host is unknown, revoked, or pending.
+5. Look up the agent by `sub` — verify the agent belongs to the resolved host
+6. Check agent status — reject if revoked, expired, or pending
+7. Verify JWT signature against the agent's stored public key (or JWKS)
+8. Check `exp`, `iat`, `jti` replay
+9. If proof of possession is required by server policy, validate the DPoP proof or mTLS binding and ensure it matches the JWT's `cnf` claim
+10. Resolve the agent's granted capabilities
+11. If `capabilities` claim is present in the JWT, intersect with granted capabilities — reject if the requested operation is not in the intersection
+12. If the matching grant carries `constraints` (§2.13), validate that the request arguments satisfy all constraints — reject with `constraint_violated` if any are violated
+13. Process the request
 
 The server MUST ensure that revocation takes effect within a bounded window.
+
+### 4.5.1 Host JWT Verification
+
+Host-authenticated endpoints (`POST /agent/register`, `GET /agent/status`, `POST /agent/reactivate`, `POST /agent/revoke`, key rotation endpoints) MUST verify the host JWT as follows:
+
+1. Verify the JWT header `typ` is `host+jwt` — reject if it is not
+2. Extract `iss` from JWT
+3. Verify `aud` matches the server's own `issuer` URL — reject if it doesn't
+4. Look up the host:
+   - **By `iss`** — if a host with this identifier is found, use it.
+   - **By `host_jwks_url`** (fallback) — if `iss` is not recognized but the JWT contains `host_jwks_url`, look up the host by that URL. If found, this is a key rotation: re-fetch the JWKS, locate the key matching the JWT header `kid`, verify its thumbprint matches `iss`, and update the stored host identifier.
+   - **Unknown host** — if neither lookup finds a match, this is a dynamic registration. Extract the signing key from `host_public_key` (or fetch from `host_jwks_url` using the JWT header `kid`). Compute the JWK thumbprint (RFC 7638, SHA-256) and reject if it does not match `iss`.
+5. Verify JWT signature against the host's public key
+6. Check `exp`, `iat` — reject if expired or issued in the future (see §8.2 for clock skew guidance)
+7. Check `jti` replay — reject if the `jti` has been seen within the JWT's lifetime window
+8. Check host status — reject if `revoked` or `rejected`. For `pending` hosts, only registration (§5.3) is allowed
+9. If this is a registration request, extract the agent key claims (`agent_public_key` or `agent_jwks_url` + `agent_kid`) for agent creation
+10. Process the request
+
+For dynamic registration with an unknown host, the server MUST NOT trust the host identity until user approval completes (see §8.10).
 
 ### 4.6 Replay Detection
 
@@ -769,12 +807,13 @@ Supports three authentication modes:
 }
 ```
 
-**Pagination fields:**
+**Response parameters:**
 
-| Field | Type | Description |
-|---|---|---|
-| `next_cursor` | string? | Opaque cursor to pass as `?cursor=` for the next page. `null` if there are no more results. |
-| `has_more` | boolean | `true` if more capabilities exist beyond this page. |
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `capabilities` | array | Yes | Array of capability summary objects. Each object carries the fields defined in §2.12 (`name`, `description`, and `grant_status` when authenticated with an agent JWT). |
+| `next_cursor` | string? | No | Opaque cursor for the next page. `null` if no more results. |
+| `has_more` | boolean | No | `true` if more capabilities exist beyond this page. |
 
 Pagination is optional — servers with a small capability set MAY return all capabilities in a single response with `has_more: false`. Clients MUST handle both paginated and non-paginated responses.
 
@@ -839,6 +878,8 @@ Returns the full detail for a single capability, including its input and output 
 }
 ```
 
+The response is a single capability object with all fields defined in §2.12 — `name`, `description`, `input` (when the capability takes arguments), `output` (when defined), and `grant_status` (when authenticated with an agent JWT). Clients MUST treat a missing `input` the same as an empty schema.
+
 If the capability name does not exist, the server MUST return `404` with error code `capability_not_found`.
 
 **Capability schema evolution:** Capability input and output schemas may change over time (e.g. new required fields, changed types). The protocol does not define a versioning mechanism for capabilities — capability names are opaque identifiers (§2.14) and servers are free to adopt naming conventions (e.g. `transfer_money_v2`) if needed. When a capability's schema changes and an agent sends arguments conforming to a stale schema, the server SHOULD reject the request with `400 invalid_request`. Clients SHOULD re-fetch `GET /capability/describe` (§5.2) on schema-related errors and present the updated schema to the agent.
@@ -898,6 +939,8 @@ Registration is keyed by the host identity plus the agent public key carried in 
 
 **Response parameters:**
 
+The response returns a subset of agent fields from §3.2, plus grant and approval data:
+
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `agent_id` | string | Yes | The server-assigned agent identifier. |
@@ -910,18 +953,11 @@ Registration is keyed by the host identity plus the agent public key carried in 
 
 **Capability grant fields in registration, status, reactivation, and request-capability responses:**
 
-When the grant status is `"active"`, each grant object MUST include full capability details (`description`, `input`, and `output` when defined). Grants with constraints MUST include the approved scope — the server MAY have narrowed the agent's proposed constraints or added server-policy constraints, and the returned constraints are the effective ones the agent must operate within. When the grant status is `"pending"`, the grant includes only `capability` and `status`. When the grant status is `"denied"`, the grant includes `capability`, `status`, and an optional human-readable `reason` (see §5.5 for the denied grant format).
+Each grant object carries the grant fields from §3.3 (`capability`, `status`, `constraints`, `granted_by`, `reason`) plus, for active grants, the capability's own fields from §2.12 (`description`, `input`, `output`). The conditional rules:
 
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `capability` | string | Yes | Capability identifier. |
-| `status` | string | Yes | `"active"`, `"pending"`, or `"denied"`. |
-| `description` | string | Active grants | Human-readable description. |
-| `input` | object | Active grants | JSON Schema for the capability's input. |
-| `output` | object | Active grants (when defined) | JSON Schema for the capability's output. |
-| `constraints` | object | Active grants (when scoped) | Effective input constraints (§2.13). |
-| `granted_by` | string | No | User or system actor who approved the grant. Servers MAY include this for audit purposes. |
-| `reason` | string | Denied grants | Human-readable explanation of the denial. |
+- **Active grants**: Include full capability details (`description`, `input`, `output` when defined). Grants with constraints MUST include the approved scope — the server MAY have narrowed the agent's proposed constraints or added server-policy constraints, and the returned constraints are the effective ones the agent must operate within.
+- **Pending grants**: Include only `capability` and `status`.
+- **Denied grants**: Include `capability`, `status`, and an optional human-readable `reason` (see §5.5 for the denied grant format).
 
 The introspect endpoint (§5.12) is an exception: it returns compact grant objects (`capability` and `status` only) because resource servers need to verify grants, not capability schemas.
 
@@ -1169,7 +1205,7 @@ Authorization: Bearer <host_jwt>
 
 **Response parameters:**
 
-The status endpoint is the comprehensive view of an agent. It returns the full agent data model (§3.2) plus all capability grants.
+The status endpoint is the comprehensive view of an agent. It returns the full agent data model (§3.2) plus all capability grants (grant fields as described in §5.3):
 
 | Field | Type | Required | Description |
 |---|---|---|---|
@@ -1304,11 +1340,10 @@ Reactivates an expired agent. Reactivation is a security checkpoint: the agent's
 
 **Response parameters:**
 
+The response returns the same fields as the status endpoint (§5.5) — all agent fields from §3.2 plus `agent_capability_grants` (grant fields as described in §5.3) — plus:
+
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `agent_id` | string | Yes | The agent identifier. |
-| `status` | string | Yes | `"active"` (auto-approved) or `"pending"` (approval required). |
-| `agent_capability_grants` | array | Yes | Array of the agent's new capability grants (grant fields as described in §5.3). |
 | `activated_at` | datetime | Conditional | The new activation time (ISO 8601). Present when `status` is `"active"`. |
 | `expires_at` | datetime | Conditional | The new session expiry (ISO 8601). Present when `status` is `"active"`. |
 | `approval` | object | Conditional | Approval flow object (§7.5). Present when `status` is `"pending"`. |
@@ -1419,6 +1454,11 @@ Revokes an agent permanently. The linked user MAY also revoke agents through the
 }
 ```
 
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `agent_id` | string | Yes | The revoked agent's ID. |
+| `status` | string | Yes | Always `"revoked"`. |
+
 ### 5.8 Key Rotation
 
 ```
@@ -1448,6 +1488,11 @@ This endpoint is intended for planned rotation and incident response. Because th
   "status": "active"
 }
 ```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `agent_id` | string | Yes | The agent whose key was rotated. |
+| `status` | string | Yes | The agent's current status (should be `"active"`). |
 
 ### 5.9 Rotate Host Key
 
@@ -1483,6 +1528,11 @@ Content-Type: application/json
 }
 ```
 
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `host_id` | string | Yes | The host whose key was rotated. |
+| `status` | string | Yes | The host's current status (should be `"active"`). |
+
 The server replaces the stored public key. Future host JWTs must be signed with the new key. Agent records, capability grants, linked user context, and trust remain bound to the host record.
 
 This endpoint is for inline key hosts only. JWKS-based hosts rotate by updating the key at their JWKS URL — servers pick up the new key on their next fetch. See §8.7 for rotation security considerations.
@@ -1512,6 +1562,12 @@ Authorization: Bearer <host_jwt>
   "agents_revoked": 3
 }
 ```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `host_id` | string | Yes | The revoked host's ID. |
+| `status` | string | Yes | Always `"revoked"`. |
+| `agents_revoked` | number | Yes | Count of agents revoked as part of the cascade (§8.5). |
 
 ---
 
@@ -1571,15 +1627,26 @@ When capability execution is not complete yet, the server MUST return `202 Accep
 }
 ```
 
-| Field | Type | Description |
-|---|---|---|
-| `data` | any | The capability's result. Present for sync responses. When the capability defines an output schema (§2.12–§2.15), this value SHOULD conform to it. |
-| `status` | string | `"pending"`, `"completed"`, or `"failed"`. Present for async responses. |
-| `status_url` | string | Absolute URL for polling async results. Present when the status is `"pending"`. |
-| `result` | any | Async result payload. Present when `status` is `"completed"`. |
-| `error` | object | Error details per §5.13. Present when the status is `"failed"`. |
+**Response parameters:**
 
-The `status_url` is polled until completion. Polling responses SHOULD use `200 OK` with the same async object shape and `status` set to `"pending"`, `"completed"`, or `"failed"`.
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `data` | any | Conditional | The capability's result. Present for sync responses. When the capability defines an output schema (§2.12–§2.15), this value SHOULD conform to it. |
+| `status` | string | Conditional | `"pending"`, `"completed"`, or `"failed"`. Present for async responses. |
+| `status_url` | string | Conditional | Absolute URL for polling async results. Present when `status` is `"pending"`. |
+| `result` | any | Conditional | Async result payload. Present when `status` is `"completed"`. |
+| `error` | object | Conditional | Error details per §5.13. Present when `status` is `"failed"`. |
+
+The response is one of the following shapes (mutually exclusive):
+
+- **Sync success** (`200`): MUST contain `data`. MUST NOT contain `status`, `status_url`, `result`, or `error`.
+- **Async pending** (`202`): MUST contain `status` (`"pending"`) and `status_url`. MUST NOT contain `data`, `result`, or `error`.
+- **Async completed** (`200`): MUST contain `status` (`"completed"`) and `result`. MUST NOT contain `data`, `status_url`, or `error`.
+- **Async failed** (`200`): MUST contain `status` (`"failed"`) and `error`. MUST NOT contain `data`, `status_url`, or `result`.
+
+The `status_url` is polled until completion. Polling requests MUST include an agent JWT in the `Authorization` header — the server MUST verify the JWT and confirm the requesting agent matches the agent that initiated the execution. Unauthenticated `status_url` endpoints are a security risk: anyone who discovers the URL could read execution results. Polling responses SHOULD use `200 OK` with the same async object shape and `status` set to `"pending"`, `"completed"`, or `"failed"`.
+
+Because agent JWTs are short-lived (SHOULD be ≤60 seconds per §8.2), the client MUST mint a fresh JWT for each polling request. For long-running operations, this means the client signs a new JWT on every poll cycle. This is by design — it ensures the server can enforce revocation checks on every poll rather than granting open-ended access through a long-lived token. Clients SHOULD use exponential backoff when polling (e.g. 1s, 2s, 4s, 8s up to a server-suggested maximum) to limit the number of JWTs minted.
 
 **Async polling authentication:** The `status_url` is server-generated and opaque. Servers SHOULD document the authentication requirements for polling their `status_url`. Common approaches include embedding a signed token in the URL itself, requiring the same Agent JWT used for the original execution request, or using no additional authentication when the URL is unguessable. Clients MUST be prepared to send the Agent JWT as a Bearer token when polling.
 
@@ -1592,6 +1659,8 @@ The `status_url` is polled until completion. Polling responses SHOULD use `200 O
 | `done` | Empty or final result JSON | Signals the stream is complete. Clients MUST close the connection after receiving this event. |
 
 If no `event:` field is set, the event defaults to `data`. Servers MUST send a `done` event to signal completion — clients MUST NOT rely on connection close alone as a termination signal.
+
+**Streaming and JWT expiry.** Unlike polling, an SSE stream can outlive the agent JWT that initiated it. The server authenticates the agent at connection time (the initial `POST /agent/execute` request carries the JWT). Once the stream is established, the server SHOULD enforce a maximum stream duration aligned with its security requirements (e.g. 5 minutes, 1 hour). Servers that require continuous authentication SHOULD terminate the stream when the initiating JWT's `exp` time is reached, requiring the client to reconnect with a fresh JWT. Servers that prioritize long-running streams over continuous auth MAY allow the stream to continue beyond JWT expiry, but MUST check agent and host revocation status periodically (e.g. every 60 seconds) and terminate the stream if the agent or host has been revoked.
 
 **Constraint enforcement:**
 
@@ -1615,6 +1684,7 @@ The `violations` array helps the agent self-correct — it can see exactly which
 | Status | Code | When |
 |---|---|---|
 | 400 | `invalid_request` | Missing or malformed `capability` |
+| 400 | `unknown_constraint_operator` | Grant contains an unrecognized constraint operator (§2.13) |
 | 403 | `capability_not_granted` | Agent does not have an active grant for this capability |
 | 403 | `constraint_violated` | Arguments violate the grant's constraints (§2.13) |
 | 403 | `agent_revoked` | Agent has been revoked |
@@ -1674,15 +1744,19 @@ Content-Type: application/json
 }
 ```
 
-| Field | Type | Description |
-|---|---|---|
-| `active` | boolean | `true` if the JWT is valid, the agent is active, and the signature verified. `false` for any reason (expired JWT, revoked agent, bad signature, unknown agent). |
-| `agent_id` | string | Agent ID (from JWT `sub` claim). Only present when `active: true`. |
-| `host_id` | string | Host that created this agent. Only present when `active: true`. |
-| `user_id` | string? | Linked user, if any. Only present when `active: true`. |
-| `agent_capability_grants` | array | Compact grant objects (`capability` and `status` only — not full capability details). Unlike other endpoints (§5.3), introspect omits `description`, `input`, `output`, and `constraints` because resource servers need to verify grants, not capability schemas. If the JWT contained a `capabilities` claim, only capabilities in that claim are included. Only present when `active: true`. |
-| `mode` | string | `"delegated"` or `"autonomous"`. Only present when `active: true`. |
-| `expires_at` | string? | Agent session expiry (ISO 8601). Only present when `active: true`. |
+**Response parameters:**
+
+The response includes a subset of agent fields from §3.2, plus compact grants. Unlike other endpoints (§5.3), introspect returns grant objects with only `capability` and `status` — no `description`, `input`, `output`, or `constraints` — because resource servers need to verify grants, not capability schemas.
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `active` | boolean | Yes | `true` if the JWT is valid, the agent is active, and the signature verified. `false` for any reason (expired JWT, revoked agent, bad signature, unknown agent). |
+| `agent_id` | string | Conditional | Agent ID (from JWT `sub` claim). Present when `active: true`. |
+| `host_id` | string | Conditional | Host that created this agent. Present when `active: true`. |
+| `user_id` | string? | No | Linked user, if any. Present when `active: true` and the host is linked. |
+| `agent_capability_grants` | array | Conditional | Compact grant objects (`capability` and `status` only). If the JWT contained a `capabilities` claim, only capabilities in that claim are included. Present when `active: true`. |
+| `mode` | string | Conditional | `"delegated"` or `"autonomous"`. Present when `active: true`. |
+| `expires_at` | string? | No | Agent session expiry (ISO 8601). Present when `active: true` and the agent has a session TTL. |
 
 The auth server performs the full verification flow (§4.5) and returns an active/inactive response.
 
@@ -1716,6 +1790,7 @@ The error value is a machine-readable code (a snake_case string). The message va
 | Status | Error Code | Meaning | Client Action |
 |---|---|---|---|
 | 400 | `invalid_request` | Malformed JSON, missing required fields, or invalid parameter types | Fix request and retry |
+| 400 | `unknown_constraint_operator` | A constraint contains an operator the server does not recognize (§2.13) | Remove or replace the unknown operator and retry |
 | 401 | `invalid_jwt` | JWT is invalid, expired, or signature failed | Re-sign and retry |
 | 403 | `agent_revoked` | Agent has been revoked | Cannot recover — create new agent |
 | 403 | `agent_expired` | Agent session has expired | Reactivate via `POST /agent/reactivate` (§5.6) |
@@ -2169,7 +2244,7 @@ Executes a granted capability through the server's execute endpoint (§5.11). Th
 
 **Behavior:**
 
-1. Sign an agent JWT scoped to this capability
+1. Sign an agent JWT scoped to this capability with `aud` set to the target server's `issuer` URL. See §8.18 for cross-server `aud` enforcement requirements.
 2. Call `POST /capability/execute` (§5.11) with the agent JWT, `capability`, and `arguments`
 3. Return the result to the agent
 4. For async responses (`status: "pending"`), poll the `status_url` until completion and return the final result
@@ -2220,6 +2295,16 @@ Each entry in `providers` is a standard discovery document (§5.1). The client M
 **Service registration:**
 
 How services are added to a registry is implementation-specific. A registry MAY accept submissions via API, require manual review, auto-discover from a crawl, or any other mechanism. The only protocol requirement is the search interface above.
+
+**Registry integrity:**
+
+Registries are a trust anchor — a poisoned registry entry can direct agents to malicious servers. Registries and clients SHOULD apply the following protections:
+
+- **Issuer verification.** Before adding a service to the registry, the registry SHOULD fetch `{issuer}/.well-known/agent-configuration` and verify that the discovery document's `issuer` field matches the submitted `issuer` URL exactly. This prevents an attacker from registering a service entry pointing to someone else's domain.
+- **TLS validation.** The registry MUST fetch discovery documents over HTTPS and validate the server's TLS certificate chain. Reject self-signed or expired certificates.
+- **Periodic re-validation.** Registries SHOULD periodically re-fetch and re-validate listed services (e.g. daily). Services whose discovery endpoints become unreachable, return errors, or fail issuer verification SHOULD be flagged or delisted.
+- **Spam and squatting prevention.** Public registries SHOULD require verification of domain ownership before listing a service (e.g. DNS TXT record, well-known file challenge). This prevents attackers from registering entries for domains they do not control.
+- **Client-side verification.** Clients SHOULD verify the `issuer` field in the discovery document returned by a registry entry matches the `issuer` in the registry result. If they differ, the client MUST reject the entry and SHOULD warn the user.
 
 ## 7. Approval Methods
 
@@ -2306,9 +2391,13 @@ General guidance:
 
 Private keys MUST never be transmitted to or stored on the server. The server stores only public keys or JWKS URLs.
 
-### 8.2 JWT Lifetime
+### 8.2 JWT Lifetime and Clock Skew
 
 JWTs SHOULD expire within 60 seconds. Short lifetimes limit misuse even without proof of possession.
+
+Servers SHOULD allow a clock skew tolerance of no more than 30 seconds when validating `exp` and `iat` claims. Servers MUST NOT accept JWTs with an `iat` more than 30 seconds in the future. Servers SHOULD log and monitor clock-skew rejections — a high rate may indicate misconfigured clients or replay attempts rather than legitimate clock drift.
+
+**Effective validity window.** With a 60-second JWT lifetime and 30-second clock skew tolerance, the effective window during which a JWT may be accepted is up to 90 seconds (60s lifetime + 30s skew on `exp`). Implementers MUST size their `jti` replay caches to cover this full effective window — not just the nominal JWT lifetime — to prevent replay attacks in the skew margin. For tighter security, reduce either the JWT lifetime or the skew tolerance. A 30-second lifetime with 5-second skew (35-second effective window) is appropriate for low-latency environments.
 
 ### 8.3 Proof of Possession
 
@@ -2339,7 +2428,11 @@ Inline key hosts rotate via `POST /host/rotate-key` (§5.9). Since the client do
 
 JWKS-based hosts rotate by updating their endpoint — the server picks up new keys on the next cache refresh (recommended: every 5 minutes or on `kid` miss). The old key SHOULD remain in the JWKS for a grace period to avoid rejecting in-flight requests.
 
+Because `iss` is the JWK thumbprint of the signing key, JWKS key rotation changes the host's `iss` value. The server updates its stored host identifier when it processes a host JWT signed with the new key (§4.5.1 step 3). However, there is a race window: agent JWTs may arrive with the new `iss` before any host JWT has triggered the update. Servers MUST handle this by falling back to the agent's `sub` to resolve the parent host when `iss` is unrecognized (§4.5 step 4). Servers SHOULD also retain the previous host identifier for a grace period matching the JWKS cache TTL.
+
 Hosts that register across many servers SHOULD prefer JWKS-based registration, since key rotation propagates automatically without the client needing to contact each server individually.
+
+**Key delivery mode is fixed at registration.** A host registered with `host_public_key` (inline) MUST NOT later present `host_jwks_url`, and vice versa. Servers MUST reject host JWTs where the key delivery mode differs from the one used at registration. This prevents an attacker who compromises a JWKS endpoint from pivoting to inline key registration to maintain persistent access after the JWKS is remediated. If a host needs to switch modes, it MUST re-register as a new host.
 
 ### 8.8 Agent Key Compromise
 
@@ -2353,6 +2446,25 @@ Mitigations:
 
 After registration, the agent authenticates independently with its own keypair — the host is not involved in every request. If binding agent requests to the host is required, implementations can enforce this at the server level.
 
+### 8.8.1 Host Key Compromise
+
+A compromised host key is significantly more damaging than a compromised agent key. The attacker can:
+
+- **Register arbitrary agents** under the host, gaining new capabilities
+- **Revoke the host** (denial of service to all agents under it)
+- **Rotate the host key** via §5.9 (inline-key hosts), locking out the legitimate owner
+- **Impersonate all future host-authenticated operations** — status checks, capability requests, agent management
+
+The inline key rotation endpoint (§5.9) is unusable during a host key compromise because it requires authentication with the current (compromised) key. The attacker can use it; the legitimate owner cannot.
+
+**Response:**
+
+1. **Revoke the host immediately.** The user (or server admin) MUST revoke the host through an out-of-band mechanism (dashboard, admin API, support). Revocation cascades to all agents under the host (§8.5).
+2. **Re-register.** After revocation, the client generates a new host keypair and registers as a new host. This creates a fresh identity with no connection to the compromised one.
+3. **JWKS hosts.** If using JWKS, revoke the compromised key at the JWKS endpoint. The server will pick up the removal on the next cache refresh. However, if the attacker has access to the JWKS endpoint itself, the endpoint is also compromised — treat this as a full host compromise and revoke.
+
+Servers SHOULD provide an authenticated, out-of-band mechanism (e.g. user dashboard) for users to revoke hosts without needing the host's private key. This is the only reliable recovery path for host key compromise.
+
 ### 8.9 Discovery Security
 
 Discovery of arbitrary URLs is a prompt injection vector. A malicious prompt can trick an agent into calling `discover_provider(url: "https://evil.com")`, which returns a fake configuration. The client then sends the host JWT to the attacker's "register" endpoint.
@@ -2363,12 +2475,18 @@ Mitigations:
 - **Allowlists.** Clients MAY maintain an allowlist of trusted service URLs.
 - **Proof on host-authenticated registration.** For **discovered servers** (not pre-configured), clients SHOULD use DPoP or an equivalent request-specific proof on host-authenticated registration requests so they cannot be replayed to a different endpoint.
 - **TLS verification.** Clients MUST verify TLS certificates when fetching discovery endpoints.
+- **Registry integrity.** When using registry-based discovery, clients SHOULD verify that the `issuer` in the fetched discovery document matches the `issuer` from the registry result. A mismatch indicates a poisoned registry entry or a man-in-the-middle attack. See §6.11 for registry-side protections.
+- **Algorithm downgrade protection.** See §8.16.
 
 ### 8.10 Approval Gravity
 
 User approval is the primary trust boundary in this protocol — for unknown host registration, capability escalation, and account linking.
 
+**Self-attestation during dynamic registration.** When a host registers for the first time, its JWT is self-signed — the public key is carried inside the JWT itself, and the server has never seen this host before. Anyone can create a valid host identity. The server MUST NOT grant any capabilities or trust the host identity until user approval completes. Until approval, the host and agent exist in `pending` state with no granted access. This is the designed trust model: the cryptographic identity is established immediately, but authorization is deferred entirely to the approval flow.
+
 First-time host approval is the highest-risk moment: the server knows nothing about the host beyond a self-signed keypair. Servers SHOULD present the requested capabilities clearly and warn if the host is requesting unusually broad access.
+
+**Display-text safety.** Several protocol fields shown on approval screens are attacker-controlled: `name`, `reason`, `host_name`, and `binding_message` (CIBA). A malicious host could set `host_name` to `"Apple Security Update"` or `reason` to social-engineering text designed to manipulate the user into approving. Servers MUST sanitize these fields before rendering — strip HTML, limit length, and escape special characters. Servers SHOULD warn users when display names resemble well-known brands or services (e.g. homoglyph detection). Servers MUST NOT render these fields as trusted content (no raw HTML, no markdown interpretation, no clickable links).
 
 Capability escalation deserves the same scrutiny. Servers SHOULD NOT auto-approve high-risk capabilities even for linked hosts. Servers MUST calibrate approval requirements to the sensitivity of their capabilities — the protocol provides the mechanism (approval flows, fresh auth, 2FA), but the server decides which to enforce.
 
@@ -2413,6 +2531,29 @@ Both servers and clients fetch external URLs as part of the protocol. The threat
 
 For discovery-specific protections (allowlists, user confirmation, TLS verification), see §8.9.
 
+**JWKS content validation.** After fetching a JWKS document, servers and clients MUST validate its contents before using any keys:
+
+- The response MUST be valid JSON conforming to [RFC 7517 §5](https://datatracker.ietf.org/doc/html/rfc7517#section-5). Reject responses that do not parse as a JWK Set.
+- The `keys` array MUST contain at least one key. Reject empty key sets.
+- Each key MUST include `kty` and the required parameters for its key type. Reject keys with missing or unrecognized key type parameters.
+- Only asymmetric key types (`RSA`, `EC`, `OKP`) are permitted. Reject symmetric keys (`kty: "oct"`) — symmetric keys have no place in this protocol and their presence indicates a misconfiguration or attack.
+- If `kid` is expected (e.g. referenced in a JWT header), the set MUST contain a key with that `kid`. Reject if the expected key is not found.
+- Servers SHOULD limit the number of keys in a JWKS response (e.g. 20 keys). An attacker-controlled JWKS with many keys forces the server to attempt signature verification against each one.
+- Servers SHOULD cache JWKS responses per [RFC 7517](https://datatracker.ietf.org/doc/html/rfc7517) cache headers, with a maximum cache duration (e.g. 24 hours) and a minimum refresh interval (e.g. 5 minutes) to prevent cache-busting attacks.
+
+**Server-returned URL validation.** The protections above cover URLs that clients and servers *fetch from external sources*. Clients MUST also validate URLs that the *server returns* to them — `status_url` (§5.11 async polling), `verification_uri` (§7.1 device authorization), and `notification_url` (§10.8.2 real-time approval). A malicious or compromised server could return URLs that:
+
+- Point to the client's local network (client-side SSRF via `status_url`)
+- Serve phishing pages designed to harvest user credentials (via `verification_uri`)
+- Exfiltrate data via DNS or HTTP requests to attacker-controlled domains
+
+Clients MUST apply the following to server-returned URLs:
+
+- **HTTPS only.** Reject `http://` URLs.
+- **Origin validation.** For `status_url`, the URL MUST share the same origin (scheme + host + port) as the server's `issuer` URL. Reject cross-origin polling URLs. For `verification_uri`, the URL SHOULD match the server's origin or a known authorization domain for that server.
+- **IP filtering.** Clients SHOULD block `status_url` values that resolve to private, loopback, or link-local IP ranges (same filtering as §8.12 server-side fetches, applied client-side).
+- **User visibility.** For `verification_uri` shown to users, the client SHOULD display the full URL so the user can verify the domain before entering credentials.
+
 ### 8.13 Rate Limiting
 
 Servers MUST implement rate limiting. Agents can generate high request volumes — both legitimately and due to bugs or compromised keys.
@@ -2452,15 +2593,49 @@ The protocol relies on JWT signatures over TLS for authentication. For high-secu
 
 These are optional enhancements. The base protocol's security model (short-lived signed JWTs + TLS) is sufficient for most deployments. Proof of possession adds defense-in-depth for environments where token theft or replay is a realistic threat.
 
+### 8.15 Capability Name Squatting
+
+Capability names are server-defined strings and MUST be treated as opaque identifiers by clients. Because the server defines and controls its own capability namespace, capability name squatting (where an attacker pre-registers a capability name to hijack later requests) is not a protocol-level threat — the server is authoritative over its own names.
+
+However, if a server allows hosts to _suggest_ new capability names during registration (an extension behavior, not defined in this specification), the server MUST validate suggested names against its own namespace and reject conflicts. The risk in this scenario is a confused-deputy attack where a malicious host registers a capability name that collides with a legitimate one.
+
+### 8.16 Discovery Downgrade Attacks
+
+The `algorithms` field in discovery (§5.1) tells clients which key types the server accepts. If an attacker can modify the discovery document in transit (e.g. via a compromised cache or DNS hijack), they could remove strong algorithms and force clients to register with weaker ones.
+
+Mitigations:
+
+- **TLS is the primary defense.** Discovery documents are fetched over HTTPS (§8.9), which protects against in-transit modification. This threat is only relevant if TLS is compromised or if a client accepts discovery documents over an insecure channel.
+- **Clients SHOULD reject unexpected algorithm downgrades.** If a client has previously connected to a server that supported `Ed25519` and a subsequent discovery fetch no longer lists it, the client SHOULD warn the user or refuse to proceed rather than silently falling back to a weaker algorithm.
+- **Servers MUST NOT remove algorithms that are still in active use.** Removing an algorithm from `algorithms` MUST NOT invalidate existing registrations (§4.1), but the server SHOULD NOT remove an algorithm unless it has a documented migration path for existing hosts and agents using it.
+
+### 8.17 Constraint Enforcement Atomicity
+
+Constraints (§2.13) are validated at the time the server processes the execution request (§5.11). However, the underlying data or state may change between validation and actual execution — a time-of-check/time-of-use (TOCTOU) gap. For example, a constraint of `max_amount: 1000` is checked against the request's `amount` field, but if the execution involves multiple steps, the effective amount could differ by the time the operation completes.
+
+This is an implementation concern, not a protocol-level issue — the protocol defines *what* constraints mean, not *how* the server executes operations internally. However, servers SHOULD be aware of the TOCTOU risk:
+
+- **Atomic validation.** Where possible, servers SHOULD validate constraints and execute the operation atomically (e.g. within a database transaction).
+- **Re-validation.** For multi-step or asynchronous operations, servers SHOULD re-validate constraints at each step that could violate them, not just at the initial request.
+- **Idempotency.** Servers SHOULD ensure that constraint-validated operations are idempotent where applicable, so that retries after partial failures do not bypass constraints.
+
+### 8.18 Cross-Server Capability Confusion
+
+Each agent JWT includes an `aud` claim set to the server's `issuer` URL (§4.3). This prevents a JWT intended for server A from being accepted by server B — the `aud` check in verification (§4.5 step 3) rejects it. However, this only works if both sides enforce `aud`:
+
+- **Servers MUST reject JWTs where `aud` does not exactly match their own `issuer` URL.** This is already required (§4.5 step 3) but is restated here for emphasis.
+- **Clients MUST set `aud` to the specific server's `issuer` URL for each request.** A client that sets `aud` to a wildcard or reuses JWTs across servers defeats this protection.
+- **Clients MUST NOT reuse a signed JWT across multiple servers.** Even if two servers happen to share a capability name (e.g. `send_email`), the JWT for one is not valid for the other.
+
 ## 9. Privacy Considerations
 
 ### 9.1 Host Key Correlation
 
-A host uses the same keypair across all servers it connects to. This means two colluding servers can correlate activity: if `bank.com` and `shop.com` both see the same host public key, they know the same client is connecting to both. This is analogous to a browser fingerprint.
+A host uses the same keypair (or JWKS URL) across all servers it connects to. This means two colluding servers can correlate activity: if `bank.com` and `shop.com` both see the same host public key, they know the same client is connecting to both.
 
-Mitigations:
-- **Per-server host keys.** Clients MAY generate a separate host keypair for each server. This eliminates cross-server correlation at the cost of more keys to manage.
-- **JWKS rotation.** Hosts using JWKS URLs can rotate keys independently per server, but the JWKS URL itself is a stable identifier — rotating the URL too is necessary for full unlinkability.
+This is a deliberate design trade-off, not a vulnerability. A shared host identity enables host reputation — servers can build trust for a host based on its behavior over time, and future protocol extensions may allow servers to vouch for known hosts. It also keeps client implementation simple: one keypair, no per-server key management.
+
+Clients that require unlinkability across servers MAY generate a separate host keypair per server — either randomly or by deriving per-server keys from a single root secret using HKDF ([RFC 5869](https://datatracker.ietf.org/doc/html/rfc5869)) with the server's `issuer` URL as context, avoiding the need to store one keypair per server. This is not expected to be common and is incompatible with JWKS-based host keys (where the URL itself is a stable cross-server identifier).
 
 ### 9.2 Agent Activity Tracking
 
@@ -2500,11 +2675,11 @@ A separate revocation set (bloom filter, in-memory set, Redis) enables O(1) revo
 
 ### 10.3 Replay Detection Storage
 
-The `jti` replay cache does not need persistence. Replay detection only matters within the JWT's lifetime window (SHOULD be ≤60 seconds). An in-memory cache or probabilistic structure (bloom filter) with a TTL matching the JWT's max age is sufficient. The cache is partitioned by identity (agent ID or host ID) — see §4.6.
+The `jti` replay cache does not need persistence. Replay detection only matters within the effective validity window — the JWT's lifetime plus clock skew tolerance (see §8.2). With the default 60-second lifetime and 30-second skew, this is 90 seconds. An in-memory cache or probabilistic structure (bloom filter) with a TTL matching the effective window is sufficient. The cache is partitioned by identity (agent ID or host ID) — see §4.6.
 
 ### 10.4 JWKS Caching
 
-Servers that fetch JWKS URLs SHOULD cache the response and refresh periodically (recommended: every 5 minutes or on `kid` miss). Servers SHOULD handle JWKS URL unavailability gracefully — use previously cached keys and return a clear error if the URL is unreachable and no cached keys exist.
+Servers that fetch JWKS URLs SHOULD cache the response and refresh periodically (recommended: every 5 minutes or on `kid` miss). Servers SHOULD handle JWKS URL unavailability gracefully — use previously cached keys and return a clear error if the URL is unreachable and no cached keys exist. For JWKS content validation requirements (key type restrictions, key count limits, `kid` matching), see §8.12.
 
 ### 10.5 Discovery Caching
 
