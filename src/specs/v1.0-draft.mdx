@@ -56,6 +56,10 @@ When the agent needs to act, it authenticates with short-lived signed JWTs tied 
 
 The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in BCP 14 [RFC 2119](https://datatracker.ietf.org/doc/html/rfc2119) [RFC 8174](https://datatracker.ietf.org/doc/html/rfc8174) when, and only when, they appear in capitalized form, as shown here.
 
+### 1.4.1 Type Notation
+
+In tables throughout this specification, a trailing `?` on a type (e.g. `string?`) indicates the field is **nullable** — it may be present with a `null` value. This is distinct from "optional" (the field may be omitted entirely). A field marked as nullable and optional (e.g. `string?` with Required = "No") may be either absent or present with a `null` value.
+
 ### 1.5 Terminology
 - **Principal** — An identity the server can authenticate, authorize, audit, and revoke independently. In this protocol, both hosts and agents are principals.
 - **Agent** — A runtime AI actor scoped to a specific conversation, task, or session that calls external services. Each agent is registered under a host (§2.7), carries its own server-side identity, granted capabilities, and lifecycle, and authenticates with short-lived signed JWTs (§4.3).
@@ -364,6 +368,8 @@ Supported operators:
 | `not_in` | array | Value must not be one of the listed values |
 
 Operators MAY be combined on a single field: `{ "min": 0, "max": 1000 }` means the value must be between 0 and 1000 inclusive. Exact values and operator objects MUST NOT be combined on the same field.
+
+**Unknown operators.** If a server encounters a constraint operator it does not recognize (e.g. from a future protocol extension or a client proposing new operators), the server MUST reject the grant or execution request with `400 unknown_constraint_operator` rather than silently ignoring the unknown operator. Ignoring an unknown constraint could grant broader access than intended. The error response SHOULD include an `unknown_operators` array listing the unrecognized operator names. Clients receiving a grant with unknown operators SHOULD treat the constraint as opaque and not attempt to interpret it locally.
 
 **Example: constrained grant**
 
@@ -759,12 +765,13 @@ Supports three authentication modes:
 }
 ```
 
-**Pagination fields:**
+**Response parameters:**
 
-| Field | Type | Description |
-|---|---|---|
-| `next_cursor` | string? | Opaque cursor to pass as `?cursor=` for the next page. `null` if there are no more results. |
-| `has_more` | boolean | `true` if more capabilities exist beyond this page. |
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `capabilities` | array | Yes | Array of capability summary objects. Each object carries the fields defined in §2.12 (`name`, `description`, and `grant_status` when authenticated with an agent JWT). |
+| `next_cursor` | string? | No | Opaque cursor for the next page. `null` if no more results. |
+| `has_more` | boolean | No | `true` if more capabilities exist beyond this page. |
 
 Pagination is optional — servers with a small capability set MAY return all capabilities in a single response with `has_more: false`. Clients MUST handle both paginated and non-paginated responses.
 
@@ -829,6 +836,8 @@ Returns the full detail for a single capability, including its input and output 
 }
 ```
 
+The response is a single capability object with all fields defined in §2.12 — `name`, `description`, `input` (when the capability takes arguments), `output` (when defined), and `grant_status` (when authenticated with an agent JWT). Clients MUST treat a missing `input` the same as an empty schema.
+
 If the capability name does not exist, the server MUST return `404` with error code `capability_not_found`.
 
 ### 5.3 Agent Registration
@@ -886,6 +895,8 @@ Registration is keyed by the host identity plus the agent public key carried in 
 
 **Response parameters:**
 
+The response returns a subset of agent fields from §3.2, plus grant and approval data:
+
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `agent_id` | string | Yes | The server-assigned agent identifier. |
@@ -898,18 +909,11 @@ Registration is keyed by the host identity plus the agent public key carried in 
 
 **Capability grant fields in registration, status, reactivation, and request-capability responses:**
 
-When the grant status is `"active"`, each grant object MUST include full capability details (`description`, `input`, and `output` when defined). Grants with constraints MUST include the approved scope — the server MAY have narrowed the agent's proposed constraints or added server-policy constraints, and the returned constraints are the effective ones the agent must operate within. When the grant status is `"pending"`, the grant includes only `capability` and `status`. When the grant status is `"denied"`, the grant includes `capability`, `status`, and an optional human-readable `reason` (see §5.5 for the denied grant format).
+Each grant object carries the grant fields from §3.3 (`capability`, `status`, `constraints`, `granted_by`, `reason`) plus, for active grants, the capability's own fields from §2.12 (`description`, `input`, `output`). The conditional rules:
 
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `capability` | string | Yes | Capability identifier. |
-| `status` | string | Yes | `"active"`, `"pending"`, or `"denied"`. |
-| `description` | string | Active grants | Human-readable description. |
-| `input` | object | Active grants | JSON Schema for the capability's input. |
-| `output` | object | Active grants (when defined) | JSON Schema for the capability's output. |
-| `constraints` | object | Active grants (when scoped) | Effective input constraints (§2.13). |
-| `granted_by` | string | No | User or system actor who approved the grant. Servers MAY include this for audit purposes. |
-| `reason` | string | Denied grants | Human-readable explanation of the denial. |
+- **Active grants**: Include full capability details (`description`, `input`, `output` when defined). Grants with constraints MUST include the approved scope — the server MAY have narrowed the agent's proposed constraints or added server-policy constraints, and the returned constraints are the effective ones the agent must operate within.
+- **Pending grants**: Include only `capability` and `status`.
+- **Denied grants**: Include `capability`, `status`, and an optional human-readable `reason` (see §5.5 for the denied grant format).
 
 The introspect endpoint (§5.12) is an exception: it returns compact grant objects (`capability` and `status` only) because resource servers need to verify grants, not capability schemas.
 
@@ -1003,6 +1007,23 @@ The introspect endpoint (§5.12) is an exception: it returns compact grant objec
 
 The client polls `GET /agent/status` (§5.5) at the `interval` rate until the agent's status changes from `"pending"` to `"active"` (or the request expires).
 
+**Partial approval.** When a registration requests multiple capabilities, the user MAY approve some and deny others. The server MUST reflect this in the `agent_capability_grants` array — each grant carries its own `status` (`"active"`, `"pending"`, or `"denied"`). The agent's top-level `status` is `"active"` as long as at least one capability was approved. A fully denied registration (all capabilities denied) sets the agent status to `"active"` with an empty or all-denied grants array — the agent exists but has no capabilities, and may request additional ones via §5.4. Servers SHOULD include a `reason` field (string) on denied grants so the agent (or user) understands why (see §3.3 `reason` field).
+
+**Partial approval response example:**
+
+```json
+{
+  "agent_id": "agt_abc123",
+  "host_id": "hst_xyz789",
+  "name": "Bank assistant",
+  "mode": "delegated",
+  "status": "active",
+  "agent_capability_grants": [
+    { "capability": "check_balance", "status": "active" },
+    { "capability": "transfer_international", "status": "denied", "reason": "International transfers require additional KYC verification" }
+  ]
+}
+```
 
 ### 5.4 Request Capability
 
@@ -1140,7 +1161,7 @@ Authorization: Bearer <host_jwt>
 
 **Response parameters:**
 
-The status endpoint is the comprehensive view of an agent. It returns the full agent data model (§3.2) plus all capability grants.
+The status endpoint is the comprehensive view of an agent. It returns the full agent data model (§3.2) plus all capability grants (grant fields as described in §5.3):
 
 | Field | Type | Required | Description |
 |---|---|---|---|
@@ -1275,11 +1296,10 @@ Reactivates an expired agent. Reactivation is a security checkpoint: the agent's
 
 **Response parameters:**
 
+The response returns the same fields as the status endpoint (§5.5) — all agent fields from §3.2 plus `agent_capability_grants` (grant fields as described in §5.3) — plus:
+
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `agent_id` | string | Yes | The agent identifier. |
-| `status` | string | Yes | `"active"` (auto-approved) or `"pending"` (approval required). |
-| `agent_capability_grants` | array | Yes | Array of the agent's new capability grants (grant fields as described in §5.3). |
 | `activated_at` | datetime | Conditional | The new activation time (ISO 8601). Present when `status` is `"active"`. |
 | `expires_at` | datetime | Conditional | The new session expiry (ISO 8601). Present when `status` is `"active"`. |
 | `approval` | object | Conditional | Approval flow object (§7.5). Present when `status` is `"pending"`. |
@@ -1390,6 +1410,11 @@ Revokes an agent permanently. The linked user MAY also revoke agents through the
 }
 ```
 
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `agent_id` | string | Yes | The revoked agent's ID. |
+| `status` | string | Yes | Always `"revoked"`. |
+
 ### 5.8 Key Rotation
 
 ```
@@ -1419,6 +1444,11 @@ This endpoint is intended for planned rotation and incident response. Because th
   "status": "active"
 }
 ```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `agent_id` | string | Yes | The agent whose key was rotated. |
+| `status` | string | Yes | The agent's current status (should be `"active"`). |
 
 ### 5.9 Rotate Host Key
 
@@ -1454,6 +1484,11 @@ Content-Type: application/json
 }
 ```
 
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `host_id` | string | Yes | The host whose key was rotated. |
+| `status` | string | Yes | The host's current status (should be `"active"`). |
+
 The server replaces the stored public key. Future host JWTs must be signed with the new key. Agent records, capability grants, linked user context, and trust remain bound to the host record.
 
 This endpoint is for inline key hosts only. JWKS-based hosts rotate by updating the key at their JWKS URL — servers pick up the new key on their next fetch. See §8.7 for rotation security considerations.
@@ -1483,6 +1518,12 @@ Authorization: Bearer <host_jwt>
   "agents_revoked": 3
 }
 ```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `host_id` | string | Yes | The revoked host's ID. |
+| `status` | string | Yes | Always `"revoked"`. |
+| `agents_revoked` | number | Yes | Count of agents revoked as part of the cascade (§8.5). |
 
 ---
 
@@ -1542,13 +1583,22 @@ When capability execution is not complete yet, the server MUST return `202 Accep
 }
 ```
 
-| Field | Type | Description |
-|---|---|---|
-| `data` | any | The capability's result. Present for sync responses. When the capability defines an output schema (§2.12–§2.15), this value SHOULD conform to it. |
-| `status` | string | `"pending"`, `"completed"`, or `"failed"`. Present for async responses. |
-| `status_url` | string | Absolute URL for polling async results. Present when the status is `"pending"`. |
-| `result` | any | Async result payload. Present when `status` is `"completed"`. |
-| `error` | object | Error details per §5.13. Present when the status is `"failed"`. |
+**Response parameters:**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `data` | any | Conditional | The capability's result. Present for sync responses. When the capability defines an output schema (§2.12–§2.15), this value SHOULD conform to it. |
+| `status` | string | Conditional | `"pending"`, `"completed"`, or `"failed"`. Present for async responses. |
+| `status_url` | string | Conditional | Absolute URL for polling async results. Present when `status` is `"pending"`. |
+| `result` | any | Conditional | Async result payload. Present when `status` is `"completed"`. |
+| `error` | object | Conditional | Error details per §5.13. Present when `status` is `"failed"`. |
+
+The response is one of the following shapes (mutually exclusive):
+
+- **Sync success** (`200`): MUST contain `data`. MUST NOT contain `status`, `status_url`, `result`, or `error`.
+- **Async pending** (`202`): MUST contain `status` (`"pending"`) and `status_url`. MUST NOT contain `data`, `result`, or `error`.
+- **Async completed** (`200`): MUST contain `status` (`"completed"`) and `result`. MUST NOT contain `data`, `status_url`, or `error`.
+- **Async failed** (`200`): MUST contain `status` (`"failed"`) and `error`. MUST NOT contain `data`, `status_url`, or `result`.
 
 The `status_url` is polled until completion. Polling responses SHOULD use `200 OK` with the same async object shape and `status` set to `"pending"`, `"completed"`, or `"failed"`.
 
@@ -1576,6 +1626,7 @@ The `violations` array helps the agent self-correct — it can see exactly which
 | Status | Code | When |
 |---|---|---|
 | 400 | `invalid_request` | Missing or malformed `capability` |
+| 400 | `unknown_constraint_operator` | Grant contains an unrecognized constraint operator (§2.13) |
 | 403 | `capability_not_granted` | Agent does not have an active grant for this capability |
 | 403 | `constraint_violated` | Arguments violate the grant's constraints (§2.13) |
 | 403 | `agent_revoked` | Agent has been revoked |
@@ -1635,15 +1686,19 @@ Content-Type: application/json
 }
 ```
 
-| Field | Type | Description |
-|---|---|---|
-| `active` | boolean | `true` if the JWT is valid, the agent is active, and the signature verified. `false` for any reason (expired JWT, revoked agent, bad signature, unknown agent). |
-| `agent_id` | string | Agent ID (from JWT `sub` claim). Only present when `active: true`. |
-| `host_id` | string | Host that created this agent. Only present when `active: true`. |
-| `user_id` | string? | Linked user, if any. Only present when `active: true`. |
-| `agent_capability_grants` | array | Compact grant objects (`capability` and `status` only — not full capability details). Unlike other endpoints (§5.3), introspect omits `description`, `input`, `output`, and `constraints` because resource servers need to verify grants, not capability schemas. If the JWT contained a `capabilities` claim, only capabilities in that claim are included. Only present when `active: true`. |
-| `mode` | string | `"delegated"` or `"autonomous"`. Only present when `active: true`. |
-| `expires_at` | string? | Agent session expiry (ISO 8601). Only present when `active: true`. |
+**Response parameters:**
+
+The response includes a subset of agent fields from §3.2, plus compact grants. Unlike other endpoints (§5.3), introspect returns grant objects with only `capability` and `status` — no `description`, `input`, `output`, or `constraints` — because resource servers need to verify grants, not capability schemas.
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `active` | boolean | Yes | `true` if the JWT is valid, the agent is active, and the signature verified. `false` for any reason (expired JWT, revoked agent, bad signature, unknown agent). |
+| `agent_id` | string | Conditional | Agent ID (from JWT `sub` claim). Present when `active: true`. |
+| `host_id` | string | Conditional | Host that created this agent. Present when `active: true`. |
+| `user_id` | string? | No | Linked user, if any. Present when `active: true` and the host is linked. |
+| `agent_capability_grants` | array | Conditional | Compact grant objects (`capability` and `status` only). If the JWT contained a `capabilities` claim, only capabilities in that claim are included. Present when `active: true`. |
+| `mode` | string | Conditional | `"delegated"` or `"autonomous"`. Present when `active: true`. |
+| `expires_at` | string? | No | Agent session expiry (ISO 8601). Present when `active: true` and the agent has a session TTL. |
 
 The auth server performs the full verification flow (§4.5) and returns an active/inactive response.
 
@@ -1677,6 +1732,7 @@ The error value is a machine-readable code (a snake_case string). The message va
 | Status | Error Code | Meaning | Client Action |
 |---|---|---|---|
 | 400 | `invalid_request` | Malformed JSON, missing required fields, or invalid parameter types | Fix request and retry |
+| 400 | `unknown_constraint_operator` | A constraint contains an operator the server does not recognize (§2.13) | Remove or replace the unknown operator and retry |
 | 401 | `invalid_jwt` | JWT is invalid, expired, or signature failed | Re-sign and retry |
 | 403 | `agent_revoked` | Agent has been revoked | Cannot recover — create new agent |
 | 403 | `agent_expired` | Agent session has expired | Reactivate via `POST /agent/reactivate` (§5.6) |
