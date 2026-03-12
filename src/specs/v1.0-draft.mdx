@@ -248,6 +248,8 @@ Once linked, future delegated agents through this host can be auto-approved for 
 
 **Host unlinking.** A server MAY allow a user to unlink a host (e.g. through a dashboard "disconnect app" action). When a host is unlinked, the server MUST revoke all delegated agents under that host, since they derived their authority from the now-removed user linkage. The host itself returns to an unlinked state and MAY continue to provision autonomous agents if the server's policy allows it. Servers that do not support host unlinking SHOULD require the user to revoke the host entirely instead.
 
+**Account switching.** To switch a host to a different user account, the client unlinks the host (revoking all agents), then re-links to the new user through the same linking mechanisms above. The host retains its `host_id` and key material across the unlink/re-link cycle — only the `user_id` binding changes. After re-linking, agents MUST be re-registered under the new user context.
+
 ### 2.10 Autonomous Agent Claiming
 
 When a host becomes linked, all active autonomous agents under that host MUST be claimed:
@@ -503,7 +505,7 @@ Implementations MAY use flat arrays on the agent model instead of a separate tab
 
 The core protocol models an agent as having one effective user context at a time (`agent.user_id`). A capability grant MAY still record a different `granted_by` value for audit purposes — for example, an admin or another authorized reviewer may approve a capability request — but that does not change which user the agent is acting for.
 
-More advanced workflows where a single agent accumulates authority from multiple end users, targets specific users for approval, or selects a subject at execution time are not part of the core protocol. Those patterns are defined, if at all, by extension profiles such as the Cross-User Grant Profile (§10.9.1).
+More advanced workflows where a single agent accumulates authority from multiple end users, targets specific users for approval, or selects a subject at execution time are not part of the core protocol. Those patterns are defined, if at all, by extension profiles such as the Cross-User Grant Profile (§10.10.1).
 
 ## 4. Authentication
 
@@ -719,7 +721,7 @@ This endpoint enables generic clients to work with any Agent Auth server. Purpos
 | `issuer` | string | Yes | Base URL of the authorization server |
 | `algorithms` | string[] | Yes | Supported key types for registration. In this spec version, only `Ed25519` is defined. |
 | `modes` | string[] | Yes | Supported registration modes: `"delegated"`, `"autonomous"`, or both |
-| `approval_methods` | string[] | Yes | How user approval works. Defined core values: `"device_authorization"` (RFC 8628), `"ciba"` (Client Initiated Backchannel Authentication). Servers MAY include additional custom methods defined by extension profiles (see §10.9.3). Clients SHOULD ignore methods they don't recognize. |
+| `approval_methods` | string[] | Yes | How user approval works. Defined core values: `"device_authorization"` (RFC 8628), `"ciba"` (Client Initiated Backchannel Authentication). Servers MAY include additional custom methods defined by extension profiles (see §10.10.3). Clients SHOULD ignore methods they don't recognize. |
 | `endpoints` | object | Yes | Server API endpoint paths, relative to `issuer` |
 | `jwks_uri` | string | No | URL to the server's JWKS (JSON Web Key Set). Enables clients to verify server-signed responses in future protocol extensions. Servers that plan to sign responses SHOULD include this. |
 
@@ -2325,7 +2327,7 @@ The approval object appears in responses from `POST /agent/register` (§5.3), `P
 | `binding_message` | string | ciba | No | Short message displayed to the user to confirm what they are approving. |
 | `expires_in` | number | All | Yes | Seconds until the approval flow expires. |
 | `interval` | number | All | Yes | Minimum polling interval in seconds for `GET /agent/status`. |
-| `notification_url` | string | All | No | SSE endpoint for real-time approval updates (§10.9.2). |
+| `notification_url` | string | All | No | SSE endpoint for real-time approval updates (§10.10.2). |
 
 ### 7.1 Device Authorization (RFC 8628)
 
@@ -2371,11 +2373,11 @@ Servers implementing CIBA MUST follow the security considerations in [CIBA Core 
 
 ### 7.3 Real-Time Notification (Optional)
 
-Polling is the baseline for all core approval methods. Real-time approval notification is defined as an extension profile in §10.9.2. Core clients MUST function correctly using polling alone.
+Polling is the baseline for all core approval methods. Real-time approval notification is defined as an extension profile in §10.10.2. Core clients MUST function correctly using polling alone.
 
 ### 7.4 Server-Defined
 
-Custom approval methods are not part of the core protocol. They are defined, if at all, by extension profiles such as the Server-Defined Approval Profile (§10.9.3).
+Custom approval methods are not part of the core protocol. They are defined, if at all, by extension profiles such as the Server-Defined Approval Profile (§10.10.3).
 
 ### 7.5 Method Selection
 
@@ -2541,7 +2543,7 @@ For discovery-specific protections (allowlists, user confirmation, TLS verificat
 - Servers SHOULD limit the number of keys in a JWKS response (e.g. 20 keys). An attacker-controlled JWKS with many keys forces the server to attempt signature verification against each one.
 - Servers SHOULD cache JWKS responses per [RFC 7517](https://datatracker.ietf.org/doc/html/rfc7517) cache headers, with a maximum cache duration (e.g. 24 hours) and a minimum refresh interval (e.g. 5 minutes) to prevent cache-busting attacks.
 
-**Server-returned URL validation.** The protections above cover URLs that clients and servers *fetch from external sources*. Clients MUST also validate URLs that the *server returns* to them — `status_url` (§5.11 async polling), `verification_uri` (§7.1 device authorization), and `notification_url` (§10.8.2 real-time approval). A malicious or compromised server could return URLs that:
+**Server-returned URL validation.** The protections above cover URLs that clients and servers *fetch from external sources*. Clients MUST also validate URLs that the *server returns* to them — `status_url` (§5.11 async polling), `verification_uri` (§7.1 device authorization), and `notification_url` (§10.10.2 real-time approval). A malicious or compromised server could return URLs that:
 
 - Point to the client's local network (client-side SSRF via `status_url`)
 - Serve phishing pages designed to harvest user credentials (via `verification_uri`)
@@ -2691,7 +2693,15 @@ Clients MUST respect HTTP `Cache-Control` headers when present (§5.1). When no 
 
 Purpose-built clients that skip discovery and use pre-configured endpoints (as noted in §5.1) are not affected by this guidance.
 
-### 10.6 Client Key Storage
+### 10.6 Capability Caching
+
+Capability list (`GET /capability/list`, §5.2) and describe (`GET /capability/describe`, §5.2.1) responses change more frequently than discovery — servers may add, remove, or update capabilities at any time (§2.12). Servers SHOULD include `Cache-Control` headers on capability responses. A `max-age` of 300 (five minutes) is RECOMMENDED.
+
+Clients SHOULD cache capability responses locally to avoid redundant network requests. Because capability responses can be auth-dependent (different results for unauthenticated, host JWT, and agent JWT requests), clients MUST key their cache by both the endpoint URL and the requesting identity (unauthenticated, a specific host, or a specific agent).
+
+Clients MUST invalidate their cached capability list and re-fetch when they receive `capability_not_found` or `invalid_request` errors during execution — this signals that the cached list or schema is stale. Clients SHOULD NOT cache capability responses for longer than one hour even when no `Cache-Control` header is present.
+
+### 10.7 Client Key Storage
 
 Clients SHOULD store private keys securely:
 - **Desktop/server:** OS keychain, encrypted file, or hardware security module
@@ -2700,19 +2710,19 @@ Clients SHOULD store private keys securely:
 
 The protocol does not mandate a storage mechanism. The security of the system depends on the client protecting its private keys.
 
-### 10.7 User-Facing Terminology
+### 10.8 User-Facing Terminology
 
 The protocol uses "host" to describe the client's persistent identity on a server. This term is precise for implementers but not meaningful to end users. In user-facing surfaces — dashboards, approval screens, settings pages — servers SHOULD present hosts using familiar labels such as "Connected Apps," "Applications," or "Authorized Apps." The protocol term "host" is for the spec and wire format; the display name is an implementation choice.
 
-### 10.8 Pending Agent Cleanup
+### 10.9 Pending Agent Cleanup
 
 Servers SHOULD periodically clean up agents that remain in `pending` state beyond a server-defined threshold (e.g. 24 hours, 7 days). Cleaned-up pending agents are deleted, not revoked — they never became active. Hosts in `pending` state should be cleaned up similarly.
 
-### 10.9 Extension Profiles
+### 10.10 Extension Profiles
 
 The following profiles are outside the core interoperability surface of this specification. Clients and servers MAY implement them by agreement, but conformant implementations MUST NOT assume support unless the relevant profile is explicitly documented by the server.
 
-#### 10.9.1 Cross-User Grant Profile
+#### 10.10.1 Cross-User Grant Profile
 
 This profile allows a capability grant's approver (`granted_by`) to be different from the agent's effective user context (`agent.user_id`) in ways that affect authorization semantics, not just audit history.
 
@@ -2724,7 +2734,7 @@ Examples include:
 
 This profile requires additional protocol surface beyond the core specification, such as targeting fields, approval-routing rules, introspection extensions, and execution semantics that tell the resource server whose authority is being exercised. Those details are intentionally left to profile-specific definitions.
 
-#### 10.9.2 Real-Time Approval Notification Profile
+#### 10.10.2 Real-Time Approval Notification Profile
 
 This profile augments the core polling model with a notification URL in the approval object:
 
@@ -2743,7 +2753,7 @@ This profile augments the core polling model with a notification URL in the appr
 
 The client connects to the notification URL via SSE and receives an event when the approval completes, is denied, or expires. If that URL is absent or the connection fails, the client MUST fall back to polling `GET /agent/status`.
 
-#### 10.9.3 Server-Defined Approval Profile
+#### 10.10.3 Server-Defined Approval Profile
 
 This profile allows servers to expose approval methods beyond the core `"device_authorization"` and `"ciba"` set. Extension-defined methods appear in the discovery approval-methods list and in the returned approval method value.
 
