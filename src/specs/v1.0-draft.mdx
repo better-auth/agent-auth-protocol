@@ -171,6 +171,8 @@ In autonomous mode (`"autonomous"`), the agent operates without a user in the lo
 
 A server MAY support delegated agents, autonomous agents, or both. Servers advertise supported modes via discovery (§5.1) and MUST reject registration requests for any unsupported mode.
 
+**Sub-agents.** This protocol's identity model treats a sub-agent as part of its parent agent — they share the same credentials, capabilities, and user context, so they are the same principal. A single agent MAY issue concurrent requests with the same JWT.
+
 ### 2.3 Agent States
 
 Every agent is in exactly one state at any time. Only `active` agents can authenticate and make requests.
@@ -205,7 +207,7 @@ The full reactivation mechanics — including which capabilities are auto-approv
 ### 2.6 Revocation
 
 An agent can be revoked by:
-- **Itself** — the agent requests its own revocation through the client
+- **Itself** — the agent requests its own revocation through the client, which uses its host JWT to call `POST /agent/revoke` (§5.7) on the agent's behalf
 - **Its host** — the host under which the agent is registered
 - **The owning user** — through the server's management UI or API
 - **An admin** — as defined by the server
@@ -343,7 +345,7 @@ The same capability name can appear in different parts of the protocol for diffe
 
 A capability grant MAY carry **constraints** — restrictions on the input values an agent is authorized to supply when executing the capability. Constraints turn a broad capability into a narrow, specific authorization: instead of granting "transfer money" with no limits, the server can grant "transfer up to $1,000 in USD to account acc_456."
 
-Constraints are stored per grant on the agent capability grant record (§3.3). They use the capability's input field names as keys. A grant without constraints permits any valid input — constraints are purely additive.
+Constraints are stored per grant on the agent capability grant record (§3.3). They use the capability's **top-level** input field names as keys — nested paths (e.g. `"address.country"`) are not supported. A grant without constraints permits any valid input — constraints are purely additive.
 
 **How constraints are established:**
 
@@ -351,7 +353,7 @@ Constraints are stored per grant on the agent capability grant record (§3.3). T
 2. **Server-imposed.** The server MAY add or narrow constraints as policy, independent of what the agent requested. For example, the server may cap all transfer grants at $10,000 even if the agent didn't propose a limit.
 3. **Combined.** The server takes the intersection — the tightest constraint from either source wins.
 
-The server MUST NOT widen constraints beyond what the agent requested without a new approval. The server MAY narrow them.
+The server MUST NOT widen constraints beyond what the agent requested without a new approval. The server MAY narrow them. Clients SHOULD compare the constraints returned in the grant against what they originally proposed — if the server returned wider constraints than requested (indicating a server bug or compromise), the client SHOULD warn the user or refuse the grant.
 
 **Constraint value format:**
 
@@ -839,6 +841,8 @@ Returns the full detail for a single capability, including its input and output 
 
 If the capability name does not exist, the server MUST return `404` with error code `capability_not_found`.
 
+**Capability schema evolution:** Capability input and output schemas may change over time (e.g. new required fields, changed types). The protocol does not define a versioning mechanism for capabilities — capability names are opaque identifiers (§2.14) and servers are free to adopt naming conventions (e.g. `transfer_money_v2`) if needed. When a capability's schema changes and an agent sends arguments conforming to a stale schema, the server SHOULD reject the request with `400 invalid_request`. Clients SHOULD re-fetch `GET /capability/describe` (§5.2) on schema-related errors and present the updated schema to the agent.
+
 ### 5.3 Agent Registration
 
 ```
@@ -1011,6 +1015,23 @@ The introspect endpoint (§5.12) is an exception: it returns compact grant objec
 
 The client polls `GET /agent/status` (§5.5) at the `interval` rate until the agent's status changes from `"pending"` to `"active"` (or the request expires).
 
+**Partial approval.** When a registration requests multiple capabilities, the user MAY approve some and deny others. The server MUST reflect this in the `agent_capability_grants` array — each grant carries its own `status` (`"active"`, `"pending"`, or `"denied"`). The agent's top-level `status` is `"active"` as long as at least one capability was approved. A fully denied registration (all capabilities denied) sets the agent status to `"active"` with an empty or all-denied grants array. This is intentional: the agent identity exists and can request additional capabilities via §5.4 without re-registering. Clients SHOULD check the grants array after registration and inform the agent which capabilities were denied. Servers SHOULD include a `reason` field (string) on denied grants so the agent (or user) understands why (see §3.3 `reason` field).
+
+**Partial approval response example:**
+
+```json
+{
+  "agent_id": "agt_abc123",
+  "host_id": "hst_xyz789",
+  "name": "Bank assistant",
+  "mode": "delegated",
+  "status": "active",
+  "agent_capability_grants": [
+    { "capability": "check_balance", "status": "active" },
+    { "capability": "transfer_international", "status": "denied", "reason": "International transfers require additional KYC verification" }
+  ]
+}
+```
 
 ### 5.4 Request Capability
 
@@ -1560,7 +1581,17 @@ When capability execution is not complete yet, the server MUST return `202 Accep
 
 The `status_url` is polled until completion. Polling responses SHOULD use `200 OK` with the same async object shape and `status` set to `"pending"`, `"completed"`, or `"failed"`.
 
-For streaming capabilities, the server returns a `200` response with `Content-Type: text/event-stream` and streams Server-Sent Events. The client SHOULD expose the stream to the agent when the transport supports it.
+**Async polling authentication:** The `status_url` is server-generated and opaque. Servers SHOULD document the authentication requirements for polling their `status_url`. Common approaches include embedding a signed token in the URL itself, requiring the same Agent JWT used for the original execution request, or using no additional authentication when the URL is unguessable. Clients MUST be prepared to send the Agent JWT as a Bearer token when polling.
+
+**Streaming:** For streaming capabilities, the server returns a `200` response with `Content-Type: text/event-stream` and streams Server-Sent Events. The client SHOULD expose the stream to the agent when the transport supports it. Servers MUST use the following SSE event types:
+
+| Event type | Data | Description |
+|---|---|---|
+| `data` | Capability-specific JSON chunk | An incremental result chunk. The schema is defined by the capability's output definition. |
+| `error` | Error object per §5.13 | An error occurred during streaming execution. |
+| `done` | Empty or final result JSON | Signals the stream is complete. Clients MUST close the connection after receiving this event. |
+
+If no `event:` field is set, the event defaults to `data`. Servers MUST send a `done` event to signal completion — clients MUST NOT rely on connection close alone as a termination signal.
 
 **Constraint enforcement:**
 
@@ -2196,6 +2227,21 @@ When a registration or capability request requires user consent, the server retu
 
 Servers MUST support device authorization (§7.1) as the baseline approval method. Servers SHOULD also support CIBA (§7.2) — it provides a better user experience when the server already knows the user's identity. Other methods are OPTIONAL.
 
+**Approval object schema:**
+
+The approval object appears in responses from `POST /agent/register` (§5.3), `POST /agent/request-capability` (§5.4), and `POST /agent/reactivate` (§5.6) when the request requires user consent. The object always includes a `method` field indicating which approval method the server selected, plus method-specific fields:
+
+| Field | Type | Methods | Required | Description |
+|---|---|---|---|---|
+| `method` | string | All | Yes | The selected approval method (`"device_authorization"`, `"ciba"`, or a server-defined method). |
+| `verification_uri` | string | device_authorization | Yes | URL the user navigates to for approval. |
+| `verification_uri_complete` | string | device_authorization | No | Pre-filled URL including the user code. |
+| `user_code` | string | device_authorization | Yes | Code the user enters at the verification URI. |
+| `binding_message` | string | ciba | No | Short message displayed to the user to confirm what they are approving. |
+| `expires_in` | number | All | Yes | Seconds until the approval flow expires. |
+| `interval` | number | All | Yes | Minimum polling interval in seconds for `GET /agent/status`. |
+| `notification_url` | string | All | No | SSE endpoint for real-time approval updates (§10.9.2). |
+
 ### 7.1 Device Authorization (RFC 8628)
 
 The baseline approval method. Every conformant server MUST support this. Used when the client cannot directly interact with the user — the user navigates to a URL and enters a code on a separate device. Polling behavior, error responses, and security considerations follow [RFC 8628](https://datatracker.ietf.org/doc/html/rfc8628).
@@ -2207,7 +2253,7 @@ The baseline approval method. Every conformant server MUST support this. Used wh
 
 **Agent Auth-specific behavior:**
 
-- **Pending registration retries are idempotent.** A client MAY retry `POST /agent/register` with the same host identity and agent keypair. The server SHOULD recognize the existing pending agent and return the same agent ID, along with either the current approval state or a refreshed approval flow.
+- **Pending registration retries are idempotent.** See §5.3 "Idempotency and retry semantics" for the authoritative definition.
 - **User denial is terminal for that attempt.** If the approval flow returns `access_denied`, the server SHOULD transition the agent to `rejected` (not `pending`). The client MUST NOT automatically retry a denied registration.
 - **Pending agent cleanup.** Servers SHOULD periodically clean up agents that remain in `pending` state beyond a server-defined threshold (e.g. 24 hours, 7 days). Cleaned-up pending agents are deleted, not revoked — they never became active.
 
@@ -2338,9 +2384,9 @@ Mitigations, from least to most restrictive:
 - **Hardware security keys** — physical interaction required
 - **TOTP/OTP from a separate device** — ensures the approver has a second factor the agent can't access
 
-Approval pages SHOULD require fresh user authentication — a long-lived session cookie alone is not sufficient.
+Approval pages MUST require fresh user authentication — a long-lived session cookie alone is not sufficient.
 
-The same applies to [CIBA](https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html) approvals. An agent with access to the user's notification channel (email tools, push notifications) could intercept the approval request. CIBA approval endpoints SHOULD require fresh authentication before completing the approval.
+The same applies to [CIBA](https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html) approvals. An agent with access to the user's notification channel (email tools, push notifications) could intercept the approval request. CIBA approval endpoints MUST require fresh authentication before completing the approval. This is mandatory, not optional — agents are first-class actors in this protocol and routinely have access to the same channels used for notifications, making auto-approval a concrete attack vector rather than a theoretical one.
 
 ### 8.12 URL Fetch Protection
 
