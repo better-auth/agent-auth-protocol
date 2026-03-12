@@ -24,40 +24,9 @@ export const prerender = true;
         The registry is a client-side discovery aid, not part of the core server protocol. When an agent calls <code>search_providers</code>, the client queries its configured registry to find matching providers. Registries can be public (open to all services), private (enterprise-only), or bundled with the client as a static list.
       </p>
 
-      <p>
-        The registry URL is configured on the client. Clients should prefer registry lookups over fetching arbitrary URLs provided by agents, as this provides a trust boundary for discovery (see <a href="/docs/security">Security Considerations</a>).
-      </p>
-
-      <h2 id="registry-implementations">Registry implementations</h2>
-
-      <p>There are several registry implementations available:</p>
-
-      <table>
-        <thead>
-          <tr>
-            <th>Registry</th>
-            <th>URL</th>
-            <th>Description</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><strong>ARM</strong></td>
-            <td><a href="https://arm.directory">arm.directory</a></td>
-            <td>Agent Registry Management — a public registry for Agent Auth providers</td>
-          </tr>
-          <tr>
-            <td><strong>Better Auth Registry</strong></td>
-            <td><a href="https://registry.better-auth.com">registry.better-auth.com</a></td>
-            <td>Registry maintained by the Better Auth team</td>
-          </tr>
-          <tr>
-            <td><strong>Protocol Registry</strong></td>
-            <td><a href="https://registry.agent-auth-protocol.com">registry.agent-auth-protocol.com</a></td>
-            <td>Official protocol registry</td>
-          </tr>
-        </tbody>
-      </table>
+     
+      
+  
 
       <h2 id="search-interface">Search interface</h2>
 

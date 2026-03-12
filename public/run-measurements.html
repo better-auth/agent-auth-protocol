@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Run Measurements</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        pre {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Position Measurements</h1>
+    <button onclick="runMeasurements()">Run Measurements on /specification</button>
+    <button onclick="window.open('http://localhost:4321/specification', '_blank')">Open /specification in new tab</button>
+    <pre id="results">Click "Run Measurements" to execute the script...</pre>
+    
+    <script>
+        function runMeasurements() {
+            // Open the specification page in an iframe to measure it
+            const iframe = document.createElement('iframe');
+            iframe.src = 'http://localhost:4321/specification';
+            iframe.style.width = '1920px';
+            iframe.style.height = '1080px';
+            iframe.style.position = 'absolute';
+            iframe.style.left = '-9999px';
+            document.body.appendChild(iframe);
+            
+            iframe.onload = () => {
+                setTimeout(() => {
+                    try {
+                        const doc = iframe.contentDocument || iframe.contentWindow.document;
+                        const logo = doc.querySelector('nav a[href="/"]');
+                        const specShell = doc.querySelector('.spec-shell');
+                        const readerContent = doc.querySelector('.spec-reader-content');
+                        const contentArea = doc.querySelector('.spec-content-area');
+                        
+                        const results = {};
+                        [['logo', logo], ['spec-shell', specShell], ['reader-content', readerContent], ['content-area', contentArea]].forEach(([name, el]) => {
+                            if (el) {
+                                const rect = el.getBoundingClientRect();
+                                results[name] = { left: rect.left, width: rect.width };
+                            } else {
+                                results[name] = 'NOT FOUND';
+                            }
+                        });
+                        
+                        document.getElementById('results').textContent = JSON.stringify(results, null, 2);
+                        document.body.removeChild(iframe);
+                    } catch (e) {
+                        document.getElementById('results').textContent = 'Error: ' + e.message + '\n\nThis might be due to CORS restrictions. Please use the browser console on the /specification page directly.';
+                        document.body.removeChild(iframe);
+                    }
+                }, 1000);
+            };
+        }
+    </script>
+</body>
+</html>

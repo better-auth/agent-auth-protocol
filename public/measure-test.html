@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Measurement Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #000;
+            color: #0f0;
+        }
+        pre {
+            background: #111;
+            padding: 20px;
+            border: 1px solid #0f0;
+            overflow: auto;
+            font-size: 12px;
+        }
+        #status {
+            color: #ff0;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="status">Loading specification page...</div>
+    <pre id="results"></pre>
+    <script>
+        // Wait a moment for the page to be ready
+        setTimeout(() => {
+            // Navigate to the specification page
+            window.location.href = 'http://localhost:4321/specification';
+        }, 100);
+        
+        // If we're on the specification page, run the measurement
+        if (window.location.pathname === '/specification') {
+            setTimeout(() => {
+                const logo = document.querySelector('nav a[href="/"]');
+                const specShell = document.querySelector('.spec-shell');
+                const readerContent = document.querySelector('.spec-reader-content');
+                const contentArea = document.querySelector('.spec-content-area');
+                const specContent = document.querySelector('.spec-content');
+                const toc = document.querySelector('.spec-reader-toc');
+                
+                const results = {};
+                [['logo', logo], ['spec-shell', specShell], ['reader-content', readerContent], ['content-area', contentArea], ['spec-content', specContent], ['toc', toc]].forEach(([name, el]) => {
+                    if (el) {
+                        const rect = el.getBoundingClientRect();
+                        const cs = getComputedStyle(el);
+                        results[name] = {
+                            left: rect.left,
+                            right: rect.right,
+                            width: rect.width,
+                            paddingLeft: cs.paddingLeft,
+                            paddingRight: cs.paddingRight,
+                            marginLeft: cs.marginLeft,
+                            marginRight: cs.marginRight,
+                            maxWidth: cs.maxWidth,
+                            boxSizing: cs.boxSizing
+                        };
+                    }
+                });
+                
+                // Create a floating results box
+                const resultsDiv = document.createElement('div');
+                resultsDiv.style.cssText = `
+                    position: fixed;
+                    top: 10px;
+                    right: 10px;
+                    background: #000;
+                    color: #0f0;
+                    padding: 20px;
+                    border: 2px solid #0f0;
+                    z-index: 999999;
+                    max-width: 600px;
+                    max-height: 80vh;
+                    overflow: auto;
+                    font-family: monospace;
+                    font-size: 11px;
+                    white-space: pre;
+                `;
+                resultsDiv.textContent = JSON.stringify(results, null, 2);
+                resultsDiv.id = 'measurement-results';
+                document.body.appendChild(resultsDiv);
+                
+                // Also log to console
+                console.log('MEASUREMENT_RESULTS:', JSON.stringify(results, null, 2));
+            }, 1000);
+        }
+    </script>
+</body>
+</html>

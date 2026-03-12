@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Running Measurement</title>
+    <meta http-equiv="refresh" content="0; url=/specification">
+    <script>
+        // This script will run after redirect to /specification
+        window.addEventListener('load', function() {
+            if (window.location.pathname === '/specification') {
+                // Wait for page to be fully loaded
+                setTimeout(function() {
+                    // Load and execute the measurement script
+                    fetch('/inject-measure.js')
+                        .then(r => r.text())
+                        .then(script => {
+                            eval(script);
+                        });
+                }, 1000);
+            }
+        });
+    </script>
+</head>
+<body>
+    <p>Redirecting to specification page...</p>
+</body>
+</html>

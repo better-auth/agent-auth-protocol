@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Measure Positions</title>
+    <script>
+        window.addEventListener('load', () => {
+            // Wait a bit for the parent page to load if in iframe
+            setTimeout(() => {
+                const logo = window.parent.document.querySelector('nav a[href="/"]');
+                const specShell = window.parent.document.querySelector('.spec-shell');
+                const readerContent = window.parent.document.querySelector('.spec-reader-content');
+                const contentArea = window.parent.document.querySelector('.spec-content-area');
+                
+                const results = {};
+                [['logo', logo], ['spec-shell', specShell], ['reader-content', readerContent], ['content-area', contentArea]].forEach(([name, el]) => {
+                    if (el) {
+                        const rect = el.getBoundingClientRect();
+                        results[name] = { left: rect.left, width: rect.width };
+                    }
+                });
+                
+                document.getElementById('results').textContent = JSON.stringify(results, null, 2);
+            }, 500);
+        });
+    </script>
+</head>
+<body>
+    <h1>Position Measurements</h1>
+    <pre id="results">Loading...</pre>
+</body>
+</html>
