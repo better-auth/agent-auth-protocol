@@ -2385,6 +2385,8 @@ General guidance:
 - **[CIBA](https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html)** when the server already knows the user (for example, the host is already linked to a user or the client provides a login hint the server can resolve)
 - **Device authorization** when the user is unknown and must navigate to a URL themselves
 
+Servers SHOULD prefer CIBA over device authorization when the requesting agent has potential browser access (desktop copilots, browser extensions, MCP servers with browser tools). CIBA delivers the approval prompt to a separate device or channel that the browser-controlling agent cannot intercept. Device authorization remains appropriate when the agent does not control a browser — CLI tools, headless workers, and server-side agents. See §8.11 for the full threat model.
+
 ## 8. Security Considerations
 
 ### 8.1 Private Keys
@@ -2505,6 +2507,19 @@ Mitigations, from least to most restrictive:
 Approval pages MUST require fresh user authentication — a long-lived session cookie alone is not sufficient.
 
 The same applies to [CIBA](https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html) approvals. An agent with access to the user's notification channel (email tools, push notifications) could intercept the approval request. CIBA approval endpoints MUST require fresh authentication before completing the approval. This is mandatory, not optional — agents are first-class actors in this protocol and routinely have access to the same channels used for notifications, making auto-approval a concrete attack vector rather than a theoretical one.
+
+**Agent-controlled browser.** When an agent controls the same browser as the approving user — which is common in desktop copilots, browser-extension agents, and MCP servers with browser tools — fresh authentication alone is insufficient. The agent can navigate to the approval URL, trigger re-authentication via the browser's stored credentials or password manager, and click "Approve" without any human involvement. This is not specific to Agent Auth; it breaks all web-based consent flows. But Agent Auth MUST address it because agents controlling the user's browser is a first-class use case, not an edge case.
+
+The only reliable proof-of-human in this scenario is a **physical gesture** that the browser's API will not complete without user interaction:
+
+- **WebAuthn / passkeys** with `userVerification: "required"` — the OS prompts for a fingerprint, face scan, or PIN. No JavaScript or browser automation can bypass the biometric prompt.
+- **Hardware security keys** (FIDO2 / U2F) — require a physical button press.
+
+Servers MUST require proof of physical presence (WebAuthn, hardware key) or use an out-of-band approval channel (CIBA on a separate device) when approving capabilities that can modify data or perform actions on behalf of the user. Device authorization with only password-based re-authentication is NOT sufficient when the agent may control the browser. Read-only capability grants MAY use weaker approval methods at the server's discretion.
+
+When using WebAuthn for approval, servers MUST set `userVerification` to `"required"` in the WebAuthn challenge options. The values `"preferred"` and `"discouraged"` allow some devices to skip the biometric check and fall back to device-possession-only verification, which an agent controlling the browser can satisfy.
+
+As AI agents gain access to additional modalities (voice, vision, physical actuators), servers SHOULD periodically reassess whether their chosen proof-of-presence mechanism remains sufficient.
 
 ### 8.12 URL Fetch Protection
 
