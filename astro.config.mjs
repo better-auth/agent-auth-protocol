@@ -11,6 +11,7 @@ export default defineConfig({
   devToolbar: { enabled: false },
   redirects: {
     '/overview': '/docs/introduction',
+    '/implementations': '/code',
   },
   vite: {
     plugins: [tailwindcss()],

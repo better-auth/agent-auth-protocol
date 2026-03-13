@@ -11,7 +11,10 @@ export interface SidebarSection {
 export const sidebar: SidebarSection[] = [
 	{
 		title: "Get started",
-		items: [{ label: "What is Agent Auth?", href: "/docs/introduction" }],
+		items: [
+			{ label: "What is Agent Auth?", href: "/docs/introduction" },
+			{ label: "Architecture", href: "/docs/architecture" },
+		],
 	},
 	{
 		title: "Concepts",
@@ -30,7 +33,12 @@ export const sidebar: SidebarSection[] = [
 			{ label: "Build a server", href: "/docs/build-server" },
 			{ label: "Integrate the client", href: "/docs/integrate-client" },
 			{ label: "SDKs", href: "/docs/sdks" },
-			{ label: "Security Considerations", href: "/docs/security" },
+		],
+	},
+	{
+		title: "Security",
+		items: [
+			{ label: "Security considerations", href: "/docs/security" },
 		],
 	},
 ];

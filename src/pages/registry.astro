@@ -2,98 +2,162 @@
 import Layout from "@/layouts/Layout.astro";
 import Nav from "@/components/Nav.astro";
 import Footer from "@/components/Footer.astro";
-import { Code } from "astro:components";
 
 export const prerender = true;
+
+const registeredServices = [
+  {
+    name: "Better Auth Demo",
+    domain: "demo.agentauth.dev",
+    description: "Reference implementation demo server for testing Agent Auth flows.",
+    modes: ["delegated", "autonomous"],
+    capabilities: 4,
+  },
+];
 ---
 
 <Layout title="Registry — Agent Auth Protocol" darkMode>
   <Nav active="/registry" showThemeToggle />
 
-  <main class="mx-auto max-w-3xl px-5 sm:px-6 py-12 sm:py-16">
-    <article class="docs-prose">
-      <h1>Registry</h1>
+  <main class="flex-1">
+    <div class="mx-auto max-w-[1400px] px-5 sm:px-6 py-16 sm:py-20">
+      <!-- Header -->
+      <div class="max-w-3xl mb-14">
+        <p class="text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-[0.2em] text-[var(--color-muted)] mb-4">Registry</p>
+        <h1 class="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight mb-6">Service Directory</h1>
+        <p class="text-[15px] text-[var(--color-muted)] leading-[1.85] font-[family-name:var(--font-serif)]">
+          The registry is a searchable index of services that support the Agent Auth Protocol. Agents can discover providers by intent — search for "banking" or "send emails" and find matching services automatically.
+        </p>
+      </div>
 
-      <p>
-        A registry is a searchable index of services that support Agent Auth. It enables agents to discover providers by intent — instead of needing a URL upfront, an agent can search for "banking" or "send emails" and find matching services automatically.
-      </p>
+      <!-- How it works -->
+      <div class="flex items-center gap-3 mb-8">
+        <span class="text-[10px] font-[family-name:var(--font-mono)] tracking-[0.15em] uppercase text-[var(--color-muted)]">How it works</span>
+        <div class="flex-1 border-t border-[var(--color-border)]"></div>
+      </div>
 
-      <h2 id="what-is-the-registry">What is the registry?</h2>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-0 border border-[var(--color-border)] mb-16">
+        <div class="p-6 border-b lg:border-b-0 lg:border-r border-[var(--color-border)]">
+          <div class="text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)] mb-3">1. Search by intent</div>
+          <p class="text-[13px] text-[var(--color-body)] leading-relaxed mb-3">The agent describes what it needs in natural language.</p>
+          <div class="border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[11px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">
+            GET /api/search?intent=send+emails
+          </div>
+        </div>
+        <div class="p-6 border-b lg:border-b-0 lg:border-r border-[var(--color-border)]">
+          <div class="text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)] mb-3">2. Get matching providers</div>
+          <p class="text-[13px] text-[var(--color-body)] leading-relaxed mb-3">The registry returns discovery documents for matching services.</p>
+          <div class="border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[11px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">
+            {"{ providers: [...], count: 3 }"}
+          </div>
+        </div>
+        <div class="p-6">
+          <div class="text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)] mb-3">3. Connect directly</div>
+          <p class="text-[13px] text-[var(--color-body)] leading-relaxed mb-3">Each result is a standard discovery document — the client proceeds to registration.</p>
+          <div class="border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[11px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">
+            /.well-known/agent-configuration
+          </div>
+        </div>
+      </div>
 
-      <p>
-        The registry is a client-side discovery aid, not part of the core server protocol. When an agent calls <code>search_providers</code>, the client queries its configured registry to find matching providers. Registries can be public (open to all services), private (enterprise-only), or bundled with the client as a static list.
-      </p>
+      <!-- Registered services -->
+      <div class="flex items-center gap-3 mb-8">
+        <span class="text-[10px] font-[family-name:var(--font-mono)] tracking-[0.15em] uppercase text-[var(--color-muted)]">Registered services</span>
+        <div class="flex-1 border-t border-[var(--color-border)]"></div>
+      </div>
 
-     
-      
-  
+      <div class="border border-[var(--color-border)] mb-16">
+        {registeredServices.map((service) => (
+          <div class="p-6 sm:p-8">
+            <div class="flex items-start justify-between mb-3">
+              <div>
+                <h3 class="text-base font-medium mb-1">{service.name}</h3>
+                <div class="flex items-center gap-2">
+                  <span class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)]">{service.domain}</span>
+                  <span class="text-[var(--color-border)]">/</span>
+                  <span class="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)]">{service.capabilities} capabilities</span>
+                </div>
+              </div>
+            </div>
+            <p class="text-[13px] text-[var(--color-muted)] leading-relaxed mb-4">{service.description}</p>
+            <div class="flex flex-wrap gap-1.5">
+              {service.modes.map((mode) => (
+                <span class="text-[10px] font-[family-name:var(--font-mono)] px-2 py-0.5 border border-[var(--color-border)] text-[var(--color-muted)]">{mode}</span>
+              ))}
+            </div>
+          </div>
+        ))}
 
-      <h2 id="search-interface">Search interface</h2>
+        <div class="p-6 sm:p-8 border-t border-[var(--color-border)] bg-[var(--color-surface)]">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 class="text-base font-medium mb-1">Submit your service</h3>
+              <p class="text-[13px] text-[var(--color-muted)]">Your server needs a valid <code class="text-[12px] font-[family-name:var(--font-mono)] px-1.5 py-0.5 bg-[color:color-mix(in_oklch,var(--color-fg)_5%,transparent)] border border-[var(--color-border)]">/.well-known/agent-configuration</code> endpoint.</p>
+            </div>
+            <a
+              href="https://github.com/better-auth/agent-auth-protocol"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center gap-2 border border-[var(--color-fg)] bg-[var(--color-fg)] px-4 py-2 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-bg)] transition-opacity hover:opacity-90 whitespace-nowrap shrink-0"
+            >
+              Submit on GitHub
+            </a>
+          </div>
+        </div>
+      </div>
 
-      <p>
-        For generic client interoperability, a registry must implement the following endpoint:
-      </p>
+      <!-- Search API reference -->
+      <div class="max-w-3xl">
+        <div class="flex items-center gap-3 mb-8">
+          <span class="text-[10px] font-[family-name:var(--font-mono)] tracking-[0.15em] uppercase text-[var(--color-muted)]">Search API</span>
+          <div class="flex-1 border-t border-[var(--color-border)]"></div>
+        </div>
 
-      <Code lang="http" code={`GET {registry_url}/api/search?intent={intent}&limit={limit}`} />
+        <p class="text-[15px] text-[var(--color-muted)] leading-[1.85] font-[family-name:var(--font-serif)] mb-6">
+          For interoperability, a registry implements the following endpoint. Registries can be public, private (enterprise-only), or bundled with the client as a static list.
+        </p>
 
-      <table>
-        <thead>
-          <tr>
-            <th>Parameter</th>
-            <th>Type</th>
-            <th>Required</th>
-            <th>Description</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><code>intent</code></td>
-            <td>string</td>
-            <td>Yes</td>
-            <td>Natural-language description of what the agent needs (e.g. "send emails", "deploy websites")</td>
-          </tr>
-          <tr>
-            <td><code>limit</code></td>
-            <td>number</td>
-            <td>No</td>
-            <td>Maximum number of results (default: 10)</td>
-          </tr>
-        </tbody>
-      </table>
+        <div class="border border-[var(--color-border)] mb-6">
+          <div class="flex border-b border-[var(--color-border)] bg-[var(--color-surface)]">
+            <div class="px-4 py-2.5 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-muted)]">Endpoint</div>
+          </div>
+          <div class="p-5 text-[12.5px] font-[family-name:var(--font-mono)] text-[var(--color-muted)]">
+            GET {"{"}<span class="text-[var(--color-fg)] opacity-70">registry_url</span>{"}"}/api/search?intent={"{"}<span class="text-[var(--color-fg)] opacity-70">intent</span>{"}"}&limit={"{"}<span class="text-[var(--color-fg)] opacity-70">limit</span>{"}"}
+          </div>
+        </div>
 
-      <p>The response returns standard discovery documents for matching providers:</p>
+        <div class="border border-[var(--color-border)] mb-6">
+          <table class="w-full border-collapse text-[13px]">
+            <thead>
+              <tr>
+                <th class="text-left px-4 py-2.5 font-[family-name:var(--font-mono)] text-[11px] font-medium uppercase tracking-wider text-[var(--color-muted)] bg-[var(--color-surface)] border-b border-[var(--color-border)]">Parameter</th>
+                <th class="text-left px-4 py-2.5 font-[family-name:var(--font-mono)] text-[11px] font-medium uppercase tracking-wider text-[var(--color-muted)] bg-[var(--color-surface)] border-b border-[var(--color-border)]">Type</th>
+                <th class="text-left px-4 py-2.5 font-[family-name:var(--font-mono)] text-[11px] font-medium uppercase tracking-wider text-[var(--color-muted)] bg-[var(--color-surface)] border-b border-[var(--color-border)]">Required</th>
+                <th class="text-left px-4 py-2.5 font-[family-name:var(--font-mono)] text-[11px] font-medium uppercase tracking-wider text-[var(--color-muted)] bg-[var(--color-surface)] border-b border-[var(--color-border)]">Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="px-4 py-2.5 border-b border-[color:color-mix(in_oklch,var(--color-fg)_5%,transparent)]"><code class="text-[12px] font-[family-name:var(--font-mono)]">intent</code></td>
+                <td class="px-4 py-2.5 border-b border-[color:color-mix(in_oklch,var(--color-fg)_5%,transparent)] text-[var(--color-muted)]">string</td>
+                <td class="px-4 py-2.5 border-b border-[color:color-mix(in_oklch,var(--color-fg)_5%,transparent)] text-[var(--color-muted)]">Yes</td>
+                <td class="px-4 py-2.5 border-b border-[color:color-mix(in_oklch,var(--color-fg)_5%,transparent)] text-[var(--color-muted)]">Natural-language description of what the agent needs</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-2.5"><code class="text-[12px] font-[family-name:var(--font-mono)]">limit</code></td>
+                <td class="px-4 py-2.5 text-[var(--color-muted)]">number</td>
+                <td class="px-4 py-2.5 text-[var(--color-muted)]">No</td>
+                <td class="px-4 py-2.5 text-[var(--color-muted)]">Maximum number of results (default: 10)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-      <Code lang="json" code={`{
-  "providers": [
-    {
-      "version": "1.0-draft",
-      "provider_name": "example",
-      "description": "Example service",
-      "issuer": "https://example.com",
-      "algorithms": ["Ed25519"],
-      "modes": ["delegated", "autonomous"],
-      "approval_methods": ["device_authorization"],
-      "endpoints": { "..." : "..." }
-    }
-  ],
-  "intent": "the original intent",
-  "count": 1
-}`} />
-
-      <p>
-        Each entry in <code>providers</code> is a standard discovery document (the same format returned by <code>/.well-known/agent-configuration</code>). The client can use these to proceed directly to agent connection.
-      </p>
-
-      <h2 id="registering-your-server">Registering your server</h2>
-
-      <p>
-        How services are added to a registry is implementation-specific. A registry may accept submissions via API, require manual review, auto-discover from a crawl, or any other mechanism. The only protocol requirement is the search interface above.
-      </p>
-
-      <p>
-        To get listed, your server needs a valid <code>/.well-known/agent-configuration</code> endpoint. Submit your server to the registries above to make it discoverable by agents.
-      </p>
-    </article>
+        <p class="text-[13px] text-[var(--color-muted)] leading-relaxed">
+          Each entry in the response <code class="text-[12px] font-[family-name:var(--font-mono)] px-1.5 py-0.5 bg-[color:color-mix(in_oklch,var(--color-fg)_5%,transparent)] border border-[var(--color-border)]">providers</code> array is a standard discovery document — the same format returned by <code class="text-[12px] font-[family-name:var(--font-mono)] px-1.5 py-0.5 bg-[color:color-mix(in_oklch,var(--color-fg)_5%,transparent)] border border-[var(--color-border)]">/.well-known/agent-configuration</code>. The client can use these to proceed directly to agent connection.
+        </p>
+      </div>
+    </div>
   </main>
 
   <Footer />

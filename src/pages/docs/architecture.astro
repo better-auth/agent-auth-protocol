@@ -1,0 +1,91 @@
+---
+import DocsLayout from "@/layouts/DocsLayout.astro";
+
+export const prerender = true;
+
+const headings = [
+	{ depth: 2, slug: "overview", text: "Overview" },
+	{ depth: 2, slug: "principals", text: "Principals" },
+	{ depth: 2, slug: "protocol-flow", text: "Protocol flow" },
+	{ depth: 2, slug: "trust-model", text: "Trust model" },
+	{ depth: 2, slug: "key-design-decisions", text: "Key design decisions" },
+];
+---
+
+<DocsLayout
+  title="Architecture"
+  activeDoc="/docs/architecture"
+  section="Get started"
+  headings={headings}
+>
+  <p>
+    This page explains the overall architecture of the Agent Auth Protocol — the entities involved, how they interact, and the design decisions behind the protocol.
+  </p>
+
+  <h2 id="overview">Overview</h2>
+
+  <p>
+    Agent Auth is an HTTP-based protocol for AI agent identity and capability-scoped authorization. It defines four principals and a set of endpoints that together enable agents to discover services, register identities, receive scoped permissions, and authenticate requests with cryptographic signatures.
+  </p>
+
+  <p>
+    The protocol builds on established standards (RFC 8628 Device Authorization, RFC 7519 JWT, RFC 7517 JWK, EdDSA) rather than inventing new primitives. It works alongside existing infrastructure — HTTP APIs, OpenAPI operations, and MCP tools.
+  </p>
+
+  <h2 id="principals">Principals</h2>
+
+  <p>The protocol defines four principals:</p>
+
+  <ul>
+    <li><strong>User</strong> — the human who approves agent capabilities. The user authenticates through standard web flows and is the ultimate authority for authorization decisions.</li>
+    <li><strong>Host</strong> — the application environment where agents run (e.g. Cursor, an MCP server, a CLI tool). A host registers with the server, manages agents, and establishes a trust anchor using its own keypair.</li>
+    <li><strong>Agent</strong> — the AI runtime that performs actions. Each agent has its own cryptographic identity (Ed25519 keypair), its own set of granted capabilities, and its own lifecycle.</li>
+    <li><strong>Server</strong> — the service that implements the protocol. The server manages registration, capability grants, JWT verification, and the discovery endpoint.</li>
+  </ul>
+
+  <h2 id="protocol-flow">Protocol flow</h2>
+
+  <p>A typical delegated agent flow proceeds as follows:</p>
+
+  <ol>
+    <li><strong>Discovery</strong> — The client resolves <code>/.well-known/agent-configuration</code> from the server's domain to learn about available capabilities, approval methods, and endpoint URLs.</li>
+    <li><strong>Host registration</strong> — The client registers a host with the server, providing its Ed25519 public key. The server returns a <code>host_id</code>.</li>
+    <li><strong>Agent registration</strong> — The client registers an agent under the host. If user approval is needed, the server returns a <code>verification_uri</code> and <code>user_code</code> (RFC 8628).</li>
+    <li><strong>User approval</strong> — The user navigates to the verification URI, reviews the requested capabilities, and approves. The server grants the capabilities.</li>
+    <li><strong>Authenticated requests</strong> — The agent authenticates every request by signing a short-lived JWT (60-second expiry) with its Ed25519 private key. The server verifies the signature against the registered public key.</li>
+    <li><strong>Capability execution</strong> — The agent invokes capabilities through the execute endpoint, passing the signed JWT. The server enforces constraints, attribution, and rate limits.</li>
+  </ol>
+
+  <p>
+    Autonomous agents (those operating without a user session) follow the same registration flow but may receive capabilities automatically via <code>defaultAgentCapabilities</code> rather than through user approval.
+  </p>
+
+  <h2 id="trust-model">Trust model</h2>
+
+  <p>
+    Agent Auth uses a layered trust model:
+  </p>
+
+  <ul>
+    <li><strong>Cryptographic identity</strong> — Hosts and agents prove identity through EdDSA signatures over short-lived JWTs. The server verifies signatures using registered public keys.</li>
+    <li><strong>Server-managed authorization</strong> — The server is the single authority for capability grants. Agents cannot self-grant capabilities; they must be explicitly granted by the server after user approval or policy evaluation.</li>
+    <li><strong>User consent</strong> — For delegated agents, capability grants require explicit user approval through a device authorization flow. The user sees exactly what capabilities the agent is requesting.</li>
+    <li><strong>Proof-of-human</strong> — For sensitive operations, servers can require WebAuthn challenges or CIBA flows to ensure a human (not the agent itself) is approving the request.</li>
+  </ul>
+
+  <h2 id="key-design-decisions">Key design decisions</h2>
+
+  <ul>
+    <li><strong>Keypair identity over bearer tokens</strong> — Agents authenticate with signed JWTs, not long-lived bearer tokens. Compromising a token doesn't compromise the identity.</li>
+    <li><strong>Flat identity model</strong> — Sub-agents share the same context as their parent and are treated as a single agent identity. The protocol doesn't model delegation chains; it models runtime agents.</li>
+    <li><strong>Capability-scoped, not role-scoped</strong> — Authorization is per-capability with constraints, not per-role. This enables fine-grained control over exactly what each agent can do.</li>
+    <li><strong>Discovery-first</strong> — Agents can find and connect to any Agent Auth-compatible service through a well-known endpoint, without prior configuration.</li>
+    <li><strong>Reuse over reinvention</strong> — The protocol reuses RFC 8628 (device authorization), RFC 7519 (JWT), RFC 7517 (JWK), EdDSA (RFC 8032/8037), and standard HTTP caching. It doesn't define new cryptographic primitives or token formats.</li>
+  </ul>
+
+  <div class="next-links">
+    <a href="/docs/servers">Servers — authorization and capability management →</a>
+    <a href="/docs/client">Client — the agent-server bridge →</a>
+    <a href="/specification">Full specification →</a>
+  </div>
+</DocsLayout>

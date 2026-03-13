@@ -98,6 +98,34 @@ function escapeHtml(text: string): string {
     .replace(/"/g, "&quot;");
 }
 
+function postProcessIetf(html: string): string {
+  html = html.replace(
+    /(<h1[^>]*class="spec-h1"[^>]*>.*?<\/h1>\s*)((?:<table>[\s\S]*?<\/table>))/,
+    '$1<div class="spec-meta">$2</div>'
+  );
+
+  html = html.replace(
+    /(<h2[^>]*id="abstract"[^>]*>[\s\S]*?<\/h2>)([\s\S]*?)(?=<h2)/,
+    '$1<div class="spec-abstract">$2</div>'
+  );
+
+  html = html.replace(
+    /(<h2[^>]*id="status-of-this-document"[^>]*>[\s\S]*?<\/h2>)([\s\S]*?)(?=<h2)/,
+    '$1<div class="spec-status-block">$2</div>'
+  );
+
+  html = html.replace(
+    /(<h2[^>]*id="13-references"[^>]*>)/,
+    '<div class="spec-references">$1'
+  );
+  html = html.replace(
+    /(<h2[^>]*id="14-authors-addresses"[^>]*>)/,
+    '</div>$1'
+  );
+
+  return html;
+}
+
 function renderSpec(rawMd: string): string {
   const marked = new Marked();
 
@@ -131,7 +159,7 @@ function renderSpec(rawMd: string): string {
     },
   });
 
-  return marked.parse(rawMd) as string;
+  return postProcessIetf(marked.parse(rawMd) as string);
 }
 
 export function getSpecContent(sourcePath = "src/specs/v1.0-draft.mdx") {
