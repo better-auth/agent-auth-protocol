@@ -25,9 +25,18 @@ const registeredServices = [
       <div class="max-w-3xl mb-14">
         <p class="text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-[0.2em] text-[var(--color-muted)] mb-4">Registry</p>
         <h1 class="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight mb-6">Service Directory</h1>
-        <p class="text-[15px] text-[var(--color-muted)] leading-[1.85] font-[family-name:var(--font-serif)]">
+        <p class="text-[15px] text-[var(--color-muted)] leading-[1.85] font-[family-name:var(--font-serif)] mb-8">
           The registry is a searchable index of services that support the Agent Auth Protocol. Agents can discover providers by intent — search for "banking" or "send emails" and find matching services automatically.
         </p>
+        <a
+          href="http://localhost:4200"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center gap-2 border border-[var(--color-fg)] bg-[var(--color-fg)] px-5 py-2.5 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-bg)] transition-opacity hover:opacity-90"
+        >
+          Browse the registry
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        </a>
       </div>
 
       <!-- How it works -->
@@ -95,12 +104,12 @@ const registeredServices = [
               <p class="text-[13px] text-[var(--color-muted)]">Your server needs a valid <code class="text-[12px] font-[family-name:var(--font-mono)] px-1.5 py-0.5 bg-[color:color-mix(in_oklch,var(--color-fg)_5%,transparent)] border border-[var(--color-border)]">/.well-known/agent-configuration</code> endpoint.</p>
             </div>
             <a
-              href="https://github.com/better-auth/agent-auth-protocol"
+              href="http://localhost:4200/submit"
               target="_blank"
               rel="noopener noreferrer"
               class="inline-flex items-center gap-2 border border-[var(--color-fg)] bg-[var(--color-fg)] px-4 py-2 text-[11px] font-[family-name:var(--font-mono)] uppercase tracking-wider text-[var(--color-bg)] transition-opacity hover:opacity-90 whitespace-nowrap shrink-0"
             >
-              Submit on GitHub
+              Submit your service
             </a>
           </div>
         </div>
