@@ -35,16 +35,7 @@ export default async function Page(props: {
   const githubUrl = `https://github.com/better-auth/agent-auth-protocol/blob/main/${filePath}`;
 
   return (
-    <DocsPage
-      toc={page.data.toc}
-      tableOfContent={{ style: "clerk" }}
-      editOnGithub={{
-        owner: "better-auth",
-        repo: "agent-auth-protocol",
-        sha: "main",
-        path: filePath,
-      }}
-    >
+    <DocsPage toc={page.data.toc} tableOfContent={{ style: "clerk" }}>
       <div className="flex items-center justify-between gap-4 pb-4">
         <DocsTitle className="mb-0">{page.data.title}</DocsTitle>
         <div className="flex items-center gap-2 not-prose shrink-0">
