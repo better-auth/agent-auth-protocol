@@ -1,0 +1,96 @@
+---
+title: Capabilities
+description: Capabilities are the protocol's unit of authorization — server-offered actions that agents request and execute with scoped grants.
+section: "Concepts"
+---
+
+Capabilities are the protocol's unit of authorization. A capability is a server-offered action identified by a stable name and a human-readable description. Agents request capabilities at registration, and the server creates grants that track what each agent is allowed to do.
+
+## What is a capability?
+
+A capability represents a single action a server offers — checking a balance, sending a message, deploying code, reading a file. Each capability has a name that agents use to request and execute it, and a description that humans read during approval flows.
+
+It's useful to distinguish two related concepts:
+
+- **Capability** — what the server offers
+- **Capability grant** — what an agent has been authorized to execute
+
+The same capability name can appear in different parts of the protocol: requested by an agent, granted by the server, included in a host's defaults, or used to restrict a JWT. The name identifies the action; the context determines how it's being used.
+
+## Capability fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Stable agent-facing identifier |
+| `description` | string | Human-readable description of what this capability does |
+| `input` | object | JSON Schema for execution arguments (optional) |
+| `output` | object | JSON Schema for the return value (optional) |
+| `grant_status` | string | Whether the capability has been granted to the requesting agent (optional) |
+
+```json
+{
+  "name": "check_balance",
+  "description": "Check the balance of a bank account",
+  "input": {
+    "type": "object",
+    "required": ["account_id"],
+    "properties": {
+      "account_id": {
+        "type": "string",
+        "description": "The bank account ID to check"
+      }
+    }
+  },
+  "output": {
+    "type": "object",
+    "properties": {
+      "account_id": { "type": "string" },
+      "balance": { "type": "number" },
+      "currency": { "type": "string" }
+    }
+  },
+  "grant_status": "granted"
+}
+```
+
+The `input` and `output` schemas let agents reason about what a capability needs and what it returns, enabling multi-step planning and chaining without trial and error.
+
+## Capability grants
+
+When an agent is granted a capability, the server creates an **agent capability grant** — a record that tracks:
+
+- Which capability was granted
+- The grant status (`active`, `pending`, `denied`, `revoked`)
+- Any constraints on the grant (see [scoped grants](#scoped-grants-constraints))
+- When the grant was created and last updated
+
+Grants are separate from agent identity — they can be added, escalated, or revoked independently without affecting the agent's registration.
+
+## Default capabilities
+
+Servers define a set of **default capabilities** — actions that are auto-granted to agents from trusted hosts without requiring user approval each time. When a linked host registers a new agent requesting only default capabilities, the server can approve immediately.
+
+Default capabilities are typically low-risk, read-only operations. Higher-risk capabilities (transfers, deletions, admin actions) should always require explicit approval.
+
+## Capability escalation
+
+An active agent can request additional capabilities at runtime via `POST /agent/request-capability`. This triggers a new approval flow — even from trusted hosts, escalated capabilities always require explicit user consent.
+
+When an agent is **reactivated** after expiry, its capabilities reset to the host's defaults. Any previously escalated capabilities are dropped and must be requested again. This is a security checkpoint that prevents stale permissions from persisting.
+
+## Scoped grants (constraints)
+
+A capability grant can carry **constraints** — restrictions on the input values an agent is authorized to supply. Constraints turn a broad capability into a narrow, specific authorization.
+
+```json
+{
+  "capability": "transfer_funds",
+  "constraints": {
+    "to": { "const": "acc_456" },
+    "amount": { "maximum": 1000 },
+    "currency": { "const": "USD" }
+  }
+}
+```
+
+Instead of granting "transfer money" with no limits, the server can grant "transfer up to $1,000 in USD to account acc_456." Constraints can be proposed by the agent, imposed by the server, or both — the tightest constraint from either source wins.

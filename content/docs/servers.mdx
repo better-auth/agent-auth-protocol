@@ -1,0 +1,170 @@
+---
+title: Servers
+description: The server manages discovery, agent registrations, approvals, capability grants, and JWT verification in the Agent Auth protocol.
+section: "Concepts"
+---
+
+The server is the service's authorization server. It manages discovery, host and agent registrations, approvals, capability grants, and JWT verification. This page covers what a server does and the endpoints it exposes.
+
+## What is a server?
+
+A server is any service that implements the Agent Auth protocol — your bank, GitHub, Slack, a deployment platform, or any API. The server manages which agents can access it, what they can do, and verifies every request.
+
+The server's responsibilities:
+
+- Publish a discovery endpoint so clients can auto-configure
+- Register hosts and agents with Ed25519 key verification
+- Manage capability grants and approval flows
+- Verify signed JWTs on every request
+- Enforce agent lifecycle (expiry, reactivation, revocation)
+
+## Discovery endpoint
+
+Servers publish a `/.well-known/agent-configuration` endpoint (no authentication required) that returns the full configuration:
+
+```http
+GET /.well-known/agent-configuration
+```
+
+```json
+{
+  "version": "1.0-draft",
+  "provider_name": "bank",
+  "description": "Banking services",
+  "issuer": "https://auth.bank.com",
+  "algorithms": ["Ed25519"],
+  "modes": ["delegated", "autonomous"],
+  "approval_methods": ["device_authorization", "ciba"],
+  "endpoints": {
+    "register": "/agent/register",
+    "capabilities": "/capability/list",
+    "execute": "/capability/execute",
+    "status": "/agent/status",
+    "reactivate": "/agent/reactivate",
+    "revoke": "/agent/revoke"
+  }
+}
+```
+
+This tells the client everything it needs: what modes the server supports, which algorithms to use, what endpoints to call, and how approval works.
+
+## Agent registration
+
+Clients register agents via `POST /agent/register` with a Host JWT. The server creates the agent, evaluates its requested capabilities, and either auto-approves (for trusted hosts with default capabilities) or returns an approval flow.
+
+```http
+POST /agent/register
+Authorization: Bearer <Host JWT>
+```
+
+```json
+{
+  "name": "Balance Checker",
+  "capabilities": ["check_balance"],
+  "mode": "delegated"
+}
+```
+
+Response:
+
+```json
+{
+  "agent_id": "agt_k7x9m2",
+  "host_id": "hst_m4a8",
+  "status": "pending",
+  "approval": {
+    "method": "device_authorization",
+    "verification_uri": "https://auth.bank.com/device",
+    "user_code": "ABCD-1234"
+  }
+}
+```
+
+If the host is already trusted and the requested capabilities are within defaults, the server returns `"status": "active"` directly.
+
+## Capability management
+
+Servers define capabilities — named actions that agents can execute. The capability list endpoint lets agents discover what's available:
+
+```json
+{
+  "capabilities": [
+    {
+      "name": "check_balance",
+      "description": "Check account balances",
+      "input": {
+        "type": "object",
+        "properties": { "account_id": { "type": "string" } }
+      },
+      "output": {
+        "type": "object",
+        "properties": { "balance": { "type": "number" } }
+      }
+    }
+  ]
+}
+```
+
+Active agents can request additional capabilities at runtime via `POST /agent/request-capability`, triggering a new approval flow. Capability grants can carry **constraints** — restrictions on input values that turn a broad capability into a narrow authorization.
+
+## Capability execution
+
+The standard way to execute capabilities is through the server's execute endpoint:
+
+```http
+POST /capability/execute
+Authorization: Bearer <Agent JWT>
+```
+
+```json
+{
+  "capability": "check_balance",
+  "arguments": { "account_id": "acc_123" }
+}
+```
+
+Response:
+
+```json
+{
+  "result": {
+    "account_id": "acc_123",
+    "balance": 1250.00,
+    "currency": "USD"
+  }
+}
+```
+
+The server validates the JWT, checks the agent's grants, enforces any constraints, and executes the capability.
+
+## JWT verification
+
+On every request, the server:
+
+1. Extracts the JWT from the `Authorization` header
+2. Verifies the Ed25519 signature against the agent's stored public key
+3. Checks `aud` matches the server's issuer URL
+4. Validates `exp`, `iat`, and `jti` for replay protection
+5. Confirms the agent is `active`
+6. Resolves granted capabilities and enforces constraints
+
+JWTs have a 60-second TTL and a unique `jti` claim. The server must reject duplicate `jti` values within the lifetime window.
+
+## Lifecycle management
+
+The server manages agent lifecycle through several endpoints:
+
+- `GET /agent/status` — check agent status and capability grants
+- `POST /agent/reactivate` — reactivate an expired agent (security checkpoint: escalated capabilities are dropped)
+- `POST /agent/revoke` — permanently revoke an agent
+- `POST /agent/rotate-key` — rotate an agent's keypair
+- `POST /host/revoke` — revoke a host and cascade to all its agents
+- `POST /host/rotate-key` — rotate a host's keypair
+
+## Approval methods
+
+When a registration or capability request requires user consent, the server returns an approval object. The protocol supports:
+
+- **Device Authorization** (RFC 8628) — the user visits a URL and enters a code, like logging into a streaming app on a TV
+- **CIBA** (Client Initiated Backchannel Authentication) — the server pushes a notification to the user's device
+- **Server-defined** — custom approval methods for specific use cases

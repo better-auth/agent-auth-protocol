@@ -1,14 +1,24 @@
 import fs from "node:fs";
 import path from "node:path";
 
+export const DEFAULT_SPEC_VERSION = "v1.0-draft";
+
 export interface TocEntry {
 	id: string;
 	text: string;
 	level: number;
 }
 
-export function getSpecContent() {
-	const filePath = path.join(process.cwd(), "spec", "v1.0-draft.mdx");
+export function getSpecVersions() {
+	const dir = path.join(process.cwd(), "content", "specification");
+	return fs
+		.readdirSync(dir)
+		.filter((f) => f.endsWith(".mdx"))
+		.map((f) => f.replace(/\.mdx$/, ""));
+}
+
+export function getSpecContent(version = DEFAULT_SPEC_VERSION) {
+	const filePath = path.join(process.cwd(), "content", "specification", `${version}.mdx`);
 	const raw = fs.readFileSync(filePath, "utf-8");
 
 	const withoutFrontmatter = raw.replace(/^---[\s\S]*?---\n*/, "");

@@ -1,0 +1,142 @@
+---
+title: Build a server
+description: How to add Agent Auth support to your service using the Better Auth plugin or building from scratch.
+section: "Develop with Agent Auth"
+---
+
+This guide covers how to add Agent Auth support to your service. The fastest way is using the Better Auth plugin, which handles registration, device flow, capability management, and JWT verification out of the box.
+
+## Better Auth plugin
+
+The Better Auth plugin is the reference implementation of the Agent Auth server. It adds all the protocol endpoints to your existing Better Auth setup with a single plugin.
+
+```ts
+import { betterAuth } from "better-auth";
+import { agentAuth } from "better-auth/plugins";
+
+export const auth = betterAuth({
+  // ... your existing config
+  plugins: [
+    agentAuth({
+      // optional configuration
+    }),
+  ],
+});
+```
+
+This adds all the Agent Auth endpoints to your server: discovery, registration, capability management, execution, lifecycle, and introspection.
+
+## Setup
+
+Install Better Auth if you haven't already:
+
+```bash
+npm install better-auth
+```
+
+Add the Agent Auth plugin to your auth configuration. The plugin will automatically:
+
+- Create the necessary database tables (hosts, agents, agent capability grants)
+- Expose the `/.well-known/agent-configuration` discovery endpoint
+- Handle agent registration with Host JWT verification
+- Manage the device authorization approval flow
+- Verify Agent JWTs on capability execution
+- Enforce capability grants and constraints
+
+## Define capabilities
+
+Define the capabilities your service offers. Each capability has a name, description, and optional input/output schemas:
+
+```ts
+agentAuth({
+  capabilities: [
+    {
+      name: "check_balance",
+      description: "Check the balance of a bank account",
+      input: {
+        type: "object",
+        required: ["account_id"],
+        properties: {
+          account_id: { type: "string", description: "The account ID" }
+        }
+      },
+      output: {
+        type: "object",
+        properties: {
+          balance: { type: "number" },
+          currency: { type: "string" }
+        }
+      }
+    },
+    {
+      name: "transfer_funds",
+      description: "Transfer funds between accounts",
+      input: {
+        type: "object",
+        required: ["from", "to", "amount"],
+        properties: {
+          from: { type: "string" },
+          to: { type: "string" },
+          amount: { type: "number" }
+        }
+      }
+    }
+  ],
+  defaultCapabilities: ["check_balance"],
+})
+```
+
+Capabilities listed in `defaultCapabilities` are auto-granted to agents from trusted hosts. All other capabilities require explicit user approval.
+
+## Verify agent requests
+
+On your API routes, verify agent sessions with a single call:
+
+```ts
+const session = await auth.api.getAgentSession({ headers });
+
+if (session) {
+  const { agent, user } = session;
+
+  // agent.id → "agt_k7x9m2"
+  // agent.status → "active"
+  // agent.mode → "delegated"
+  // agent.agentCapabilityGrants → [{ capability, status }]
+  // user.id → "user_xyz" (for delegated agents)
+}
+```
+
+This extracts the JWT, verifies the Ed25519 signature, checks the agent's status, and resolves its capability grants. You get back the full agent context including the linked user for delegated agents.
+
+## Approval flow
+
+The plugin handles the device authorization flow automatically. When a new host registers a delegated agent, the server returns a verification URL and user code. You need to provide the approval UI — a web page where users can:
+
+1. See which agent is requesting access and from which host
+2. Review the requested capabilities
+3. Approve or deny the request
+4. Optionally trust the host for future auto-approval
+
+The approval page should require fresh authentication — a long-lived session cookie alone is not sufficient (see [Security Considerations](/docs/security)).
+
+## Data model
+
+The plugin creates three tables:
+
+| Table | Purpose |
+|-------|---------|
+| **hosts** | Persistent client identities with public keys, linked users, and trust status |
+| **agents** | Per-agent records with status, mode, lifetime clocks, and keypairs |
+| **agent_capability_grants** | Per-capability grants with status, constraints, and metadata |
+
+## Building from scratch
+
+If you're not using Better Auth, you can implement the protocol from scratch. You need:
+
+- **3 database tables** — hosts, agents, agent capability grants (see [§3 Data Model](/specification#3-data-model))
+- **Ed25519 verification** — verify Host and Agent JWT signatures
+- **Device authorization flow** — RFC 8628 for user approval
+- **Discovery endpoint** — `/.well-known/agent-configuration`
+- **Protocol endpoints** — register, status, capabilities, execute, etc.
+
+Read the [full specification](/specification) for complete endpoint definitions, JWT claims, error codes, and edge cases.

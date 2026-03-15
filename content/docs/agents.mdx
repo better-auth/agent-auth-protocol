@@ -1,0 +1,84 @@
+---
+title: Agents
+description: An agent is a runtime AI actor with its own identity, capabilities, and lifecycle — the core principal in Agent Auth.
+section: "Concepts"
+---
+
+An agent is a runtime AI actor that needs to call external services. Each agent has its own server-side identity, its own granted capabilities, and its own lifecycle. Agents are the core principal in Agent Auth — the entity that *is* authenticated.
+
+## What is an agent?
+
+An agent is **not** the application it runs inside. Claude Code, Cursor, ChatGPT — these are hosts. An agent is the specific runtime AI actor within that environment: a particular conversation, task, or session that acts over time. Two separate chats in the same application are different agents with different contexts, intents, and permissions.
+
+Identity requires two properties:
+
+- **Continuity** — recognizable as the same actor over time. The server can verify across multiple requests that it's dealing with the same agent.
+- **Distinctiveness** — distinguishable from every other actor. Each agent can be individually scoped, audited, and revoked without affecting others.
+
+Agent Auth provides both by giving each agent its own Ed25519 keypair, registration, and capability set.
+
+## Agent modes
+
+An agent operates in one of two modes, chosen at registration and immutable after creation:
+
+- **Delegated** (default) — acts on behalf of a specific user. The user approves capabilities through a device flow. Use for copilots, assistants, and tool-calling agents.
+  *Example: an email assistant that requests permission to read your inbox and send replies.*
+
+- **Autonomous** — operates without a user in the loop. Capabilities are granted by server policy or admin approval. Use for background workers, scheduled jobs, and service-to-service agents.
+  *Example: a deployment agent that provisions infrastructure and deploys a website.*
+
+A server may support delegated agents, autonomous agents, or both. Supported modes are advertised via [discovery](/docs/discovery).
+
+## Agent states
+
+Every agent is in exactly one state at any time. Only `active` agents can authenticate and make requests.
+
+| State | Description |
+|-------|-------------|
+| **pending** | Awaiting user approval — cannot authenticate |
+| **active** | Operational — each request extends the session TTL |
+| **expired** | Timed out — can be reactivated with re-approval |
+| **revoked** | Permanently terminated — cannot be reactivated |
+| **rejected** | User denied the registration |
+| **claimed** | Autonomous agent claimed when host was linked to a user |
+
+## Lifetime clocks
+
+Three independent clocks govern agent lifetimes. The durations are server policy.
+
+- **Session TTL** — measured from the last request. Protects against abandoned agents. If the agent stops making requests, it expires.
+- **Max lifetime** — measured from the last activation. Caps continuous use. Prevents compromised agents from running indefinitely.
+- **Absolute lifetime** — measured from creation. A hard limit. Once elapsed, the agent is permanently revoked.
+
+**Example:** A server uses a 30-minute session TTL, 24-hour max lifetime, and 7-day absolute lifetime. If the agent goes idle for 30 minutes, it expires. If it runs continuously for 24 hours, it also expires and must reactivate. After 7 days from creation, it's permanently revoked.
+
+## Reactivation
+
+An expired agent can be reactivated, but reactivation is a **security checkpoint**. On reactivation:
+
+- Capabilities reset to the host's defaults — escalated capabilities are dropped
+- Session TTL and max lifetime clocks reset
+- The absolute lifetime clock does **not** reset
+
+If the absolute lifetime has already elapsed, reactivation fails and a new agent must be created.
+
+## Revocation
+
+An agent can be revoked by:
+
+- **Itself** — through the client's `disconnect_agent` tool
+- **Its host** — the host under which it was registered
+- **The user** — through the server's management UI or API
+- **An admin** — as defined by the server
+
+Revocation is permanent. A revoked agent cannot be reactivated; a new agent must be created. Revoking a [host](/docs/host) cascades to all agents under it.
+
+## Authentication
+
+Active agents authenticate by signing short-lived JWTs with their Ed25519 private key. Each JWT:
+
+- Expires within 60 seconds
+- Contains the agent ID (`sub`), server URL (`aud`), and a unique ID (`jti`)
+- Is signed fresh for every request — no refresh tokens
+
+The server verifies the signature against the agent's stored public key, checks the claims, and rejects duplicate `jti` values for replay protection.

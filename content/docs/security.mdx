@@ -1,0 +1,92 @@
+---
+title: Security Considerations
+description: Security considerations for implementing and deploying Agent Auth — key management, JWT lifetime, replay protection, and threat mitigations.
+section: "Develop with Agent Auth"
+---
+
+This page covers security considerations for implementing and deploying Agent Auth. For the full treatment, see [§8 Security Considerations](/specification#8-security-considerations) in the specification.
+
+## Private keys
+
+Private keys must **never** be transmitted to or stored on the server. The server stores only public keys or JWKS URLs. Clients should store private keys securely — in a keychain, encrypted file, or memory-only.
+
+## JWT lifetime
+
+Agent JWTs should expire within **60 seconds**. Short lifetimes limit misuse even without proof of possession. There are no refresh tokens — the client signs a new JWT for every request.
+
+## Replay protection
+
+Servers must reject duplicate `jti` values within the JWT's lifetime window. Every JWT includes a unique `jti` claim, and the server tracks seen values to prevent replay attacks.
+
+## Proof of possession
+
+The base protocol does not require proof of possession — short-lived JWTs over TLS are sufficient for many applications. For sensitive operations, servers should support a standard proof-of-possession profile:
+
+- **DPoP** — the client sends a separate DPoP proof JWT on each request
+- **mTLS** — the client authenticates with a TLS client certificate
+
+This keeps the baseline simple while giving higher-assurance deployments a standards-aligned path.
+
+## Approval security
+
+User approval is the primary trust boundary. First-time host approval is the highest-risk moment — the server knows nothing about the host beyond a self-signed keypair.
+
+- Servers should present requested capabilities clearly and warn if the host requests unusually broad access
+- Capability escalation deserves the same scrutiny — servers should not auto-approve high-risk capabilities even for linked hosts
+- Approval pages should require **fresh authentication** — a long-lived session cookie alone is not sufficient
+
+## Self-authorization attacks
+
+Agents often run with access to the user's browser or session (via browser tools, MCP, automation frameworks). This creates a unique threat: an agent could navigate to the device authorization URL and **approve its own registration** without the user being physically present.
+
+Mitigations, from least to most restrictive:
+
+- **Fresh authentication** — require the user to have authenticated within a short window (e.g. 5 minutes)
+- **Biometric passkeys** (WebAuthn) — proves a human is physically present
+- **Hardware security keys** — physical interaction required
+- **TOTP/OTP from a separate device** — ensures the approver has a second factor the agent can't access
+
+## Discovery security
+
+Discovery of arbitrary URLs is a prompt injection vector. A malicious prompt can trick an agent into calling `discover_provider` with a fake URL, which returns a fake configuration pointing registration at an attacker's endpoint.
+
+Mitigations:
+
+- **Registry-first discovery** — clients should resolve new services through a trusted registry rather than arbitrary URLs
+- **User confirmation** — if `discover_provider` is called with a direct URL, require user confirmation before fetching
+- **Allowlists** — clients may maintain an allowlist of trusted service URLs
+- **TLS verification** — clients must verify TLS certificates when fetching discovery endpoints
+
+## Key compromise
+
+If an agent's private key is leaked, anyone holding it can impersonate that agent. Unlike bearer tokens, the private key never traverses the wire — it can only leak from the client's local storage.
+
+Mitigations:
+
+- **Host-authorized key rotation** — use `POST /agent/rotate-key` with a Host JWT to immediately invalidate the compromised key
+- **Short TTL** — agents with short session TTL values auto-expire, limiting the window of compromise
+- **Immediate revocation** — revoke the agent if compromise is detected
+- **Secure storage** — store private keys securely (keychain, encrypted file, memory-only)
+
+## Revocation cascade
+
+Revoking a host must cascade to all agents under it. This ensures that if a host is compromised, all agents running under it are immediately terminated.
+
+## Rate limiting
+
+Servers must implement rate limiting. Agents can generate high request volumes — both legitimately and due to bugs or compromised keys. Rate limits should apply at multiple levels:
+
+- **Per-agent** — limits individual agent request rates
+- **Per-host** — limits total requests from all agents under a host
+- **Per-capability** — limits execution of specific high-cost capabilities
+- **Global** — overall server protection
+
+## URL fetch protection
+
+Both servers and clients fetch external URLs as part of the protocol. Servers fetching JWKS URLs must apply:
+
+- **IP filtering** — block private, loopback, and link-local ranges
+- **DNS rebinding protection** — pin the resolved IP for the request duration
+- **HTTPS only** — reject `http://` URLs
+- **Response size limits** — cap response bodies (e.g. 1 MB for JWKS)
+- **Timeouts** — enforce connect and read timeouts

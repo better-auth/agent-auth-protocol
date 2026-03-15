@@ -1,0 +1,59 @@
+---
+title: Host
+description: A host is the persistent identity of the client environment where agents run — representing the place the agent operates from.
+section: "Concepts"
+---
+
+A host is the persistent identity of the client environment where agents run. It represents the *place* the agent is running from — a Claude Code session, a Cursor installation, a ChatGPT connector, or a background worker. On the server, it's a registered keypair plus metadata.
+
+## What is a host?
+
+Every agent is registered under a host. This lets the server reason about the long-lived client environment separately from the individual runtime agent. Two different conversations in Claude Code are two different agents, but they share the same host.
+
+A host is an identity record, not a running process. A client uses its host identity when registering agents, checking status, or performing host-authenticated operations like key rotation and revocation.
+
+For delegated agents, a host must be linked to at most one user. For autonomous agents, a host may exist without any linked user.
+
+## Host establishment
+
+Hosts are created in one of two ways:
+
+- **Dynamic registration** — the host is first seen as part of agent registration. If the server doesn't recognize the host's public key, it creates a new host in `pending` state and waits for user approval.
+- **Pre-registration** — a user or administrator registers the host before any agent exists, through the server's dashboard, admin API, or another mechanism.
+
+In both cases, the result is the same host record: a keypair (or JWKS URL), an optional linked user, and a set of default capabilities.
+
+## Host linking
+
+Linking binds an unlinked host to a specific user. This happens through:
+
+- **Server-side linking** — the server links the host through its dashboard, admin API, or another implementation-specific mechanism
+- **Delegated registration approval** — an unknown host registers a delegated agent, the user approves, and the server links the host to the approving user
+
+Once linked, future delegated agents from this host can be auto-approved for default capabilities. A host cannot be linked to more than one user.
+
+## Host states
+
+| State | Meaning |
+|-------|---------|
+| **active** | Operational — can register agents |
+| **pending** | Awaiting approval (agents registered under it also stay pending) |
+| **revoked** | Permanently disabled — all agents under it are also revoked |
+| **rejected** | Approval denied — all agents under it are also rejected |
+
+A `pending` host can register agents, but those agents remain `pending` until the host itself is approved. A host in a terminal state (`revoked` or `rejected`) cannot register agents, and all existing agents under it are terminated.
+
+## Default capabilities
+
+Hosts carry a set of default capabilities. When an agent is registered under a trusted (linked, active) host requesting only default capabilities, the server can auto-approve without user interaction. This makes repeat agent creation seamless while keeping escalation under user control.
+
+## Autonomous agent claiming
+
+When an unlinked host becomes linked to a user, all active autonomous agents under that host are **claimed**:
+
+1. Each autonomous agent's capabilities are revoked
+2. Each agent's status is set to `claimed`
+3. Activity history is attributed to the user
+4. Any resources created by the agent are transferred to the user
+
+A claimed agent is terminal — it cannot be reactivated. If the user wants to continue, the host registers a new delegated agent.

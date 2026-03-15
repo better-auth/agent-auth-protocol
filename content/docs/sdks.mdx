@@ -1,0 +1,65 @@
+---
+title: SDKs
+description: Official and community SDKs for the Agent Auth Protocol — TypeScript, Python, and implementation guides for other languages.
+section: "Develop with Agent Auth"
+---
+
+Official and community SDKs for the Agent Auth Protocol. The protocol is simple enough to implement from scratch in any language — Ed25519 keypairs, device authorization flow, signed JWTs, and three database tables.
+
+## TypeScript
+
+### Better Auth plugin (Server)
+
+Full reference implementation of the Agent Auth server as a Better Auth plugin. Drop-in agent identity, registration, device flow, capability management, and session verification.
+
+```ts
+import { betterAuth } from "better-auth";
+import { agentAuth } from "better-auth/plugins";
+
+const auth = betterAuth({
+  plugins: [agentAuth()],
+});
+```
+
+- Agent registration with Ed25519 key verification
+- Device authorization flow for user approval
+- Capability management and grant tracking
+- Session verification via `getAgentSession()`
+- Lifecycle management (expiry, reactivation, revocation)
+
+[View on GitHub →](https://github.com/better-auth/better-auth)
+
+### Agent Auth SDK (Client)
+
+Client SDK for agent runtimes. Manages keypairs, signs requests, handles registration and capability escalation. Can run as an MCP server, CLI tool, or embedded library.
+
+```bash
+npm install agent-auth
+```
+
+- Ed25519 key generation and management
+- JWT signing for every request
+- Auto-registration with discovery
+- Capability escalation handling
+- MCP server mode
+- CLI interface
+
+[View on GitHub →](https://github.com/better-auth/agent-auth-protocol)
+
+## Python
+
+**Coming soon.** A Python SDK for the Agent Auth Protocol is in development. It will support both server and client implementations.
+
+In the meantime, you can implement the protocol from scratch in Python using standard libraries for Ed25519 (e.g. `cryptography`) and JWT (e.g. `PyJWT`).
+
+## Other languages
+
+The protocol is open and language-agnostic. To implement it from scratch, you need:
+
+| Component | Requirements |
+|-----------|-------------|
+| **Server** | 3 database tables + Ed25519 JWT verification + device authorization flow |
+| **Client** | Ed25519 key generation + JWT signing + HTTP request binding |
+| **Standards** | DPoP-style (RFC 9449) + Device Authorization (RFC 8628) |
+
+If you build an implementation, [submit a PR](https://github.com/better-auth/agent-auth-protocol) to be listed here.
