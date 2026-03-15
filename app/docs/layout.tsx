@@ -1,4 +1,4 @@
-import { DocsLayout } from "fumadocs-ui/layouts/docs";
+import { DocsLayout } from "fumadocs-ui/layouts/notebook";
 import { source } from "@/lib/source";
 import { BetterAuthLogo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";

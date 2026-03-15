@@ -5,7 +5,7 @@ import {
   DocsBody,
   DocsTitle,
   DocsDescription,
-} from "fumadocs-ui/page";
+} from "fumadocs-ui/layouts/notebook/page";
 import { getMDXComponents } from "@/mdx-components";
 import { notFound, redirect } from "next/navigation";
 import type { MDXContent } from "mdx/types";
