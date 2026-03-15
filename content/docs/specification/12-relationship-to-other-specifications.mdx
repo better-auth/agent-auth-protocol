@@ -1,0 +1,50 @@
+---
+title: "12. Relationship to Other Specifications"
+description: "Section 12 of the Agent Auth Protocol specification."
+---
+
+## 12.1 Specifications Used
+
+Agent Auth builds on existing standards for cryptography, key formats, user consent, and token validation.
+
+## MCP
+
+Services with MCP servers can expose Agent Auth-backed capabilities through an MCP adapter or gateway. The execute endpoint (`POST /capability/execute`) can proxy requests to MCP tools internally. MCP remains an implementation layer — the server may use MCP to fulfill capabilities behind the execute endpoint.
+
+## OpenAPI
+
+Services with OpenAPI documents can derive capability definitions from API operations. An adapter maps OpenAPI operations to Agent Auth capabilities. The execute endpoint can proxy to these operations, so agent JWT validation can remain centralized in the auth server or gateway layer.
+
+## OAuth 2.0
+
+Agent Auth is a standalone protocol that reuses specific OAuth mechanisms where they fit:
+
+- **Device Authorization ([RFC 8628](https://datatracker.ietf.org/doc/html/rfc8628))** — the primary user consent flow. When agent registration requires approval, the server returns a `verification_uri` and `user_code` following RFC 8628. The client polls `GET /agent/status` for the result instead of a token endpoint.
+- **CIBA ([OpenID CIBA Core](https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html))** — backchannel consent for autonomous agents that need user authorization without a browser.
+- **DPoP ([RFC 9449](https://datatracker.ietf.org/doc/html/rfc9449))** — optional proof of possession for higher-security deployments. When used, Agent Auth follows the standard DPoP model: a separate proof JWT plus `cnf` binding on the access token.
+- **Token Introspection ([RFC 7662](https://datatracker.ietf.org/doc/html/rfc7662))** — the `/agent/introspect` endpoint follows the introspection model for resource servers that validate JWTs externally.
+- **JWK / JWKS ([RFC 7517](https://datatracker.ietf.org/doc/html/rfc7517))** — public keys use standard JWK format. Hosts and agents MAY publish keys at JWKS URLs for rotation.
+
+A server MAY accept both OAuth bearer tokens and Agent Auth JWTs on the same endpoints when it chooses to support both interaction models.
+
+## 12.2 Related Agent Authorization Proposals
+
+The following specifications address overlapping problem spaces. Agent Auth differs in focus and approach from each.
+
+## IETF: On-Behalf-Of User Authorization for AI Agents
+
+[draft-oauth-ai-agents-on-behalf-of-user](https://datatracker.ietf.org/doc/draft-oauth-ai-agents-on-behalf-of-user/) (Senarath & Dissanayaka, 2025) extends the OAuth Authorization Code flow with a `requested_actor` parameter so users can explicitly consent to agent delegation. The resulting JWT uses the `act` claim ([RFC 8693](https://datatracker.ietf.org/doc/html/rfc8693)) where `sub` = user and `act.sub` = agent. The agent authenticates during token exchange via an `actor_token`.
+
+On-Behalf-Of solves a narrow problem: letting an OAuth authorization server issue a token that identifies both user and agent. Agent Auth solves the broader problem of agent identity, registration, capability discovery, and lifecycle management. A server could choose On-Behalf-Of for OAuth-native clients and Agent Auth for MCP-native agents.
+
+## IETF: Agent Authorization Profile (AAP) for OAuth 2.0
+
+[draft-aap-oauth-profile-00](https://www.ietf.org/archive/id/draft-aap-oauth-profile-00.html) (Cruz, February 2026) defines structured JWT claims for autonomous agent authorization. AAP layers seven claim sections onto standard OAuth tokens: `aap_agent` (identity + model + runtime), `aap_task` (purpose binding), `aap_capabilities` (actions + constraints), `aap_oversight` (human approval requirements), `aap_delegation` (chains with depth control), `aap_context` (network/geo/time restrictions), and `aap_audit` (trace propagation).
+
+**Complementary areas:** AAP's task binding, delegation chains, and structured constraints address concerns that Agent Auth defers to the server. Future Agent Auth extensions could adopt AAP-style claims as optional JWT fields — particularly `aap_task` for audit-sensitive deployments and `aap_delegation` for multi-agent orchestration. AAP's `requires_human_approval_for` maps conceptually to Agent Auth's pending capability approval mechanism.
+
+**Architectural distinction:** AAP is a policy-expression profile — it tells resource servers *what* an agent can do via token claims but doesn't define *how* agents register, discover capabilities, or manage their lifecycle. Agent Auth is a registration-and-lifecycle protocol — it defines the operational flow from discovery through execution. They solve different layers and could work together: an Agent Auth server could issue AAP-compliant tokens.
+
+## AAuth (Hardt)
+
+[AAuth](https://github.com/dickhardt/agent-auth) takes a different approach: URI-based agent identity, HTTP signatures for authentication, and asynchronous consent via `202 Accepted` with a `Location` header for polling. Agent Auth chose keypair-based identity (no URI requirement) and RFC 8628 device authorization for consent. AAuth's URI model supports key rotation (the URI stays stable while the JWKS at that URI changes) — Agent Auth achieves similar rotation through JWKS URLs as an optional alternative to inline keys.

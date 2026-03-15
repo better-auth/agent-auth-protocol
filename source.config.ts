@@ -1,8 +1,8 @@
-import { defineDocs, defineConfig } from 'fumadocs-mdx/config';
-import { remarkMdxMermaid } from 'fumadocs-core/mdx-plugins';
+import { defineDocs, defineConfig } from "fumadocs-mdx/config";
+import { remarkMdxMermaid } from "fumadocs-core/mdx-plugins";
 
 export const docs = defineDocs({
-  dir: 'content/docs',
+  dir: "content/docs",
   docs: {
     postprocess: {
       includeProcessedMarkdown: true,
@@ -15,8 +15,8 @@ export default defineConfig({
     remarkPlugins: [remarkMdxMermaid],
     rehypeCodeOptions: {
       themes: {
-        light: 'one-light',
-        dark: 'one-dark-pro',
+        light: "one-light",
+        dark: "one-dark-pro",
       },
     },
   },

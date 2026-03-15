@@ -1,0 +1,21 @@
+---
+title: Agent Auth Protocol
+description: An implementation-oriented protocol for AI agent identity, registration, and capability access.
+---
+
+Agent Auth is an open protocol that gives AI agents their own identity — distinct from users, OAuth clients, or API keys. It defines how agents register, authenticate, receive capabilities, and operate across services.
+
+## Why Agent Auth?
+
+AI agents are becoming long-lived actors: copilots, background workers, scheduled automations, and multi-step systems that call external services. Today's auth models were not designed with this in mind.
+
+- **No visibility** — servers can't tell which agent made a request
+- **No scoping** — every agent gets the user's full permissions
+- **No isolation** — revoking one agent means revoking all of them
+- **No autonomous identity** — agents without a human in the loop have no way to register or authenticate
+
+Agent Auth solves this by making the runtime agent a first-class principal with its own identity, granted capabilities, and lifecycle.
+
+## Get Started
+
+Read the full [Specification](/specification) in the dedicated protocol reader.

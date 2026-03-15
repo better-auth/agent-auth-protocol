@@ -1,0 +1,17 @@
+{
+  "title": "Specification",
+  "pages": [
+    "01-introduction",
+    "02-core-model",
+    "03-data-model",
+    "04-authentication",
+    "05-server",
+    "06-client",
+    "07-approval-methods",
+    "08-security-considerations",
+    "09-privacy-considerations",
+    "10-implementation-considerations",
+    "11-observability",
+    "12-relationship-to-other-specifications"
+  ]
+}

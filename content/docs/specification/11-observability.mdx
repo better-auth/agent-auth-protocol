@@ -1,0 +1,20 @@
+---
+title: "11. Observability"
+description: "Section 11 of the Agent Auth Protocol specification."
+---
+
+The protocol does not define logging formats, audit trail schemas, or webhook events. However, the JWT-based authentication model provides per-agent, per-call traceability by default.
+
+Every authenticated request contains a JWT with:
+
+| Claim | What it tells you |
+|---|---|
+| `sub` | Which agent made the call |
+| `jti` | Unique call identifier (for correlation and replay detection) |
+| `iat` | When the JWT was issued |
+| `exp` | When it expires |
+| `cnf` | Which proof key or client certificate the JWT is bound to (if a proof-of-possession profile is used) |
+
+Combined with the agent's host and user identifiers from stored state, the server can reconstruct the full chain: **which user** → **which host** → **which agent** → **which capability** → **when**.
+
+Servers SHOULD log at least: agent ID, capability name, timestamp, and result (success/error) for each capability call. How to store, query, export, or alert on these logs is an implementation concern.

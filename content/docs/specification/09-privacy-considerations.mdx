@@ -1,0 +1,36 @@
+---
+title: "9. Privacy Considerations"
+description: "Section 9 of the Agent Auth Protocol specification."
+---
+
+## 9.1 Host Key Correlation
+
+A host uses the same keypair across all servers it connects to. This means two colluding servers can correlate activity: if `bank.com` and `shop.com` both see the same host public key, they know the same client is connecting to both. This is analogous to a browser fingerprint.
+
+Mitigations:
+- **Per-server host keys.** Clients MAY generate a separate host keypair for each server. This eliminates cross-server correlation at the cost of more keys to manage.
+- **JWKS rotation.** Hosts using JWKS URLs can rotate keys independently per server, but the JWKS URL itself is a stable identifier — rotating the URL too is necessary for full unlinkability.
+
+## 9.2 Agent Activity Tracking
+
+The protocol provides per-agent, per-call traceability by design (§11). This is a feature for security and auditing, but also a privacy concern: the server has a complete record of every capability an agent executed, when, and with what inputs.
+
+- Servers SHOULD define and publish data retention policies for agent activity logs.
+- Servers SHOULD provide users with the ability to view and delete agent activity data associated with their account.
+- Servers MUST NOT share per-agent activity data with third parties without user consent.
+
+## 9.3 Autonomous Agent Data Collection
+
+Autonomous agents (`mode: "autonomous"`) can register and operate without a user in the loop. When a host acquires a `user_id`, autonomous agents under it are automatically claimed and their activity history is attributed to the user (§2.10). The user may not be aware of what the agent did before the host was linked.
+
+- Servers SHOULD provide the user with visibility into the autonomous agent's activity before completing the claiming process.
+
+## 9.4 Capability Requests as Behavioral Signal
+
+The capabilities an agent requests reveal intent. A request for `transfer_international` tells the server the user is planning an international transfer, even if the transfer never happens. Pending capability requests (user hasn't approved yet) are also stored server-side.
+
+- Servers SHOULD treat pending and denied capability requests with the same data protection as granted capabilities.
+
+## 9.5 Metadata and Reason Fields
+
+The `reason` field on registration and capability requests is freetext. Agents may include sensitive information (e.g. "User wants to transfer $50,000 to account ending in 4321"). Servers that store these fields SHOULD apply the same access controls and retention policies as other PII.

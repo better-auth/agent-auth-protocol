@@ -1,0 +1,71 @@
+---
+title: "3. Data Model"
+description: "Section 3 of the Agent Auth Protocol specification."
+---
+
+This section defines the logical fields the protocol operates on. Implementations MAY store these fields however they choose, as long as the protocol-facing behavior is preserved.
+
+## 3.1 Host
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | string | Unique identifier |
+| `name` | string? | Human-readable name for the host (e.g. `"MacBook-Pro"`, `"CI Server"`). Informational only — servers MUST NOT use it for authorization. |
+| `public_key` | JWK? | Ed25519 public key (see §4.1). Present when inline key registration is used. |
+| `jwks_url` | string? | JWKS endpoint URL. Present when JWKS-based registration is used. |
+| `user_id` | string? | ID of the owning user in the server's auth system. Set when a user approves and trusts the host. Drives authorization (revocation, management). |
+| `default_capabilities` | string[] | Default capabilities for agents registered under this host |
+| `status` | enum | active, pending, revoked, rejected |
+| `activated_at` | datetime? | Last activation |
+| `expires_at` | datetime? | TTL deadline |
+| `last_used_at` | datetime? | Last host JWT usage |
+| `created_at` | datetime | Created |
+| `updated_at` | datetime | Last modified |
+
+Clients SHOULD auto-detect the `name` from available context (e.g. device hostname, client name) and pass it as `host_name` during agent registration (§5.3).
+
+## 3.2 Agent
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | string | Unique identifier |
+| `name` | string | Human-readable name for the agent |
+| `host_id` | string (FK) | The host this agent is registered under (**required**) |
+| `user_id` | string? (FK) | The single effective user context this agent acts on behalf of. Set from the host's `user_id` or session auth. Core protocol behavior assumes at most one effective `user_id` per agent at a time. |
+| `public_key` | JWK? | Ed25519 public key (see §4.1). Present when inline key registration is used. |
+| `jwks_url` | string? | JWKS endpoint URL. Present when JWKS-based registration is used. |
+| `status` | enum | active, pending, expired, revoked, rejected, claimed |
+| `mode` | string | `"delegated"` or `"autonomous"`. Immutable after creation (§2.2). |
+| `last_used_at` | datetime? | Last authenticated request |
+| `activated_at` | datetime? | Last activation |
+| `expires_at` | datetime? | TTL deadline |
+| `created_at` | datetime | Created |
+| `updated_at` | datetime | Last modified |
+
+## 3.3 Agent Capability Grant
+
+Agent capabilities are stored as individual agent capability grant records rather than flat arrays on the agent. This enables per-capability metadata (expiry, grant source, reason) and granular revocation.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | string | Unique identifier |
+| `agent_id` | string (FK) | The agent this capability grant belongs to |
+| `capability` | string | The granted capability identifier |
+| `status` | enum | `active`, `pending`, or `denied` |
+| `constraints` | object? | Input constraints on this grant (§2.13). Keys are input field names; values are exact values or operator objects (`max`, `min`, `in`, `not_in`). Present only when the grant is scoped. |
+| `granted_by` | string? (FK) | User or system actor who granted this capability. Informational for audit and revocation history — it does not change the agent's single effective `user_id`. |
+| `denied_by` | string? (FK) | User or system actor who denied this capability. Present only when `status` is `denied`. |
+| `reason` | string? | Why this capability was granted, requested, or denied. For denied grants, this is a human-readable explanation returned to the agent (§5.5). |
+| `expires_at` | datetime? | When this specific capability grant expires (independent of agent TTL) |
+| `created_at` | datetime | Created |
+| `updated_at` | datetime | Last modified |
+
+An agent's effective capabilities are all agent capability grants where `status = "active"` and `expires_at` is null or in the future. Pending capabilities are grants where `status = "pending"`.
+
+Implementations MAY use flat arrays on the agent model instead of a separate table, but MUST support at minimum per-capability status tracking (active vs pending).
+
+## 3.3.1 Single-User Core Model
+
+The core protocol models an agent as having one effective user context at a time (`agent.user_id`). A capability grant MAY still record a different `granted_by` value for audit purposes — for example, an admin or another authorized reviewer may approve a capability request — but that does not change which user the agent is acting for.
+
+More advanced workflows where a single agent accumulates authority from multiple end users, targets specific users for approval, or selects a subject at execution time are not part of the core protocol. Those patterns are defined, if at all, by extension profiles such as the Cross-User Grant Profile (§10.8.1).

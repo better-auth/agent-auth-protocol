@@ -3,6 +3,8 @@
 @import "fumadocs-ui/css/preset.css";
 @import "tw-animate-css";
 
+@source '../node_modules/fumadocs-ui/dist/**/*.js';
+
 @custom-variant dark (&:is(.dark *));
 
 @layer utilities {
@@ -369,6 +371,15 @@
 }
 .spec-prose p:last-child {
   margin-bottom: 0;
+}
+.spec-prose code {
+	font-family: var(--font-typewriter), ui-monospace, monospace;
+	font-size: 0.8em;
+	padding: 0.12em 0.35em;
+	background: color-mix(in oklch, var(--foreground) 5%, transparent);
+	border: 1px solid color-mix(in oklch, var(--foreground) 8%, transparent);
+	border-radius: 3px;
+	word-break: break-word;
 }
 
 /* Specification reader */

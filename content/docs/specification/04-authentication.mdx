@@ -1,0 +1,121 @@
+---
+title: "4. Authentication"
+description: "Section 4 of the Agent Auth Protocol specification."
+---
+
+## 4.1 Keypairs
+
+Both hosts and agents use EdDSA over Ed25519 ([RFC 8037](https://datatracker.ietf.org/doc/html/rfc8037), [RFC 8032](https://datatracker.ietf.org/doc/html/rfc8032)) keypairs in JWK format.
+
+- Algorithm: `EdDSA` with curve `Ed25519`
+- The private key MUST never be sent to the server
+- The server stores only public keys (or JWKS URLs)
+- The agent's private key lives with the client
+
+Public keys for both hosts and agents can be provided to servers in two ways:
+
+- **Inline (JWK)** — sent directly during registration. Simplest case.
+- **JWKS URL** — published at a URL the server can fetch. The URL MAY be served by the client itself, or by a service acting on the client's behalf (for example a broker or identity service). This is useful for key rotation and for avoiding manual public-key distribution across multiple verifier services. The private keys still live with the client or the service that controls that identity.
+
+The `algorithms` field in discovery (§5.1) lists accepted key types for new registrations. In this specification version, the only defined value is `Ed25519`, and conformant clients and servers MUST support it. JWT signing still uses JWA `alg = EdDSA` with the `Ed25519` key type.
+
+Removing an algorithm from the discovery list MUST NOT invalidate existing agents or hosts that registered with it.
+
+## 4.2 Host JWT
+
+Hosts authenticate by signing short-lived JWTs per [RFC 7519](https://datatracker.ietf.org/doc/html/rfc7519) with the host's private key. The JWT header MUST include `kid` when using a JWKS URL.
+
+| Claim | Type | Required | Description |
+|---|---|---|---|
+| `aud` | string | Yes | Server's `issuer` URL from discovery. |
+| `iat` | number | Yes | Issued-at timestamp. |
+| `exp` | number | Yes | Expiration timestamp. |
+| `jti` | string | Yes | Unique token identifier. |
+| `host_public_key` | JWK | Conditional | Inline host public key. Required unless `host_jwks_url` is provided. |
+| `host_jwks_url` | string | Conditional | JWKS URL for the host's public keys. Required unless `host_public_key` is provided. Server matches by `kid` from the JWT header. |
+| `agent_public_key` | JWK | Conditional | Inline agent public key. Required for registration (§5.3) unless `agent_jwks_url` is provided. Not required on other endpoints. |
+| `agent_jwks_url` | string | Conditional | JWKS URL for the agent's public keys. Required for registration (§5.3) unless `agent_public_key` is provided. Not required on other endpoints. |
+| `agent_kid` | string | Conditional | Key ID for the agent's key in the agent JWKS. Required when `agent_jwks_url` is provided. |
+
+**Example Host JWT payload (for registration):**
+
+```json
+{
+  "aud": "https://api.example.com",
+  "iat": 1710000000,
+  "exp": 1710000060,
+  "jti": "h-abc123",
+  "host_public_key": { "kty": "OKP", "crv": "Ed25519", "x": "host-pub-key..." },
+  "agent_public_key": { "kty": "OKP", "crv": "Ed25519", "x": "agent-pub-key..." }
+}
+```
+
+Host and agent JWKS URLs MUST point to different endpoints. Servers that fetch JWKS URLs MUST apply URL fetch protections (§8.12) and SHOULD cache previously fetched keys. Servers MUST accept host JWTs with or without agent key claims on non-registration endpoints.
+
+## 4.3 Agent JWT
+
+Agents authenticate by signing short-lived JWTs per [RFC 7519](https://datatracker.ietf.org/doc/html/rfc7519). JWTs SHOULD expire within 60 seconds.
+
+| Claim | Type | Required | Description |
+|---|---|---|---|
+| `sub` | string | Yes | Agent ID. |
+| `aud` | string | Yes | Server's `issuer` URL from discovery. |
+| `iat` | number | Yes | Issued-at timestamp. |
+| `exp` | number | Yes | Expiration timestamp. |
+| `jti` | string | Yes | Unique token identifier. |
+| `capabilities` | string[] | No | Capability names this JWT is authorized for. If present, the server MUST reject requests for capabilities not in this list. If absent, the JWT is valid for all the agent's granted capabilities. |
+
+**Example Agent JWT payload:**
+
+```json
+{
+  "sub": "agt_k7x9m2",
+  "aud": "https://api.example.com",
+  "iat": 1710000000,
+  "exp": 1710000060,
+  "jti": "a-xyz789"
+}
+```
+
+**Example with capability restriction:**
+
+```json
+{
+  "sub": "agt_k7x9m2",
+  "aud": "https://api.example.com",
+  "iat": 1710000000,
+  "exp": 1710000060,
+  "jti": "a-xyz790",
+  "capabilities": ["check_balance", "list_accounts"]
+}
+```
+
+## 4.4 Proof of Possession (Optional)
+
+The base security model is short-lived JWTs over TLS. This is sufficient for most applications.
+
+For higher-security deployments, servers MAY require a standard proof-of-possession profile:
+
+- **DPoP ([RFC 9449](https://datatracker.ietf.org/doc/html/rfc9449))** — the client sends the agent JWT as the access token and a separate DPoP proof JWT in the `DPoP` header on each request. The agent JWT SHOULD include `cnf.jkt` (the JWK thumbprint of the DPoP proof key).
+- **mTLS ([RFC 8705](https://datatracker.ietf.org/doc/html/rfc8705))** — the client authenticates with a TLS client certificate. The agent JWT SHOULD include `cnf.x5t#S256` to bind it to that certificate.
+
+## 4.5 Verification
+
+1. Extract `sub` from JWT (agent ID)
+2. Verify `aud` matches the server's own `issuer` URL — reject if it doesn't
+3. Look up the agent by `sub`
+4. Look up the agent's host — reject if the host is revoked or pending
+5. Check agent status — reject if revoked, expired, or pending
+6. Verify JWT signature against the agent's stored public key (or JWKS)
+7. Check `exp`, `iat`, `jti` replay
+8. If proof of possession is required by server policy, validate the DPoP proof or mTLS binding and ensure it matches the JWT's `cnf` claim
+9. Resolve the agent's granted capabilities
+10. If `capabilities` claim is present in the JWT, intersect with granted capabilities — reject if the requested operation is not in the intersection
+11. If the matching grant carries `constraints` (§2.13), validate that the request arguments satisfy all constraints — reject with `constraint_violated` if any are violated
+12. Process the request
+
+The server MUST ensure that revocation takes effect within a bounded window.
+
+## 4.6 Replay Detection
+
+All JWTs MUST include `jti`. The server MUST cache seen values and reject duplicates within the JWT's max age window.

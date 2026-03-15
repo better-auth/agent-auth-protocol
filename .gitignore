@@ -30,6 +30,9 @@ next-env.d.ts
 # vercel
 .vercel
 
+# fumadocs
+.source/
+
 # misc
 .DS_Store
 *.pem

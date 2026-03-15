@@ -1,16 +1,13 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef } from "react";
-import { LandingDiagrams } from "@/components/landing/diagrams";
+import { ProtocolOverview } from "@/components/landing/overview";
 import { LandingFooter } from "@/components/landing/footer";
 import { LandingHero } from "@/components/landing/hero";
 import { HeroIdentityBg } from "@/components/landing/hero-identity";
 import { HalftoneBackground } from "@/components/ui/halftone-background";
-import { BetterAuthLogo } from "../logo";
-import { ThemeToggle } from "../theme-toggle";
 
-export function LandingShell() {
+export function LandingContent() {
 	const scrollRef = useRef<HTMLDivElement>(null);
 	const heroInnerRef = useRef<HTMLDivElement>(null);
 
@@ -115,7 +112,6 @@ export function LandingShell() {
 					className="absolute inset-0 z-1 pointer-events-none select-none overflow-hidden"
 					aria-hidden="true"
 				>
-					
 					<svg
 						className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 text-foreground/25"
 						width="20"
@@ -175,7 +171,7 @@ export function LandingShell() {
 					<rect width="100%" height="100%" filter="url(#paper-noise)" />
 				</svg>
 				<div className="relative z-1">
-					<LandingDiagrams />
+					<ProtocolOverview />
 				</div>
 			</div>
 
