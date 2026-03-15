@@ -451,7 +451,7 @@
 }
 .spec-inline-code {
   font-family: var(--font-typewriter), ui-monospace, monospace;
-  font-size: 0.85em;
+  font-size: 0.8rem;
   padding: 0.15em 0.4em;
   background: color-mix(in oklch, var(--foreground) 5%, transparent);
   border: 1px solid color-mix(in oklch, var(--foreground) 8%, transparent);
