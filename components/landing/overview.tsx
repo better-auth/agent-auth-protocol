@@ -2,6 +2,7 @@
 
 import { BookOpen, Code, Globe } from "lucide-react";
 import { motion } from "motion/react";
+import Link from "next/link";
 
 function AgentIcon({ variant }: { variant: "red" | "green" }) {
 	const color =
@@ -89,27 +90,35 @@ export function ProtocolOverview() {
 			{/*  INTRO                                          */}
 			{/* ═══════════════════════════════════════════════ */}
 
+			<h2
+				className="text-xl sm:text-2xl md:text-3xl tracking-[-0.015em] font-semibold mb-6"
+				style={{ fontFamily: "var(--font-display), serif" }}
+			>
+				Agent Auth
+			</h2>
+
 			<div className="spec-prose mb-16">
 				<p>
-					Every auth model we{"'"}ve built for the web — OAuth, sessions, API keys — assumes two kinds of actors: a human user and a static application, with predefined scopes and a human in the consent loop. Agents are neither.
+					Everything we{"'"}ve built for auth on the web assumes two kinds of actors: a human user and a static application, with predefined scopes and known execution paths.
 				</p>
 				<p>
-					They range from ephemeral one-shot tasks to long-running background workers and multi-step systems — calling external services without human supervision, sometimes on behalf of a user, sometimes entirely on their own.
+					Agents are dynamic, non-deterministic, and vary their tasks over time — sometimes acting on behalf of a user, sometimes entirely on their own, calling external services, discovering tools at runtime, needing one capability now and a different one later, often running long after the human who started them has moved on.
 				</p>
+				<p>
+					These problems share a single root cause: existing auth — OAuth, API keys, sessions — has no concept of an "agent", a distinct runtime actor. The server sees a credential, and credentials identify resources, not the specific actor using them. Without per-agent identity, the server cannot tell which agent made a request, cannot scope one differently from another, and cannot revoke one without affecting every other. There is no lifecycle, no state transitions, no way to expire an agent that should have stopped running hours ago.
+				</p>
+				<p>
+					Agent Auth solves this by making the runtime agent a first-class principal:
+				</p>
+				<ul className="list-disc list-inside">
+					<li><strong>Identity</strong> — each agent is registered with its own identity, scoped to a specific task or session. The server knows exactly which agent is acting.</li>
+					<li><strong>Capabilities</strong> — instead of coarse-grained scopes, agents are granted specific capabilities that can be escalated or revoked at runtime.</li>
+					<li><strong>Lifecycle</strong> — every agent is governed by session TTL, max lifetime, and revocation. The server can expire or terminate one agent without affecting any other.</li>
+				</ul>
 			</div>
 
-			{/* ═══════════════════════════════════════════════ */}
-			{/*  1 · DELEGATED AGENTS                           */}
-			{/* ═══════════════════════════════════════════════ */}
-
-			<div className="mb-16">
-				<SectionTag label="Delegated agents" />
-				<div className="spec-prose mb-8">
-					<p>
-						When an agent acts for a user, it typically reuses the user{"'"}s OAuth token or a shared client credential. That collapses the agent into someone else{"'"}s identity — the server can{"'"}t tell which agent made a request, can{"'"}t scope one differently from another, and can{"'"}t revoke one without revoking everything.
-					</p>
-				</div>
-
+			{/* Delegated — diagram */}
+			<div className="mb-12">
 				<div className="border border-foreground/10 dark:border-foreground/7 overflow-hidden grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr]">
 					{/* Today */}
 					<div className="bg-red-400/5 p-5 sm:p-6">
@@ -150,7 +159,7 @@ export function ProtocolOverview() {
 							<div className="flex flex-col gap-1.5 shrink-0">
 								{[
 									{ id: "agt_1", cap: "check_balance" },
-									{ id: "agt_2", cap: "transfer_funds" },
+									{ id: "agt_2", cap: "transfer_funds · ≤500 · USD" },
 									{ id: "agt_3", cap: "list_txns" },
 								].map((row) => (
 									<div
@@ -175,186 +184,22 @@ export function ProtocolOverview() {
 						</p>
 					</div>
 				</div>
-
-				<div className="spec-prose mt-6">
-					<p>
-						Agent Auth treats each agent as a first-class principal with its own identity, granted capabilities, and lifecycle. The server sees exactly which agent is acting, what it{"'"}s authorized to do, and can revoke one without affecting anything else.
-					</p>
-				</div>
 			</div>
 
-			{/* ═══════════════════════════════════════════════ */}
-			{/*  2 · AUTONOMOUS AGENTS                          */}
-			{/* ═══════════════════════════════════════════════ */}
-
-			<div className="mb-16">
-				<SectionTag label="Autonomous agents" />
-				<div className="spec-prose mb-8">
-					<p>
-						When an agent needs to act on its own — without a user in the loop — there{"'"}s no identity model at all. It{"'"}s forced to pretend to be a human: opening a browser, solving a CAPTCHA, clicking through a signup flow — just to use a service. There is no standard way for an agent to register itself, prove its identity, or receive capabilities without impersonating a person.
-					</p>
-				</div>
-
-				<div className="border border-foreground/10 dark:border-foreground/7 overflow-hidden grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr]">
-					{/* Today */}
-					<div className="bg-red-400/5 p-5 sm:p-6">
-						<div className="text-[11px] font-mono uppercase tracking-wider text-red-500 dark:text-red-400/70 mb-4">Today</div>
-						<div className="flex items-center justify-center gap-3 sm:gap-4">
-							<div className="flex flex-col gap-1.5 shrink-0">
-								{["worker_1", "worker_2"].map((id) => (
-									<div
-										key={id}
-										className="flex items-center gap-1.5 px-2 py-1 border border-red-400/30 dark:border-red-400/22 bg-red-400/8 dark:bg-red-400/6"
-									>
-										<AgentIcon variant="red" />
-										<span className="text-[10px] font-mono text-red-400/80 dark:text-red-400/60">{id}</span>
-									</div>
-								))}
-							</div>
-							<FlowArrow />
-							<div className="border border-dashed border-red-400/25 dark:border-red-400/18 px-3 py-2.5 shrink-0">
-								<div className="text-[10px] font-mono text-red-400/75 dark:text-red-400/55 text-center">
-									user impersonation
-								</div>
-								<div className="text-[9px] font-mono text-red-400/50 dark:text-red-400/38 text-center mt-0.5">
-									browser, CAPTCHA, signup
-								</div>
-							</div>
-							<FlowArrow />
-							<ServerNode label="Server" />
-						</div>
-						<p className="text-[11px] text-red-400/65 dark:text-red-400/50 leading-relaxed mt-4">
-							Autonomous agents are routed through human signup flows. The server sees one principal.
-						</p>
-					</div>
-
-					{/* Divider */}
-					<div className="hidden sm:block w-px bg-foreground/10 dark:bg-foreground/7" />
-					<div className="sm:hidden h-px bg-foreground/10 dark:bg-foreground/7" />
-
-					{/* With Agent Auth */}
-					<div className="bg-emerald-400/3 p-5 sm:p-6">
-						<div className="text-[11px] font-mono uppercase tracking-wider text-emerald-600/70 dark:text-emerald-400/50 mb-4">With Agent Auth</div>
-						<div className="flex items-center justify-center gap-3 sm:gap-4">
-							<div className="flex flex-col gap-1.5 shrink-0">
-								{[
-									{ id: "auto_1", ctx: "own keypair" },
-									{ id: "auto_2", ctx: "own keypair" },
-								].map((row) => (
-									<div
-										key={row.id}
-										className="flex items-center gap-2 px-2 py-1 bg-emerald-400/6 dark:bg-emerald-400/4 border border-emerald-400/15 dark:border-emerald-400/10"
-									>
-										<AgentIcon variant="green" />
-										<span className="text-[10px] font-mono text-foreground/65 dark:text-foreground/50">
-											{row.id}
-										</span>
-										<span className="text-[9px] font-mono text-foreground/35 dark:text-foreground/25">
-											{row.ctx}
-										</span>
-									</div>
-								))}
-							</div>
-							<FlowArrow />
-							<div className="flex flex-col gap-1 shrink-0">
-								{["register", "authenticate"].map((step) => (
-									<div
-										key={step}
-										className="flex items-center gap-2 px-3 py-1 border border-dashed border-emerald-400/15 dark:border-emerald-400/10"
-									>
-										<span className="text-[10px] font-mono text-emerald-500/50 dark:text-emerald-400/35">
-											{step}
-										</span>
-									</div>
-								))}
-							</div>
-							<FlowArrow />
-							<ServerNode label="Server" />
-						</div>
-						<p className="text-[11px] text-emerald-600/50 dark:text-emerald-400/35 leading-relaxed mt-4">
-							Each agent registers directly with its own identity and credential path.
-						</p>
-					</div>
-				</div>
-
-				<div className="spec-prose mt-6">
-					<p>
-						Agent Auth gives each autonomous agent its own identity. No user session, no impersonation. The agent registers directly, authenticates with signed JWTs, and the server attributes every action to the exact agent instance.
-					</p>
-				</div>
+			{/* Autonomous + Discovery — prose */}
+			<div className="spec-prose mb-12">
+				<p>
+					Beyond solving the identity problem for <strong>delegated agents</strong> — agents acting on behalf of a user — Agent Auth addresses two other structural gaps:
+				</p>
+				<p>
+					<strong>Autonomous agents.</strong> When there{"'"}s no user in the loop at all, agents today are forced to pretend to be human — opening a browser, solving a CAPTCHA, clicking through a signup flow — just to use a service. Agent Auth lets an agent register directly with its own identity. When a user later claims the agent, its activity history is attributed to them and capabilities are re-granted under user context.
+				</p>
+				<p>
+					<strong>Discovery.</strong> There{"'"}s no standard way for a service to advertise that it supports agents or how an agent should begin authenticating. Agent Auth standardizes a well-known endpoint and a <Link href="/registry" className="underline underline-offset-2 hover:text-foreground/80 transition-colors">registry</Link> so agents can discover services automatically — by URL or by intent.
+				</p>
 			</div>
 
-			{/* ═══════════════════════════════════════════════ */}
-			{/*  3 · DISCOVERY                                  */}
-			{/* ═══════════════════════════════════════════════ */}
-
-			<div className="mb-16">
-				<SectionTag label="Discovery" />
-				<div className="spec-prose mb-8">
-					<p>
-						There{"'"}s no standard way for a service to advertise that it supports agents, what capabilities it offers, or how an agent should begin authenticating. Every new integration requires hardcoded configuration, prior training data, or a human pointing the agent to the right endpoint.
-					</p>
-				</div>
-
-				<div className="border border-foreground/10 dark:border-foreground/7 overflow-hidden grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr]">
-					{/* Today */}
-					<div className="bg-red-400/5 p-5 sm:p-6">
-						<div className="text-[11px] font-mono uppercase tracking-wider text-red-500 dark:text-red-400/70 mb-4">Today</div>
-						<div className="flex flex-col gap-1.5">
-							{["find the right server", "add to config file", "create API key, paste it", "hope the agent knows how"].map((step) => (
-								<div
-									key={step}
-									className="border border-dashed border-red-400/25 dark:border-red-400/18 px-3 py-1.5"
-								>
-									<span className="text-[10px] font-mono text-red-400/65 dark:text-red-400/50">{step}</span>
-								</div>
-							))}
-						</div>
-						<p className="text-[11px] text-red-400/65 dark:text-red-400/50 leading-relaxed mt-4">
-							Every new service means manual setup. No standard way for agents to find and connect.
-						</p>
-					</div>
-
-					{/* Divider */}
-					<div className="hidden sm:block w-px bg-foreground/10 dark:bg-foreground/7" />
-					<div className="sm:hidden h-px bg-foreground/10 dark:bg-foreground/7" />
-
-					{/* With Agent Auth */}
-					<div className="bg-emerald-400/3 p-5 sm:p-6">
-						<div className="text-[11px] font-mono uppercase tracking-wider text-emerald-600/70 dark:text-emerald-400/50 mb-4">With Agent Auth</div>
-						<div className="space-y-4">
-							<div>
-								<div className="text-[9px] font-mono uppercase tracking-[0.12em] text-foreground/40 dark:text-foreground/28 mb-1.5">By URL</div>
-								<div className="flex items-center gap-2">
-									<div className="border border-emerald-400/15 dark:border-emerald-400/10 bg-emerald-400/6 dark:bg-emerald-400/4 px-3 py-1.5 shrink-0">
-										<span className="text-[10px] font-mono text-foreground/65 dark:text-foreground/50">example.com</span>
-									</div>
-									<FlowArrow />
-									<code className="text-[9px] font-mono text-foreground/40 dark:text-foreground/28">/.well-known/agent-auth</code>
-								</div>
-							</div>
-							<div className="h-px bg-foreground/6 dark:bg-foreground/4" />
-							<div>
-								<div className="text-[9px] font-mono uppercase tracking-[0.12em] text-foreground/40 dark:text-foreground/28 mb-1.5">By intent</div>
-								<div className="flex items-center gap-2">
-									<span className="text-[10px] font-mono text-foreground/50 dark:text-foreground/38 italic">{'"deploy my site"'}</span>
-									<FlowArrow />
-									<span className="text-[10px] font-mono text-foreground/65 dark:text-foreground/50">vercel.com</span>
-								</div>
-							</div>
-						</div>
-						<p className="text-[11px] text-emerald-600/50 dark:text-emerald-400/35 leading-relaxed mt-4">
-							Agents discover services automatically — by URL or by intent.
-						</p>
-					</div>
-				</div>
-
-				<div className="spec-prose mt-6">
-					<p>
-						Agent Auth defines a well-known endpoint and a registry protocol so agents can find and connect to services automatically — no manual config, no hardcoded endpoints.
-					</p>
-				</div>
-			</div>
+		
 
 			{/* ═══════════════════════════════════════════════ */}
 			{/*  APPROACH                                       */}

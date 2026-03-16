@@ -41,6 +41,19 @@ export function LandingContent() {
 
 	return (
 		<div ref={scrollRef} className="relative flex-1 overflow-y-auto min-h-0">
+			{/* Top smoke */}
+			<div
+				className="pointer-events-none sticky top-0 left-0 right-0 h-12 sm:h-16 z-10 -mb-12 sm:-mb-16"
+				style={{
+					background:
+						"linear-gradient(to bottom, var(--background) 0%, transparent 100%)",
+					maskImage:
+						"linear-gradient(to right, transparent 0%, black 15%, black 85%, transparent 100%)",
+					WebkitMaskImage:
+						"linear-gradient(to right, transparent 0%, black 15%, black 85%, transparent 100%)",
+				}}
+			/>
+
 			{/* Hero */}
 			<div className="relative overflow-hidden min-h-[80dvh] flex items-center justify-center">
 				<HalftoneBackground />

@@ -84,6 +84,21 @@ export function BookIcon(props: SVGProps<SVGSVGElement>) {
 	);
 }
 
+export function SlashIcon(props: SVGProps<SVGSVGElement>) {
+	return (
+		<svg
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			strokeWidth="2"
+			strokeLinecap="round"
+			{...props}
+		>
+			<path d="M12 2v20" />
+		</svg>
+	);
+}
+
 export function ChevronRightIcon(props: SVGProps<SVGSVGElement>) {
 	return (
 		<svg viewBox="0 0 16 16" fill="currentColor" {...props}>

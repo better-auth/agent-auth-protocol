@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { LandingContent } from "@/components/landing/landing-content";
-import { Logo } from "@/components/icons";
+import { Logo, SlashIcon } from "@/components/icons";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export default async function LandingPage() {
@@ -16,7 +16,7 @@ export default async function LandingPage() {
       >
         <Link href="/" className="flex items-center gap-1 px-4 sm:px-4 py-3">
           <Logo className="h-4 w-4" />
-          <p className="select-none text-sm uppercase">BETTER-AUTH.</p>
+          <p className="select-none text-sm uppercase">| AGENT-AUTH.</p>
         </Link>
         <div className="ml-auto flex items-center px-4">
           <ThemeToggle />
