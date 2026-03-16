@@ -1,11 +1,12 @@
 "use client";
 
+import { BookOpen, Code, Globe } from "lucide-react";
 import { motion } from "motion/react";
 
 function AgentIcon({ variant }: { variant: "red" | "green" }) {
 	const color =
 		variant === "red"
-			? "text-red-400/60 dark:text-red-400/40"
+			? "text-red-400/75 dark:text-red-400/55"
 			: "text-emerald-400/60 dark:text-emerald-400/40";
 	return (
 		<svg
@@ -64,11 +65,14 @@ function ServerNode({ label }: { label: string }) {
 	);
 }
 
-function SectionNumber({ n }: { n: string }) {
+function SectionTag({ label }: { label: string }) {
 	return (
-		<span className="text-[10px] font-mono text-foreground/30 dark:text-foreground/20 tracking-[0.2em] uppercase">
-			{n}
-		</span>
+		<div className="flex items-center gap-3 mb-6">
+			<span className="inline-flex items-center border border-foreground/10 dark:border-foreground/7 bg-foreground/3 dark:bg-foreground/2 px-3 py-1 text-[10px] sm:text-[11px] font-mono tracking-[0.14em] uppercase text-foreground/70 dark:text-foreground/55">
+				{label}
+			</span>
+			<div className="h-px flex-1 bg-linear-to-r from-foreground/10 dark:from-foreground/7 to-transparent" />
+		</div>
 	);
 }
 
@@ -81,48 +85,48 @@ export function ProtocolOverview() {
 			className="mx-auto max-w-4xl px-5 sm:px-6 py-16 sm:py-20"
 		>
 
-			<div className="spec-prose">
+			{/* ═══════════════════════════════════════════════ */}
+			{/*  INTRO                                          */}
+			{/* ═══════════════════════════════════════════════ */}
+
+			<div className="spec-prose mb-16">
 				<p>
-					Every auth model we{"'"}ve built for the web assumes two kinds of actors: a human user and a static application, with predefined scopes. Agents are neither.
+					Every auth model we{"'"}ve built for the web — OAuth, sessions, API keys — assumes two kinds of actors: a human user and a static application, with predefined scopes and a human in the consent loop. Agents are neither.
 				</p>
 				<p>
 					They range from ephemeral one-shot tasks to long-running background workers and multi-step systems — calling external services without human supervision, sometimes on behalf of a user, sometimes entirely on their own.
 				</p>
-				<p>
-					When an agent acts for a user, it typically reuses the user{"'"}s OAuth token or a shared client credential. That collapses the agent into someone else{"'"}s identity — the server can{"'"}t tell which agent made a request, can{"'"}t scope one differently from another, and can{"'"}t revoke one without revoking everything.
-				</p>
-				<p>
-					When an agent needs to act on its own, there{"'"}s no identity model at all. It{"'"}s forced to pretend to be a human — opening a browser, solving a CAPTCHA, clicking through a signup flow — just to use a service.
-				</p>
-				<p>
-					And there{"'"}s no standard way for a service to advertise that it supports agents, what capabilities it offers, or how an agent should begin authenticating.
-				</p>
 			</div>
 
 			{/* ═══════════════════════════════════════════════ */}
-			{/*  BEFORE / AFTER DIAGRAM                         */}
+			{/*  1 · DELEGATED AGENTS                           */}
 			{/* ═══════════════════════════════════════════════ */}
 
-			<figure className="my-10">
+			<div className="mb-16">
+				<SectionTag label="Delegated agents" />
+				<div className="spec-prose mb-8">
+					<p>
+						When an agent acts for a user, it typically reuses the user{"'"}s OAuth token or a shared client credential. That collapses the agent into someone else{"'"}s identity — the server can{"'"}t tell which agent made a request, can{"'"}t scope one differently from another, and can{"'"}t revoke one without revoking everything.
+					</p>
+				</div>
+
 				<div className="border border-foreground/10 dark:border-foreground/7 overflow-hidden grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr]">
-					{/* Today — red */}
-					<div className="bg-red-400/3 p-5 sm:p-6">
-						<div className="text-[9px] font-mono uppercase tracking-[0.16em] text-red-400/50 dark:text-red-400/35 mb-4 text-center">
-							Today
-						</div>
+					{/* Today */}
+					<div className="bg-red-400/5 p-5 sm:p-6">
+						<div className="text-[11px] font-mono uppercase tracking-wider text-red-500 dark:text-red-400/70 mb-4">Today</div>
 						<div className="flex items-center justify-center gap-3 sm:gap-4">
-							<div className="border border-dashed border-red-400/15 dark:border-red-400/10 p-2.5 shrink-0">
-								<div className="text-[8px] font-mono uppercase tracking-[0.12em] text-red-400/45 dark:text-red-400/35 mb-2 text-center">
+							<div className="border border-dashed border-red-400/25 dark:border-red-400/18 p-2.5 shrink-0">
+								<div className="text-[8px] font-mono uppercase tracking-[0.12em] text-red-400/65 dark:text-red-400/50 mb-2 text-center">
 									token: s_123
 								</div>
 								<div className="flex flex-col gap-1">
 									{["agent_1", "agent_2", "agent_3"].map((id) => (
 										<div
 											key={id}
-											className="flex items-center gap-1.5 px-2 py-1 border border-red-400/20 dark:border-red-400/15 bg-red-400/5 dark:bg-red-400/4"
+											className="flex items-center gap-1.5 px-2 py-1 border border-red-400/30 dark:border-red-400/22 bg-red-400/8 dark:bg-red-400/6"
 										>
 											<AgentIcon variant="red" />
-											<span className="text-[10px] font-mono text-red-400/60 dark:text-red-400/45">{id}</span>
+											<span className="text-[10px] font-mono text-red-400/80 dark:text-red-400/60">{id}</span>
 										</div>
 									))}
 								</div>
@@ -130,23 +134,23 @@ export function ProtocolOverview() {
 							<FlowArrow />
 							<ServerNode label="Server" />
 						</div>
+						<p className="text-[11px] text-red-400/65 dark:text-red-400/50 leading-relaxed mt-4">
+							All agents share one token. The server sees the user, not the agent.
+						</p>
 					</div>
 
-					{/* Vertical divider */}
+					{/* Divider */}
 					<div className="hidden sm:block w-px bg-foreground/10 dark:bg-foreground/7" />
-					{/* Horizontal divider for mobile */}
 					<div className="sm:hidden h-px bg-foreground/10 dark:bg-foreground/7" />
 
-					{/* Agent Auth — green */}
+					{/* With Agent Auth */}
 					<div className="bg-emerald-400/3 p-5 sm:p-6">
-						<div className="text-[9px] font-mono uppercase tracking-[0.16em] text-emerald-500/50 dark:text-emerald-400/35 mb-4 text-center">
-							Agent Auth
-						</div>
+						<div className="text-[11px] font-mono uppercase tracking-wider text-emerald-600/70 dark:text-emerald-400/50 mb-4">With Agent Auth</div>
 						<div className="flex items-center justify-center gap-3 sm:gap-4">
 							<div className="flex flex-col gap-1.5 shrink-0">
 								{[
 									{ id: "agt_1", cap: "check_balance" },
-									{ id: "agt_2", cap: "transfer ≤ $1k" },
+									{ id: "agt_2", cap: "transfer_funds" },
 									{ id: "agt_3", cap: "list_txns" },
 								].map((row) => (
 									<div
@@ -166,72 +170,197 @@ export function ProtocolOverview() {
 							<FlowArrow />
 							<ServerNode label="Server" />
 						</div>
+						<p className="text-[11px] text-emerald-600/50 dark:text-emerald-400/35 leading-relaxed mt-4">
+							Each agent has its own identity. Every request traces back to a specific agent.
+						</p>
 					</div>
 				</div>
-				<figcaption className="mt-2.5 text-center">
-					<span className="text-[9px] font-mono uppercase tracking-[0.18em] text-foreground/30 dark:text-foreground/20">
-						Fig. 1
-					</span>
-					<span className="text-[11px] text-foreground/40 dark:text-foreground/28 ml-1.5">
-						Shared identity vs. per-agent identity
-					</span>
-				</figcaption>
-			</figure>
 
-			<div className="spec-prose">
-				<p>
-					Agent Auth makes the runtime agent a first-class principal. Each agent is registered with its own identity, granted specific capabilities, and managed through a lifecycle — giving the server a durable way to identify which agent is acting, what it{"'"}s authorized to do, and how to revoke it without affecting anything else.
-				</p>
-				<p>The specification covers three things:</p>
+				<div className="spec-prose mt-6">
+					<p>
+						Agent Auth treats each agent as a first-class principal with its own identity, granted capabilities, and lifecycle. The server sees exactly which agent is acting, what it{"'"}s authorized to do, and can revoke one without affecting anything else.
+					</p>
+				</div>
 			</div>
 
 			{/* ═══════════════════════════════════════════════ */}
-			{/*  PILLAR CARDS                                   */}
+			{/*  2 · AUTONOMOUS AGENTS                          */}
 			{/* ═══════════════════════════════════════════════ */}
 
-			<div className="grid grid-cols-1 sm:grid-cols-3 gap-px my-8 border border-foreground/10 dark:border-foreground/7 bg-foreground/10 dark:bg-foreground/7">
-				{[
-					{
-						n: "01",
-						title: "Delegated Agents",
-						desc: "Acting for a user without impersonating them.",
-					},
-					{
-						n: "02",
-						title: "Autonomous Agents",
-						desc: "Acting on its own without a user in the loop.",
-					},
-					{
-						n: "03",
-						title: "Discovery",
-						desc: "Finding and connecting to services automatically.",
-					},
-				].map((item) => (
-					<div
-						key={item.n}
-						className="bg-background p-5 sm:p-6 flex flex-col gap-3"
-					>
-						<span className="text-[10px] font-mono text-foreground/25 dark:text-foreground/18 tracking-[0.15em]">
-							{item.n}
-						</span>
-						<h3
-							className="text-base sm:text-lg tracking-[-0.01em] font-semibold"
-							style={{ fontFamily: "var(--font-display), serif" }}
-						>
-							{item.title}
-						</h3>
-						<p className="text-[13px] text-foreground/50 dark:text-foreground/38 leading-relaxed">
-							{item.desc}
+			<div className="mb-16">
+				<SectionTag label="Autonomous agents" />
+				<div className="spec-prose mb-8">
+					<p>
+						When an agent needs to act on its own — without a user in the loop — there{"'"}s no identity model at all. It{"'"}s forced to pretend to be a human: opening a browser, solving a CAPTCHA, clicking through a signup flow — just to use a service. There is no standard way for an agent to register itself, prove its identity, or receive capabilities without impersonating a person.
+					</p>
+				</div>
+
+				<div className="border border-foreground/10 dark:border-foreground/7 overflow-hidden grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr]">
+					{/* Today */}
+					<div className="bg-red-400/5 p-5 sm:p-6">
+						<div className="text-[11px] font-mono uppercase tracking-wider text-red-500 dark:text-red-400/70 mb-4">Today</div>
+						<div className="flex items-center justify-center gap-3 sm:gap-4">
+							<div className="flex flex-col gap-1.5 shrink-0">
+								{["worker_1", "worker_2"].map((id) => (
+									<div
+										key={id}
+										className="flex items-center gap-1.5 px-2 py-1 border border-red-400/30 dark:border-red-400/22 bg-red-400/8 dark:bg-red-400/6"
+									>
+										<AgentIcon variant="red" />
+										<span className="text-[10px] font-mono text-red-400/80 dark:text-red-400/60">{id}</span>
+									</div>
+								))}
+							</div>
+							<FlowArrow />
+							<div className="border border-dashed border-red-400/25 dark:border-red-400/18 px-3 py-2.5 shrink-0">
+								<div className="text-[10px] font-mono text-red-400/75 dark:text-red-400/55 text-center">
+									user impersonation
+								</div>
+								<div className="text-[9px] font-mono text-red-400/50 dark:text-red-400/38 text-center mt-0.5">
+									browser, CAPTCHA, signup
+								</div>
+							</div>
+							<FlowArrow />
+							<ServerNode label="Server" />
+						</div>
+						<p className="text-[11px] text-red-400/65 dark:text-red-400/50 leading-relaxed mt-4">
+							Autonomous agents are routed through human signup flows. The server sees one principal.
 						</p>
 					</div>
-				))}
+
+					{/* Divider */}
+					<div className="hidden sm:block w-px bg-foreground/10 dark:bg-foreground/7" />
+					<div className="sm:hidden h-px bg-foreground/10 dark:bg-foreground/7" />
+
+					{/* With Agent Auth */}
+					<div className="bg-emerald-400/3 p-5 sm:p-6">
+						<div className="text-[11px] font-mono uppercase tracking-wider text-emerald-600/70 dark:text-emerald-400/50 mb-4">With Agent Auth</div>
+						<div className="flex items-center justify-center gap-3 sm:gap-4">
+							<div className="flex flex-col gap-1.5 shrink-0">
+								{[
+									{ id: "auto_1", ctx: "own keypair" },
+									{ id: "auto_2", ctx: "own keypair" },
+								].map((row) => (
+									<div
+										key={row.id}
+										className="flex items-center gap-2 px-2 py-1 bg-emerald-400/6 dark:bg-emerald-400/4 border border-emerald-400/15 dark:border-emerald-400/10"
+									>
+										<AgentIcon variant="green" />
+										<span className="text-[10px] font-mono text-foreground/65 dark:text-foreground/50">
+											{row.id}
+										</span>
+										<span className="text-[9px] font-mono text-foreground/35 dark:text-foreground/25">
+											{row.ctx}
+										</span>
+									</div>
+								))}
+							</div>
+							<FlowArrow />
+							<div className="flex flex-col gap-1 shrink-0">
+								{["register", "authenticate"].map((step) => (
+									<div
+										key={step}
+										className="flex items-center gap-2 px-3 py-1 border border-dashed border-emerald-400/15 dark:border-emerald-400/10"
+									>
+										<span className="text-[10px] font-mono text-emerald-500/50 dark:text-emerald-400/35">
+											{step}
+										</span>
+									</div>
+								))}
+							</div>
+							<FlowArrow />
+							<ServerNode label="Server" />
+						</div>
+						<p className="text-[11px] text-emerald-600/50 dark:text-emerald-400/35 leading-relaxed mt-4">
+							Each agent registers directly with its own identity and credential path.
+						</p>
+					</div>
+				</div>
+
+				<div className="spec-prose mt-6">
+					<p>
+						Agent Auth gives each autonomous agent its own identity. No user session, no impersonation. The agent registers directly, authenticates with signed JWTs, and the server attributes every action to the exact agent instance.
+					</p>
+				</div>
+			</div>
+
+			{/* ═══════════════════════════════════════════════ */}
+			{/*  3 · DISCOVERY                                  */}
+			{/* ═══════════════════════════════════════════════ */}
+
+			<div className="mb-16">
+				<SectionTag label="Discovery" />
+				<div className="spec-prose mb-8">
+					<p>
+						There{"'"}s no standard way for a service to advertise that it supports agents, what capabilities it offers, or how an agent should begin authenticating. Every new integration requires hardcoded configuration, prior training data, or a human pointing the agent to the right endpoint.
+					</p>
+				</div>
+
+				<div className="border border-foreground/10 dark:border-foreground/7 overflow-hidden grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr]">
+					{/* Today */}
+					<div className="bg-red-400/5 p-5 sm:p-6">
+						<div className="text-[11px] font-mono uppercase tracking-wider text-red-500 dark:text-red-400/70 mb-4">Today</div>
+						<div className="flex flex-col gap-1.5">
+							{["find the right server", "add to config file", "create API key, paste it", "hope the agent knows how"].map((step) => (
+								<div
+									key={step}
+									className="border border-dashed border-red-400/25 dark:border-red-400/18 px-3 py-1.5"
+								>
+									<span className="text-[10px] font-mono text-red-400/65 dark:text-red-400/50">{step}</span>
+								</div>
+							))}
+						</div>
+						<p className="text-[11px] text-red-400/65 dark:text-red-400/50 leading-relaxed mt-4">
+							Every new service means manual setup. No standard way for agents to find and connect.
+						</p>
+					</div>
+
+					{/* Divider */}
+					<div className="hidden sm:block w-px bg-foreground/10 dark:bg-foreground/7" />
+					<div className="sm:hidden h-px bg-foreground/10 dark:bg-foreground/7" />
+
+					{/* With Agent Auth */}
+					<div className="bg-emerald-400/3 p-5 sm:p-6">
+						<div className="text-[11px] font-mono uppercase tracking-wider text-emerald-600/70 dark:text-emerald-400/50 mb-4">With Agent Auth</div>
+						<div className="space-y-4">
+							<div>
+								<div className="text-[9px] font-mono uppercase tracking-[0.12em] text-foreground/40 dark:text-foreground/28 mb-1.5">By URL</div>
+								<div className="flex items-center gap-2">
+									<div className="border border-emerald-400/15 dark:border-emerald-400/10 bg-emerald-400/6 dark:bg-emerald-400/4 px-3 py-1.5 shrink-0">
+										<span className="text-[10px] font-mono text-foreground/65 dark:text-foreground/50">example.com</span>
+									</div>
+									<FlowArrow />
+									<code className="text-[9px] font-mono text-foreground/40 dark:text-foreground/28">/.well-known/agent-auth</code>
+								</div>
+							</div>
+							<div className="h-px bg-foreground/6 dark:bg-foreground/4" />
+							<div>
+								<div className="text-[9px] font-mono uppercase tracking-[0.12em] text-foreground/40 dark:text-foreground/28 mb-1.5">By intent</div>
+								<div className="flex items-center gap-2">
+									<span className="text-[10px] font-mono text-foreground/50 dark:text-foreground/38 italic">{'"deploy my site"'}</span>
+									<FlowArrow />
+									<span className="text-[10px] font-mono text-foreground/65 dark:text-foreground/50">vercel.com</span>
+								</div>
+							</div>
+						</div>
+						<p className="text-[11px] text-emerald-600/50 dark:text-emerald-400/35 leading-relaxed mt-4">
+							Agents discover services automatically — by URL or by intent.
+						</p>
+					</div>
+				</div>
+
+				<div className="spec-prose mt-6">
+					<p>
+						Agent Auth defines a well-known endpoint and a registry protocol so agents can find and connect to services automatically — no manual config, no hardcoded endpoints.
+					</p>
+				</div>
 			</div>
 
 			{/* ═══════════════════════════════════════════════ */}
 			{/*  APPROACH                                       */}
 			{/* ═══════════════════════════════════════════════ */}
 
-			<div className="mt-20 mb-4">
+			<div className="mt-16 mb-4">
 				<h2
 					className="text-xl sm:text-2xl md:text-3xl tracking-[-0.015em] font-semibold mb-6"
 					style={{ fontFamily: "var(--font-display), serif" }}
@@ -247,7 +376,7 @@ export function ProtocolOverview() {
 						<strong>Implementation-oriented:</strong> This protocol ships with official implementations. We expect most use cases to be served through them. The specification exists to enable additional implementations and custom use cases.
 					</p>
 					<p>
-						<strong>Open source:</strong> This project is meant to be collaborative in the open source, with a core team as benevolent leaders. We have no intention to make this part of a committee or standardized by any standards body.
+						<strong>Open source:</strong> This project is developed in the open. The spec and reference implementations are open source, and we welcome contributions, feedback, and implementations from the community.
 					</p>
 				</div>
 			</div>
@@ -256,7 +385,13 @@ export function ProtocolOverview() {
 			{/*  FAQ                                             */}
 			{/* ═══════════════════════════════════════════════ */}
 
-			<div className="mt-20 mb-4">
+			<div className="mb-4">
+				<h2
+					className="text-xl sm:text-2xl md:text-3xl tracking-[-0.015em] font-semibold mb-8"
+					style={{ fontFamily: "var(--font-display), serif" }}
+				>
+					FAQ
+				</h2>
 				<div className="space-y-10">
 					{[
 						{
@@ -274,18 +409,63 @@ export function ProtocolOverview() {
 					].map((item) => (
 						<div key={item.q}>
 							<h3
-								className="text-base sm:text-lg tracking-normal font-medium mb-2 text-foreground/80 dark:text-foreground/70"
+								className="text-base sm:text-lg tracking-normal font-medium mb-2.5 text-foreground/85 dark:text-foreground/75"
 								style={{ fontFamily: "var(--font-content), Georgia, serif" }}
 							>
 								{item.q}
 							</h3>
 							<p
-								className="text-sm sm:text-base text-foreground/70 dark:text-foreground/50 leading-relaxed"
+								className="text-sm sm:text-[15px] text-foreground/65 dark:text-foreground/55 leading-[1.8]"
 								style={{ fontFamily: "var(--font-content), Georgia, serif" }}
 							>
 								{item.a}
 							</p>
 						</div>
+					))}
+				</div>
+			</div>
+
+			{/* ═══════════════════════════════════════════════ */}
+			{/*  GET STARTED                                    */}
+			{/* ═══════════════════════════════════════════════ */}
+
+			<div className="mt-20 border border-foreground/10 dark:border-foreground/7">
+				<div className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-foreground/10 dark:bg-foreground/7">
+					{[
+						{
+							label: "Docs",
+							title: "Read the documentation",
+							href: "/docs",
+							icon: BookOpen,
+						},
+						{
+							label: "SDKs",
+							title: "Official implementations",
+							href: "/docs/implementations",
+							icon: Code,
+						},
+						{
+							label: "Registry",
+							title: "Submit your server",
+							href: "/registry",
+							icon: Globe,
+						},
+					].map((item) => (
+						<a
+							key={item.label}
+							href={item.href}
+							className="bg-background p-5 sm:p-6 flex flex-col gap-2 group transition-colors hover:bg-foreground/3 dark:hover:bg-foreground/2"
+						>
+							<div className="flex items-center gap-2">
+								<item.icon className="w-3.5 h-3.5 text-foreground/30 dark:text-foreground/20" />
+								<span className="text-[10px] font-mono uppercase tracking-[0.15em] text-foreground/30 dark:text-foreground/20">
+									{item.label}
+								</span>
+							</div>
+							<span className="text-sm font-medium text-foreground/70 dark:text-foreground/55 group-hover:text-foreground transition-colors">
+								{item.title}
+							</span>
+						</a>
 					))}
 				</div>
 			</div>
