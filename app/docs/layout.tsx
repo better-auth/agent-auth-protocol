@@ -1,6 +1,6 @@
 import { DocsLayout } from "fumadocs-ui/layouts/notebook";
 import { source } from "@/lib/source";
-import { BetterAuthLogo } from "@/components/logo";
+import { Logo } from "@/components/icons";
 import { ThemeToggle } from "@/components/theme-toggle";
 import type { ReactNode } from "react";
 
@@ -12,7 +12,7 @@ export default function Layout({ children }: { children: ReactNode }) {
 				url: "/",
 				title: (
 					<span className="!font-normal flex items-center gap-1">
-						<BetterAuthLogo className="h-4 w-4" />
+						<Logo className="h-4 w-4" />
 						<span className="select-none font-mono text-sm uppercase">BETTER-AUTH.</span>
 					</span>
 				),
