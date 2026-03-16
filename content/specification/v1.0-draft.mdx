@@ -140,9 +140,9 @@ sequenceDiagram
 - **(D)** If pending, the resource owner (user) approves via device authorization ([RFC 8628](https://datatracker.ietf.org/doc/html/rfc8628)) or [CIBA](https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html). The client facilitates the approval flow and polls for completion.
 - **(E)** Client returns agent ID and granted capabilities to the agent.
 - **(F)** Agent calls `execute_capability` (§6.10) on the client with a capability name and arguments.
-- **(G)** Client sends `POST /capability/execute` (§5.11) to the authorization server, authenticated with a short-lived signed agent JWT.
-- **(H)** Authorization server validates the JWT, checks the agent's granted capabilities, and executes the requested capability.
-- **(I)** Authorization server returns the execution result to the client.
+- **(G)** Client resolves the capability's location (§2.15) — the capability's `location` if set, or the server's `default_location` from discovery. Signs a short-lived agent JWT with `aud` set to the location URL and sends the request.
+- **(H)** The service at the location validates the JWT (including `aud` match), checks the agent's granted capabilities, and executes the requested capability.
+- **(I)** The service returns the execution result to the client.
 - **(J)** Client returns the result to the agent.
 
 Agents that need a raw JWT for direct server-to-server use can still call `sign_jwt` (§6.5). Resource servers that validate agent JWTs directly MAY use introspection (§5.12) or local verification as described later in the spec, but that is an alternative path rather than the standard capability-execution flow shown above.
@@ -293,16 +293,18 @@ The same capability name can appear in different parts of the protocol for diffe
 
 - `name` (`string`, required): Stable agent-facing capability identifier.
 - `description` (`string`, required): Human-readable description of what this capability does.
+- `location` (`string`, optional): The URL where this capability is executed. The client sends the execute request (agent JWT + capability name + arguments) to this URL, and sets the JWT `aud` claim to match it (§4.3). If absent, the client uses the server's `default_location` from discovery (§5.1).
 - `input` (`object`, optional): A JSON Schema describing the shape of the execution arguments a capability requires.
 - `output` (`object`, optional): A JSON Schema describing the shape of the data returned when this capability executes successfully. Agents use this to reason about what information a capability provides, plan multi-step workflows, and chain capability outputs into other capabilities' inputs without trial and error.
 - `grant_status` (`string`, optional): Enum indicating whether the capability has been granted to the agent. Present only when the request is authenticated with an agent JWT.
 
-**Example capability:**
+**Example capability (with custom location):**
 
 ```json
 {
   "name": "check_balance",
   "description": "Check the balance of a bank account",
+  "location": "https://banking-api.example.com/agent/execute",
   "input": {
     "type": "object",
     "required": ["account_id"],
@@ -419,24 +421,28 @@ Capability names should only include lowercase ASCII alphanumeric characters and
 
 ### 2.15 Execution
 
-The standard way to execute a capability is through the execute endpoint `POST /capability/execute` (§5.11). The agent calls the client's `execute_capability` tool (§6.10) with a `capability` and `arguments`. The client signs an agent JWT and forwards the request to the server. The server validates the JWT, checks that the agent has been granted the capability, executes it, and returns the result.
+To execute a capability, the client resolves the target **location**: the capability's `location` field if set, otherwise the server's `default_location` from discovery (§5.1). The client signs an agent JWT with `aud` set to the resolved location URL (§4.3), then sends the capability name and arguments to that location via `POST`.
 
 **Request flow:**
 
 ```
-Agent → Client (execute_capability) → Server (POST /capability/execute) → Backend service
-                                   ← result                             ← response
+Agent → Client (execute_capability) → Location (POST with JWT + capability + arguments)
+                                   ← result
 ```
+
+The service at the location validates the agent JWT — verifying that `aud` matches its own URL — checks that the agent has been granted the capability, and processes the request.
+
+When the location is the server's own execute endpoint (the default), the server acts as a gateway: it validates the JWT, checks grants, executes the capability against its backend, and returns the result. When the location is a separate service, that service is responsible for JWT validation and grant verification (via introspection §5.12 or local verification). Either way, the client sends the same payload to the same contract — only the destination URL changes.
 
 **Interaction modes:**
 
-Capabilities MUST operate in one of the following modes, controlled by the server:
+Capabilities MUST operate in one of the following modes, controlled by the service at the location:
 
 - **Sync** (default) — the service executes the capability and returns the result in the response body.
 - **Stream** — the service returns a streaming response (e.g. Server-Sent Events). The client SHOULD expose the stream to the agent when the transport supports it.
 - **Async** — the service returns `202 Accepted` with a status URL for polling. The response MUST include a status value (`"pending"`, `"completed"`, or `"failed"`). When `"completed"`, the response SHOULD include a result payload. When `"failed"`, the response SHOULD include an error object per §5.13. The service MAY include a `Retry-After` header or a retry-after value (in seconds).
 
-The server determines the interaction mode for each capability. The agent does not need to know — the client and server handle it.
+The service at the location determines the interaction mode for each capability. The agent does not need to know — the client and service handle it.
 
 ## 3. Data Model
 
@@ -574,32 +580,32 @@ Agents authenticate by signing short-lived JWTs per [RFC 7519](https://datatrack
 |---|---|---|---|
 | `iss` | string | Yes | The host's identifier as known by this server — the JWK thumbprint of the host's current signing key (same value as the host JWT `iss`). Allows the server to resolve the agent's parent host without a database lookup on `sub` first. |
 | `sub` | string | Yes | Agent ID. |
-| `aud` | string | Yes | Server's `issuer` URL from discovery. |
+| `aud` | string | Yes | The URL of the intended recipient. For capability execution, this MUST be the resolved location URL — the capability's `location` if set, or the server's `default_location` from discovery (§5.1). For non-execution requests to the auth server (e.g. capability listing with grant status), this MUST be the server's `issuer` URL. The receiving service MUST reject JWTs where `aud` does not match its expected value. |
 | `iat` | number | Yes | Issued-at timestamp. |
 | `exp` | number | Yes | Expiration timestamp. |
 | `jti` | string | Yes | Unique token identifier. |
 | `capabilities` | string[] | No | Capability names this JWT is authorized for. If present, the server MUST reject requests for capabilities not in this list. If absent, the JWT is valid for all the agent's granted capabilities. |
 
-**Example Agent JWT payload:**
+**Example Agent JWT payload (execution at default location):**
 
 ```json
 {
   "iss": "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs",
   "sub": "agt_k7x9m2",
-  "aud": "https://api.example.com",
+  "aud": "https://auth.bank.com/capability/execute",
   "iat": 1710000000,
   "exp": 1710000060,
   "jti": "a-xyz789"
 }
 ```
 
-**Example with capability restriction:**
+**Example with custom location and capability restriction:**
 
 ```json
 {
   "iss": "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs",
   "sub": "agt_k7x9m2",
-  "aud": "https://api.example.com",
+  "aud": "https://banking-api.example.com/agent/execute",
   "iat": 1710000000,
   "exp": 1710000060,
   "jti": "a-xyz790",
@@ -692,6 +698,7 @@ This endpoint enables generic clients to work with any Agent Auth server. Purpos
   "provider_name": "bank",
   "description": "Banking services — accounts, transfers, and payments",
   "issuer": "https://auth.bank.com",
+  "default_location": "https://auth.bank.com/capability/execute",
   "algorithms": ["Ed25519"],
   "modes": ["delegated", "autonomous"],
   "approval_methods": ["device_authorization", "ciba"],
@@ -719,13 +726,14 @@ This endpoint enables generic clients to work with any Agent Auth server. Purpos
 | `provider_name` | string | Yes | Unique provider identifier. |
 | `description` | string | Yes | Human-readable description of the service. Shown in `list_providers` results. |
 | `issuer` | string | Yes | Base URL of the authorization server |
+| `default_location` | string | No | The default URL where capability execution requests are sent. Capabilities that do not specify their own `location` (§2.12) are executed at this URL. The client uses this as the `aud` value in the agent JWT for execution requests. If not present, clients MUST derive it as `{issuer}{endpoints.execute}`. |
 | `algorithms` | string[] | Yes | Supported key types for registration. In this spec version, only `Ed25519` is defined. |
 | `modes` | string[] | Yes | Supported registration modes: `"delegated"`, `"autonomous"`, or both |
 | `approval_methods` | string[] | Yes | How user approval works. Defined core values: `"device_authorization"` (RFC 8628), `"ciba"` (Client Initiated Backchannel Authentication). Servers MAY include additional custom methods defined by extension profiles (see §10.10.3). Clients SHOULD ignore methods they don't recognize. |
 | `endpoints` | object | Yes | Server API endpoint paths, relative to `issuer` |
 | `jwks_uri` | string | No | URL to the server's JWKS (JSON Web Key Set). Enables clients to verify server-signed responses in future protocol extensions. Servers that plan to sign responses SHOULD include this. |
 
-Capabilities are listed via `/capability/list` (§5.2), described in detail via `/capability/describe` (§5.2.1), and executed through `POST /capability/execute` (§5.11). The discovery document covers identity and authorization configuration only.
+Capabilities are listed via `/capability/list` (§5.2), described in detail via `/capability/describe` (§5.2.1), and executed at the capability's `location` or the server's `default_location` (§5.11). The discovery document covers identity and authorization configuration only.
 
 Approval methods are negotiated through `POST /agent/register` (§5.3), `POST /agent/request-capability` (§5.4), and `POST /agent/reactivate` (§5.6). The server communicates the chosen method in the returned approval object — approval initiation is not a separate discovery-advertised endpoint in the core protocol.
 
@@ -1579,11 +1587,11 @@ Authorization: Bearer <host_jwt>
 POST /capability/execute
 ```
 
-The server's execute endpoint. The client sends execute requests here when an agent calls `execute_capability` (§6.10).
+The server's execute endpoint. This is the default **location** for capability execution — when a capability does not specify its own `location` (§2.12), the client sends execute requests here. The server advertises this endpoint's full URL as `default_location` in discovery (§5.1).
 
-The server validates the agent JWT, checks that the agent has an active grant for the requested capability, executes the capability, and returns the result. The server acts as a gateway so backend service endpoints do not need to validate agent JWTs themselves.
+The service at a location (whether this endpoint or a custom location) validates the agent JWT, verifies that `aud` matches its own URL, checks that the agent has an active grant for the requested capability, executes the capability, and returns the result. When this endpoint is the location, the server acts as a gateway so backend service endpoints do not need to validate agent JWTs themselves.
 
-**Authorization:** Agent JWT.
+**Authorization:** Agent JWT (with `aud` set to this endpoint's URL).
 
 **Request headers:**
 
@@ -2051,7 +2059,7 @@ Returns a signed agent JWT for authenticating requests. The agent does not hold 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `agent_id` | string | Yes | The agent's ID |
-| `aud` | string | No | The audience URL for the JWT's `aud` claim. If omitted, the client sets `aud` to the server's `issuer` URL. |
+| `aud` | string | No | The audience URL for the JWT's `aud` claim. Typically a capability's `location` URL or the server's `default_location`. If omitted, the client sets `aud` to the server's `issuer` URL. |
 | `capabilities` | string[] | No | Restrict this JWT to specific capabilities. If omitted, the JWT is valid for all the agent's granted capabilities. |
 
 **Behavior:**
@@ -2237,7 +2245,7 @@ Checks the health and status of an existing agent connection.
 
 ### 6.10 execute_capability
 
-Executes a granted capability through the server's execute endpoint (§5.11). The client signs an agent JWT and sends the capability name and arguments to `POST /capability/execute`. The server validates the JWT, checks grants, executes the capability, and returns the result.
+Executes a granted capability by routing the request to the capability's location. The client resolves the target location (the capability's `location` if set, or the server's `default_location` from discovery), signs an agent JWT with `aud` set to that location URL, and sends the capability name and arguments. The service at the location validates the JWT, checks grants, executes the capability, and returns the result.
 
 **Input:**
 
