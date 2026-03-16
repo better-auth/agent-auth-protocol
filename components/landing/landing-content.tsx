@@ -16,12 +16,9 @@ export function LandingContent() {
 		const innerEl = heroInnerRef.current;
 		if (!scrollEl || !innerEl) return;
 
-		const faders = Array.from(
-			innerEl.querySelectorAll("[data-hero-fade]"),
-		) as HTMLElement[];
-
 		let prevT = -1;
-		const PARALLAX_PX = 200;
+
+		const PARALLAX_PX = 400;
 
 		const onScroll = () => {
 			const scrollTop = scrollEl.scrollTop;
@@ -30,17 +27,12 @@ export function LandingContent() {
 			if (Math.abs(t - prevT) < 0.001) return;
 			prevT = t;
 
-			const yOffset = scrollTop * 0.35;
+			const yOffset = scrollTop * 0.3;
 			const scale = 1 - t * 0.04;
-			const opacity = 1 - t * 0.7;
+			const opacity = 1 - t;
 
 			innerEl.style.transform = `translateY(${yOffset}px) scale(${scale})`;
 			innerEl.style.opacity = String(Math.max(opacity, 0));
-
-			const fadeT = Math.min(t * 2.5, 1);
-			for (const el of faders) {
-				el.style.opacity = String(1 - fadeT);
-			}
 		};
 
 		scrollEl.addEventListener("scroll", onScroll, { passive: true });
@@ -50,7 +42,7 @@ export function LandingContent() {
 	return (
 		<div ref={scrollRef} className="relative flex-1 overflow-y-auto min-h-0">
 			{/* Hero */}
-			<div className="relative overflow-hidden py-10 sm:py-14 lg:py-20">
+			<div className="relative overflow-hidden min-h-[80dvh] flex items-center justify-center">
 				<HalftoneBackground />
 				<HeroIdentityBg />
 
@@ -143,16 +135,16 @@ export function LandingContent() {
 					<LandingHero />
 				</div>
 
-				{/* Bottom border */}
-				<div
-					className="absolute bottom-0 left-0 right-0 h-px"
-					style={{
-						background:
-							"linear-gradient(to right, transparent 0%, var(--foreground) 30%, var(--foreground) 70%, transparent 100%)",
-						opacity: 0.12,
-					}}
-				/>
-			</div>
+				</div>
+
+			{/* Hero → content fade */}
+			<div
+				className="relative -mt-40 h-40 pointer-events-none z-10"
+				style={{
+					background:
+						"linear-gradient(to bottom, transparent 0%, var(--background) 100%)",
+				}}
+			/>
 
 			{/* Diagrams + Intro */}
 			<div className="relative">

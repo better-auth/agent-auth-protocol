@@ -200,7 +200,7 @@ function seededFragments(seed: number): Fragment[] {
 			value: ids[(s + i) % ids.length],
 			x,
 			y,
-			opacity: 0.18 + (i % 3) * 0.06,
+			opacity: 0.7 + (i % 3) * 0.07,
 			size: "sm",
 			delay: i * 180,
 		});
@@ -215,7 +215,7 @@ function seededFragments(seed: number): Fragment[] {
 			icon: cap.icon,
 			x,
 			y,
-			opacity: 0.12 + (i % 3) * 0.05,
+			opacity: 0.7 + (i % 3) * 0.07,
 			size: "sm",
 			delay: 600 + i * 220,
 		});
@@ -228,7 +228,7 @@ function seededFragments(seed: number): Fragment[] {
 			value: keys[(s + i) % keys.length],
 			x,
 			y,
-			opacity: 0.08 + (i % 2) * 0.04,
+			opacity: 0.7 + (i % 2) * 0.1,
 			size: "sm",
 			delay: 300 + i * 250,
 		});
@@ -241,7 +241,7 @@ function seededFragments(seed: number): Fragment[] {
 			value: "✓",
 			x,
 			y,
-			opacity: 0.15,
+			opacity: 0.7 + (i % 3) * 0.07,
 			size: "sm",
 			delay: 1000 + i * 180,
 		});
@@ -254,7 +254,7 @@ function seededFragments(seed: number): Fragment[] {
 			value: "",
 			x,
 			y,
-			opacity: 0.08,
+			opacity: 0.7 + (i % 2) * 0.1,
 			size: "sm",
 			delay: 0,
 		});
@@ -265,39 +265,56 @@ function seededFragments(seed: number): Fragment[] {
 
 function ScrambleFragment({
 	frag,
-	cycle,
-}: { frag: Fragment; cycle: number }) {
-	const text = useScramble(frag.value, 35, frag.delay);
+}: { frag: Fragment }) {
 	const [visible, setVisible] = useState(false);
+	const [key, setKey] = useState(0);
+	const text = useScramble(frag.value, 35, 0);
 
 	useEffect(() => {
-		const t = setTimeout(() => setVisible(true), frag.delay);
-		return () => clearTimeout(t);
-	}, [frag.delay, cycle]);
+		const duration = 3000 + Math.random() * 4000;
+		const pause = 2000 + Math.random() * 3000;
+
+		const showTimeout = setTimeout(() => setVisible(true), frag.delay);
+
+		const interval = setInterval(() => {
+			setVisible(false);
+			setTimeout(() => {
+				setKey((k) => k + 1);
+				setVisible(true);
+			}, pause);
+		}, duration + pause);
+
+		return () => {
+			clearTimeout(showTimeout);
+			clearInterval(interval);
+		};
+	}, [frag.delay]);
 
 	return (
 		<div
-			className="absolute font-mono transition-opacity duration-700 text-[8px]"
+			key={key}
+			className="absolute font-mono text-[8px]"
 			style={{
 				left: `${frag.x}%`,
 				top: `${frag.y}%`,
 				opacity: visible ? frag.opacity : 0,
+				transition: `opacity ${visible ? "1.5s" : "2s"} ease-${visible ? "in" : "out"}`,
 			}}
 		>
 			{frag.type === "id" && (
-				<span className="text-emerald-500/70">{text}</span>
+				<span className="text-emerald-600 dark:text-emerald-400">{text}</span>
 			)}
 			{frag.type === "key" && (
-				<span className="text-foreground/15">{text}</span>
+				<span className="text-foreground/60 dark:text-foreground/60">{text}</span>
 			)}
 			{frag.type === "cap" && (
-				<span className="text-foreground/25 flex items-center gap-0.5">
+				<span className="text-foreground/50 dark:text-foreground/60 flex items-center gap-0.5">
 					{frag.icon && <CapIcon type={frag.icon} />}
 					{text}
 				</span>
 			)}
 			{frag.type === "check" && (
-				<span className="text-emerald-500/30 text-[10px]">✓</span>
+				<span className="text-emerald-600 dark:text-emerald-400 text-[10px]">✓</span>
 			)}
 		</div>
 	);
@@ -312,7 +329,7 @@ function HashFragment({ frag }: { frag: Fragment }) {
 
 	return (
 		<div
-			className="absolute font-mono text-[8px] text-foreground/10 whitespace-nowrap"
+			className="absolute font-mono text-[8px] text-foreground/50 dark:text-foreground/50 whitespace-nowrap"
 			style={{
 				left: `${frag.x}%`,
 				top: `${frag.y}%`,
@@ -325,17 +342,7 @@ function HashFragment({ frag }: { frag: Fragment }) {
 }
 
 export function HeroIdentityBg() {
-	const [cycle, setCycle] = useState(0);
-	const intervalRef = useRef<ReturnType<typeof setInterval>>(null);
-
-	useEffect(() => {
-		intervalRef.current = setInterval(() => setCycle((c) => c + 1), 6000);
-		return () => {
-			if (intervalRef.current) clearInterval(intervalRef.current);
-		};
-	}, []);
-
-	const fragments = seededFragments(cycle);
+	const [fragments] = useState(() => seededFragments(0));
 
 	return (
 		<div
@@ -343,9 +350,9 @@ export function HeroIdentityBg() {
 			aria-hidden="true"
 			style={{
 				maskImage:
-					"radial-gradient(ellipse 90% 80% at 50% 50%, black 5%, transparent 60%)",
+					"radial-gradient(ellipse 80% 60% at 50% 50%, transparent 50%, black 100%)",
 				WebkitMaskImage:
-					"radial-gradient(ellipse 90% 80% at 50% 50%, black 5%, transparent 60%)",
+					"radial-gradient(ellipse 80% 60% at 50% 50%, transparent 50%, black 100%)",
 			}}
 		>
 			{fragments.map((frag, i) =>
@@ -353,9 +360,8 @@ export function HeroIdentityBg() {
 					<HashFragment key={`h-${i}`} frag={frag} />
 				) : (
 					<ScrambleFragment
-						key={`${cycle}-${frag.type}-${i}`}
+						key={`${frag.type}-${i}`}
 						frag={frag}
-						cycle={cycle}
 					/>
 				),
 			)}

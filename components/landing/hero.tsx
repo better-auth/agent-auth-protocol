@@ -85,17 +85,17 @@ export function LandingHero() {
 						type="button"
 						className="pointer-events-auto group inline-flex items-center gap-0 border border-foreground/10 transition-all cursor-pointer overflow-hidden"
 					>
-						<span className="flex items-center gap-1.5 bg-foreground/6 px-3 py-1.5 border-r border-foreground/10">
-							<ChevronRightIcon className="w-3 h-3 text-foreground/30" />
-							<code className="text-[11px] sm:text-xs font-mono text-foreground/55 group-hover:text-foreground/80 transition-colors">
+						<span className="flex items-center gap-1.5 bg-foreground/5 px-3 py-1.5 border-r border-foreground/10">
+							<ChevronRightIcon className="w-3 h-3 text-foreground/50" />
+							<code className="text-[11px] sm:text-xs font-mono text-foreground/70 group-hover:text-foreground/90 transition-colors">
 								npx auth ai
 							</code>
 						</span>
-						<span className="flex items-center px-2.5 py-1.5 bg-foreground/3 hover:bg-foreground/6 transition-colors">
+						<span className="flex items-center self-stretch px-2.5 bg-foreground/5 hover:bg-foreground/8 transition-colors">
 							{copied ? (
 								<Check className="h-3 w-3 text-emerald-500" />
 							) : (
-								<Copy className="h-3 w-3 text-foreground/30 group-hover:text-foreground/50 transition-colors" />
+								<Copy className="h-3 w-3 text-foreground/40 group-hover:text-foreground/60 transition-colors" />
 							)}
 						</span>
 					</button>
