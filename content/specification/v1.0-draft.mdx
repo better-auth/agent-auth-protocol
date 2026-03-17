@@ -838,7 +838,7 @@ Content-Type: application/json
 
 {
   "error": "authentication_required",
-  "message": "This server requires a host or agent JWT to list capabilities."
+  "error_description": "This server requires a host or agent JWT to list capabilities."
 }
 ```
 
@@ -1681,7 +1681,7 @@ If the agent's grant for the requested capability carries constraints (§2.13), 
 ```json
 {
   "error": "constraint_violated",
-  "message": "Execution arguments violate grant constraints",
+  "error_description": "Execution arguments violate grant constraints",
   "violations": [
     { "field": "amount", "constraint": { "max": 1000 }, "actual": 5000 },
     { "field": "currency", "constraint": { "in": ["USD"] }, "actual": "GBP" }
@@ -1783,16 +1783,16 @@ All endpoints use a standard error response format:
 ```json
 {
   "error": "error_code",
-  "message": "Human-readable description of what went wrong"
+  "error_description": "Human-readable description of what went wrong"
 }
 ```
 
-The error value is a machine-readable code (a snake_case string). The message value is a human-readable explanation for debugging — clients SHOULD NOT parse it programmatically. Error responses MAY include additional structured fields beyond those two fields to help clients recover. For example, `invalid_capabilities` errors SHOULD include an invalid-capabilities list naming the unrecognized capabilities:
+The error value is a machine-readable code (a snake_case string). The error_description value is a human-readable explanation for debugging — clients SHOULD NOT parse it programmatically. Error responses MAY include additional structured fields beyond those two fields to help clients recover. For example, `invalid_capabilities` errors SHOULD include an invalid-capabilities list naming the unrecognized capabilities:
 
 ```json
 {
   "error": "invalid_capabilities",
-  "message": "One or more requested capability names don't exist",
+  "error_description": "One or more requested capability names don't exist",
   "invalid_capabilities": ["nonexistent_cap", "also_not_real"]
 }
 ```
@@ -2605,7 +2605,7 @@ HTTP/1.1 429 Too Many Requests
 Retry-After: 30
 Content-Type: application/json
 
-{"error": "rate_limited", "message": "Agent agt_abc123 exceeded 60 requests/minute"}
+{"error": "rate_limited", "error_description": "Agent agt_abc123 exceeded 60 requests/minute"}
 ```
 
 Clients MUST respect `Retry-After` when present. If absent, clients SHOULD use exponential backoff starting at 1 second.
