@@ -91,9 +91,12 @@ export function LLMCopyButton({ rawUrl }: { rawUrl: string }) {
 }
 
 export function ViewOptions(props: { markdownUrl: string; githubUrl: string }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const markdownUrl = new URL(
     props.markdownUrl,
-    typeof window !== "undefined"
+    mounted && typeof window !== "undefined"
       ? window.location.origin
       : "https://agentauth.dev",
   );

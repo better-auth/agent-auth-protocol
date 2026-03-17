@@ -99,7 +99,7 @@ export function ProtocolOverview() {
 
 			<div className="spec-prose mb-16">
 				<p>
-					Everything we{"'"}ve built for auth on the web assumes two kinds of actors: a human user and a static application, with predefined scopes and known execution paths.
+					Everything we{"'"}ve built for auth on the web assumes two kinds of actors: a human user and a closed loop application, with predefined scopes and known execution paths.
 				</p>
 				<p>
 					Agents are dynamic, non-deterministic, and vary their tasks over time — sometimes acting on behalf of a user, sometimes entirely on their own, calling external services, discovering tools at runtime, needing one capability now and a different one later, often running long after the human who started them has moved on.
@@ -192,7 +192,7 @@ export function ProtocolOverview() {
 					Beyond solving the identity problem for <strong>delegated agents</strong> — agents acting on behalf of a user — Agent Auth addresses two other structural gaps:
 				</p>
 				<p>
-					<strong>Autonomous agents.</strong> When there{"'"}s no user in the loop at all, agents today are forced to pretend to be human — opening a browser, solving a CAPTCHA, clicking through a signup flow — just to use a service. Agent Auth lets an agent register directly with its own identity. When a user later claims the agent, its activity history is attributed to them and capabilities are re-granted under user context.
+					<strong>Autonomous agents.</strong> When there{"'"}s no user in the loop at all, agents today are forced to pretend to be human — opening a browser, solving a CAPTCHA, clicking through a signup flow. Agent Auth lets an agent register directly with its own identity. When a user later claims the agent, its activity history is attributed to them and capabilities are re-granted under user context.
 				</p>
 				<p>
 					<strong>Discovery.</strong> There{"'"}s no standard way for a service to advertise that it supports agents or how an agent should begin authenticating. Agent Auth standardizes a well-known endpoint and a <Link href="/registry" className="underline underline-offset-2 hover:text-foreground/80 transition-colors">registry</Link> so agents can discover services automatically — by URL or by intent.
@@ -260,7 +260,7 @@ export function ProtocolOverview() {
 								{item.q}
 							</h3>
 							<p
-								className="text-sm sm:text-[15px] text-foreground/65 dark:text-foreground/55 leading-[1.8]"
+								className="text-[15px] sm:text-[17.5px] text-foreground/65 dark:text-foreground/55 leading-[1.9]"
 								style={{ fontFamily: "var(--font-content), Georgia, serif" }}
 							>
 								{item.a}
