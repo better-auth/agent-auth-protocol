@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { WordmarkLogo } from "@/components/icons";
 
 const TABS = [
 	{ label: "Docs", href: "/docs", match: "/docs" },
@@ -26,9 +27,9 @@ export function DocsTopNav() {
 				{!isDocsPath && (
 					<Link
 						href="/"
-						className="px-5 py-2.5 select-none text-sm uppercase text-fd-foreground"
+						className="px-4 py-1 select-none text-sm uppercase text-fd-foreground"
 					>
-						AGENT-AUTH.
+						<WordmarkLogo className="h-4 w-auto" />
 					</Link>
 				)}
 				<nav className="flex items-center">

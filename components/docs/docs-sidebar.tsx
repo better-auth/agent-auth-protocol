@@ -13,6 +13,7 @@ import { useCallback, useMemo, useState } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import type { DocsSection } from "@/lib/docs";
+import { WordmarkLogo } from "@/components/icons";
 
 const SIDEBAR_WIDTH = 280;
 
@@ -122,9 +123,9 @@ export function DocsSidebar({ sections }: { sections: DocsSection[] }) {
 							<Menu className="size-3.5" />
 						)}
 					</button>
-					<Link href="/" className="select-none text-sm uppercase">
-						AGENT-AUTH.
-					</Link>
+				<Link href="/" className="select-none text-sm uppercase">
+					<WordmarkLogo className="h-4 w-auto" />
+				</Link>
 					{currentPage && (
 						<>
 							<ChevronRight className="size-3 text-fd-muted-foreground/50 shrink-0" />
@@ -188,12 +189,12 @@ export function SidebarContent({
 			{/* Header */}
 			<div className="shrink-0 px-4 py-3">
 				<Link
-					href="/"
-					className="inline-block select-none text-sm uppercase"
-					onClick={onNavigate}
-				>
-					AGENT-AUTH.
-				</Link>
+				href="/"
+				className="inline-block select-none text-sm uppercase"
+				onClick={onNavigate}
+			>
+				<WordmarkLogo className="h-4 w-auto" />
+			</Link>
 			</div>
 			<SearchTrigger />
 
