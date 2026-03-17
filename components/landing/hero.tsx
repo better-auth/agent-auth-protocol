@@ -28,7 +28,7 @@ export function LandingHero() {
 				className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl text-foreground leading-[1.1] tracking-[-0.02em]"
 				style={{ fontFamily: "var(--font-display), serif" }}
 			>
-				Agent Auth
+				Agent Auth <span className="text-foreground/80">Protocol</span>
 			</motion.h1>
 
 			<motion.p
@@ -36,7 +36,7 @@ export function LandingHero() {
 				animate={{ opacity: 1 }}
 				transition={{ duration: 0.2, delay: 0.05, ease: "easeOut" }}
 				data-hero-fade
-				className="text-[15px] sm:text-base text-foreground/45 max-w-lg mx-auto leading-[1.8] tracking-normal"
+				className="text-[15px] sm:text-base text-foreground/80 max-w-lg mx-auto leading-[1.8] tracking-normal"
 				style={{ fontFamily: "var(--font-content), Georgia, serif" }}
 			>
 				The open-source protocol and implementation for AI agent authentication, capability-based authorization, and service discovery.
@@ -85,17 +85,17 @@ export function LandingHero() {
 						type="button"
 						className="pointer-events-auto group inline-flex items-center gap-0 border border-foreground/10 transition-all cursor-pointer overflow-hidden"
 					>
-						<span className="flex items-center gap-1.5 bg-foreground/5 px-3 py-1.5 border-r border-foreground/10">
+						<span className="flex items-center gap-2 bg-foreground/5 px-2 py-1.5 border-r border-foreground/10">
 							<ChevronRightIcon className="w-3 h-3 text-foreground/50" />
-							<code className="text-[11px] sm:text-xs font-mono text-foreground/70 group-hover:text-foreground/90 transition-colors">
+							<code className="text-sm  font-mono text-foreground/70 group-hover:text-foreground/90 transition-colors">
 								npx auth ai
 							</code>
 						</span>
-						<span className="flex items-center self-stretch px-2.5 bg-foreground/5 hover:bg-foreground/8 transition-colors">
+						<span className="flex items-center self-stretch px-3.5 bg-foreground/5 hover:bg-foreground/8 transition-colors">
 							{copied ? (
-								<Check className="h-3 w-3 text-emerald-500" />
+								<Check className="h-4 w-4 text-emerald-500" />
 							) : (
-								<Copy className="h-3 w-3 text-foreground/40 group-hover:text-foreground/60 transition-colors" />
+								<Copy className="h-4 w-4 text-foreground/40 group-hover:text-foreground/60 transition-colors" />
 							)}
 						</span>
 					</button>

@@ -85,18 +85,6 @@ export function ProtocolOverview() {
 			transition={{ duration: 0.5, delay: 0.1, ease: "easeOut" }}
 			className="mx-auto max-w-4xl px-5 sm:px-6 py-16 sm:py-20"
 		>
-
-			{/* ═══════════════════════════════════════════════ */}
-			{/*  INTRO                                          */}
-			{/* ═══════════════════════════════════════════════ */}
-
-			<h2
-				className="text-xl sm:text-2xl md:text-3xl tracking-[-0.015em] font-semibold mb-6"
-				style={{ fontFamily: "var(--font-display), serif" }}
-			>
-				Agent Auth
-			</h2>
-
 			<div className="spec-prose mb-16">
 				<p>
 					Everything we{"'"}ve built for auth on the web assumes two kinds of actors: a human user and a closed loop application, with predefined scopes and known execution paths.

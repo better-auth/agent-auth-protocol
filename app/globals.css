@@ -369,8 +369,8 @@
 /* Spec-style prose */
 .spec-prose {
   font-family: var(--font-content), Georgia, serif;
-  font-size: 17.5px;
-  line-height: 1.9;
+  font-size: 19px;
+  line-height: 1.85;
   letter-spacing: 0.008em;
   color: color-mix(in oklch, var(--foreground) 75%, transparent);
 }
