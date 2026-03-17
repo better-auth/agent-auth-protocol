@@ -1,54 +1,56 @@
 ---
 title: Build a server
-description: How to add Agent Auth support to your service using the Better Auth plugin or building from scratch.
+description: How to add Agent Auth support to your service using the Better Auth plugin — setup, capabilities, OpenAPI adapter, execution, verification, and configuration.
 section: "Develop with Agent Auth"
 ---
 
-This guide covers how to add Agent Auth support to your service. The fastest way is using the Better Auth plugin, which handles registration, device flow, capability management, and JWT verification out of the box.
+This guide covers how to add Agent Auth support to your service. The fastest way is using the `@better-auth/agent-auth` plugin, which handles registration, device flow, capability management, and JWT verification out of the box.
 
-## Better Auth plugin
+## Installation
 
-The Better Auth plugin is the reference implementation of the Agent Auth server. It adds all the protocol endpoints to your existing Better Auth setup with a single plugin.
+Install Better Auth and the Agent Auth plugin:
+
+```bash
+npm install better-auth @better-auth/agent-auth
+```
+
+Add the plugin to your auth configuration:
 
 ```ts
 import { betterAuth } from "better-auth";
-import { agentAuth } from "better-auth/plugins";
+import { agentAuth } from "@better-auth/agent-auth";
 
 export const auth = betterAuth({
   // ... your existing config
   plugins: [
     agentAuth({
-      // optional configuration
+      providerName: "my-service",
+      providerDescription: "My service description",
     }),
   ],
 });
 ```
 
-This adds all the Agent Auth endpoints to your server: discovery, registration, capability management, execution, lifecycle, and introspection.
+The plugin automatically:
 
-## Setup
+- Creates the necessary database tables (`agentHost`, `agent`, `agentCapabilityGrant`, `approvalRequest`)
+- Exposes the `/.well-known/agent-configuration` [discovery](/docs/discovery) endpoint
+- Handles agent registration with Host JWT verification
+- Manages the device authorization approval flow
+- Verifies Agent JWTs on capability execution
+- Enforces capability grants and constraints
 
-Install Better Auth if you haven't already:
-
-```bash
-npm install better-auth
-```
-
-Add the Agent Auth plugin to your auth configuration. The plugin will automatically:
-
-- Create the necessary database tables (hosts, agents, agent capability grants)
-- Expose the `/.well-known/agent-configuration` discovery endpoint
-- Handle agent registration with Host JWT verification
-- Manage the device authorization approval flow
-- Verify Agent JWTs on capability execution
-- Enforce capability grants and constraints
+Run your database migrations after adding the plugin so the new tables are created.
 
 ## Define capabilities
 
-Define the capabilities your service offers. Each capability has a name, description, and optional input/output schemas:
+Define the capabilities your service offers. Each capability has a name, description, and optional input/output JSON schemas:
 
 ```ts
+import { agentAuth } from "@better-auth/agent-auth";
+
 agentAuth({
+  providerName: "bank",
   capabilities: [
     {
       name: "check_balance",
@@ -57,83 +59,444 @@ agentAuth({
         type: "object",
         required: ["account_id"],
         properties: {
-          account_id: { type: "string", description: "The account ID" }
-        }
+          account_id: { type: "string", description: "The account ID" },
+        },
       },
       output: {
         type: "object",
         properties: {
           balance: { type: "number" },
-          currency: { type: "string" }
-        }
-      }
+          currency: { type: "string" },
+        },
+      },
     },
     {
       name: "transfer_funds",
       description: "Transfer funds between accounts",
+      approvalStrength: "webauthn",
       input: {
         type: "object",
         required: ["from", "to", "amount"],
         properties: {
           from: { type: "string" },
           to: { type: "string" },
-          amount: { type: "number" }
-        }
-      }
-    }
+          amount: { type: "number" },
+        },
+      },
+    },
   ],
-  defaultCapabilities: ["check_balance"],
-})
+  defaultHostCapabilities: ["check_balance"],
+});
 ```
 
-Capabilities listed in `defaultCapabilities` are auto-granted to agents from trusted hosts. All other capabilities require explicit user approval.
+Capabilities listed in `defaultHostCapabilities` are auto-granted to agents from trusted hosts. All other capabilities require explicit user approval through the [approval flow](/docs/approval).
+
+The `approvalStrength` field controls how much proof is required to approve a capability:
+
+- `"none"` — auto-grant, no user interaction
+- `"session"` — requires an active user session (default)
+- `"webauthn"` — requires physical presence via WebAuthn (fingerprint, face scan, hardware key)
+
+## Handle execution
+
+The `onExecute` handler is called when an agent executes a capability. The plugin validates the JWT, checks grants, and enforces constraints before your handler runs:
+
+```ts
+agentAuth({
+  capabilities: [/* ... */],
+  onExecute: async ({ capability, arguments: args, agentSession }) => {
+    switch (capability) {
+      case "check_balance": {
+        const balance = await db.getBalance(args.account_id);
+        return { balance: balance.amount, currency: balance.currency };
+      }
+      case "transfer_funds": {
+        const result = await db.transfer(args.from, args.to, args.amount);
+        return { transaction_id: result.id, status: "completed" };
+      }
+      default:
+        throw new Error(`Unknown capability: ${capability}`);
+    }
+  },
+});
+```
+
+The return value determines the response type:
+
+- **Plain value** — sync response, returned as `{ data: result }`
+- **`asyncResult(url)`** — returns `202 Accepted` with a polling URL
+- **`streamResult(body)`** — returns an SSE stream
+
+### Async execution
+
+For long-running operations, return an `asyncResult` with a status URL the client can poll:
+
+```ts
+import { agentAuth, asyncResult } from "@better-auth/agent-auth";
+
+agentAuth({
+  onExecute: async ({ capability, arguments: args }) => {
+    if (capability === "generate_report") {
+      const job = await startReportJob(args);
+      return asyncResult(
+        `https://api.example.com/jobs/${job.id}/status`,
+        5 // retry-after seconds
+      );
+    }
+  },
+});
+```
+
+### Streaming execution
+
+For streaming responses, return a `streamResult` with a `ReadableStream`:
+
+```ts
+import { agentAuth, streamResult } from "@better-auth/agent-auth";
+
+agentAuth({
+  onExecute: async ({ capability, arguments: args }) => {
+    if (capability === "stream_analysis") {
+      const stream = createAnalysisStream(args);
+      return streamResult(stream);
+    }
+  },
+});
+```
+
+## OpenAPI adapter
+
+If your service already has an OpenAPI spec, you can derive capabilities and execution logic directly from it instead of defining them manually. The OpenAPI adapter turns each operation (with an `operationId`) into a capability and proxies execution to your upstream API.
+
+### Quick setup with `createFromOpenAPI`
+
+The simplest way — generates capabilities, execution handler, provider info, and default host capabilities all at once:
+
+```ts
+import { agentAuth } from "@better-auth/agent-auth";
+import { createFromOpenAPI } from "@better-auth/agent-auth/openapi";
+
+const spec = await fetch("https://api.example.com/openapi.json")
+  .then(r => r.json());
+
+export const auth = betterAuth({
+  plugins: [
+    agentAuth({
+      ...createFromOpenAPI(spec, {
+        baseUrl: "https://api.example.com",
+        defaultHostCapabilities: ["GET", "HEAD"],
+        approvalStrength: {
+          GET: "session",
+          POST: "webauthn",
+          DELETE: "webauthn",
+        },
+        async resolveHeaders({ agentSession }) {
+          const token = await getServiceToken(agentSession.user.id);
+          return { Authorization: `Bearer ${token}` };
+        },
+      }),
+      // you can still override or add options
+      deviceAuthorizationPage: "/approve",
+    }),
+  ],
+});
+```
+
+`createFromOpenAPI` returns an object with `providerName`, `providerDescription`, `capabilities`, `onExecute`, and optionally `defaultHostCapabilities` — all derived from the spec. Spread it into `agentAuth()` and override anything you need.
+
+### How it works
+
+Each OpenAPI operation with an `operationId` becomes a capability:
+
+| OpenAPI field | Capability field |
+|---|---|
+| `operationId` | `name` |
+| `description` or `summary` | `description` |
+| Parameters + request body | `input` (JSON Schema) |
+| 200/201 response body | `output` (JSON Schema) |
+
+When a capability is executed, the handler maps `arguments` back to path parameters, query parameters, headers, and request body, then forwards the request to the upstream API.
+
+The handler automatically detects response types:
+- `202` responses → async result with polling URL
+- `text/event-stream` → streaming result
+- `application/json` → parsed JSON
+- Everything else → plain text
+
+### `createFromOpenAPI` options
+
+| Option | Type | Description |
+|---|---|---|
+| `baseUrl` | `string` | Upstream API base URL (required) |
+| `resolveHeaders` | `(context) => Record<string, string>` | Add auth headers (e.g. `Authorization`) to upstream requests |
+| `fetch` | `typeof fetch` | Custom fetch implementation |
+| `defaultHostCapabilities` | `boolean \| string \| string[] \| function` | Which capabilities to auto-grant (see below) |
+| `approvalStrength` | `ApprovalStrength \| Record<string, ApprovalStrength> \| function` | Required approval level per capability |
+| `location` | `string` | Custom execution URL for all capabilities |
+
+**`defaultHostCapabilities` filter:**
+- `true` — all capabilities
+- `"GET"` — all GET operations
+- `["GET", "HEAD"]` — all operations matching listed methods
+- `(cap, context) => boolean` — callback with runtime context (`userId`, `hostId`, `mode`)
+
+### Using `fromOpenAPI` and `createOpenAPIHandler` separately
+
+For more control, use the lower-level helpers independently:
+
+```ts
+import { agentAuth } from "@better-auth/agent-auth";
+import {
+  fromOpenAPI,
+  createOpenAPIHandler,
+} from "@better-auth/agent-auth/openapi";
+
+const spec = await fetch("https://api.example.com/openapi.json")
+  .then(r => r.json());
+
+const capabilities = fromOpenAPI(spec);
+
+const onExecute = createOpenAPIHandler(spec, {
+  baseUrl: "https://api.example.com",
+  async resolveHeaders({ agentSession }) {
+    return { Authorization: `Bearer ${await getToken(agentSession.user.id)}` };
+  },
+});
+
+agentAuth({
+  providerName: "my-api",
+  capabilities,
+  onExecute,
+  defaultHostCapabilities: capabilities
+    .filter(c => c.name.startsWith("get_"))
+    .map(c => c.name),
+});
+```
+
+`fromOpenAPI(spec)` returns `Capability[]`. `createOpenAPIHandler(spec, opts)` returns an `onExecute` function. This lets you filter capabilities, add custom ones, or mix OpenAPI-derived and hand-written capabilities.
 
 ## Verify agent requests
+
+### Inside Better Auth endpoints
 
 On your API routes, verify agent sessions with a single call:
 
 ```ts
-const session = await auth.api.getAgentSession({ headers });
+const session = await auth.api.getAgentSession({
+  headers: request.headers,
+});
 
 if (session) {
-  const { agent, user } = session;
-
-  // agent.id → "agt_k7x9m2"
-  // agent.status → "active"
-  // agent.mode → "delegated"
-  // agent.agentCapabilityGrants → [{ capability, status }]
-  // user.id → "user_xyz" (for delegated agents)
+  const { agent, user, host } = session;
+  // agent.id, agent.mode, agent.capabilityGrants
+  // user.id, user.email (for delegated agents)
+  // host.id, host.status
 }
 ```
 
-This extracts the JWT, verifies the Ed25519 signature, checks the agent's status, and resolves its capability grants. You get back the full agent context including the linked user for delegated agents.
+This extracts the JWT, verifies the Ed25519 signature, checks the agent's status, and resolves its capability grants. For delegated agents, you get the linked user.
+
+### In custom routes (outside Better Auth)
+
+Use `verifyAgentRequest` to verify agent JWTs in routes that aren't part of Better Auth:
+
+```ts
+import { verifyAgentRequest } from "@better-auth/agent-auth";
+
+export async function handleCustomRoute(request: Request) {
+  const session = await verifyAgentRequest(request, auth);
+
+  if (!session) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  // session has the same shape as getAgentSession
+  return new Response(JSON.stringify({ data: "..." }));
+}
+```
+
+This forwards the JWT to the plugin's `/agent/session` endpoint internally, running the full verification flow.
 
 ## Approval flow
 
-The plugin handles the device authorization flow automatically. When a new host registers a delegated agent, the server returns a verification URL and user code. You need to provide the approval UI — a web page where users can:
+When a host registers a delegated agent, the server returns a verification URL and user code. You need to build an approval page where users can:
 
 1. See which agent is requesting access and from which host
 2. Review the requested capabilities
 3. Approve or deny the request
 4. Optionally trust the host for future auto-approval
 
-The approval page should require fresh authentication — a long-lived session cookie alone is not sufficient (see [Security Considerations](/docs/security)).
+The `deviceAuthorizationPage` option controls the URL returned to clients:
+
+```ts
+agentAuth({
+  deviceAuthorizationPage: "/approve",
+  // or a full URL: "https://app.example.com/approve"
+});
+```
+
+The page receives `agent_id` and `code` as query parameters. Your app loads the approval request, displays the details, and calls `auth.api.approveCapability()` or the approval endpoint to approve or deny.
+
+The approval page should require fresh authentication — a long-lived session cookie alone is not sufficient (see [Security Considerations](/docs/security)). The `freshSessionWindow` option (default: 300 seconds) controls how recent the session must be.
+
+## Filter capabilities per user
+
+Use `resolveCapabilities` to show different capabilities to different users — useful for plan-gated features, admin-only actions, or per-org capability sets:
+
+```ts
+agentAuth({
+  resolveCapabilities: ({ capabilities, agentSession, hostSession }) => {
+    if (!agentSession?.user) return capabilities;
+
+    const user = agentSession.user;
+    return capabilities.filter(cap => {
+      if (cap.name === "admin_action") return user.role === "admin";
+      return true;
+    });
+  },
+});
+```
+
+## Events and audit logging
+
+Use `onEvent` to hook into agent lifecycle events for audit logging, analytics, or side effects:
+
+```ts
+agentAuth({
+  onEvent: async (event) => {
+    switch (event.type) {
+      case "agent.created":
+      case "agent.revoked":
+      case "capability.approved":
+      case "capability.denied":
+      case "capability.executed":
+        await auditLog.write(event);
+        break;
+    }
+  },
+});
+```
+
+Event types include: `agent.created`, `agent.revoked`, `agent.reactivated`, `agent.key_rotated`, `host.created`, `host.revoked`, `capability.requested`, `capability.approved`, `capability.denied`, `capability.granted`, `capability.executed`, and more.
+
+The `capability.executed` event includes timing (`durationMs`), the capability name, arguments, output, and success/error status.
+
+## Configuration reference
+
+All options with their types and defaults:
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `providerName` | `string` | — | Provider name for [discovery](/docs/discovery) |
+| `providerDescription` | `string` | — | Human-readable service description |
+| `capabilities` | `Capability[]` | — | Capability definitions |
+| `onExecute` | `function` | — | Capability execution handler |
+| `modes` | `AgentMode[]` | `["delegated","autonomous"]` | Supported agent modes |
+| `defaultHostCapabilities` | `string[] \| function` | `[]` | Capabilities auto-granted to new hosts |
+| `deviceAuthorizationPage` | `string` | `"/device/capabilities"` | Approval page path or URL |
+| `approvalMethods` | `string[]` | `["ciba","device_authorization"]` | Supported [approval methods](/docs/approval) |
+| `resolveApprovalMethod` | `function` | Prefers `device_authorization` | Choose approval method per request |
+| `allowedKeyAlgorithms` | `string[]` | `["Ed25519"]` | Allowed key algorithms (JWK curve names) |
+| `jwtMaxAge` | `number` | `60` | Max JWT age in seconds |
+| `agentSessionTTL` | `number` | `3600` | Sliding session TTL (seconds). 0 to disable |
+| `agentMaxLifetime` | `number` | `86400` | Max session lifetime from activation (seconds). 0 to disable |
+| `absoluteLifetime` | `number` | `0` | Hard lifetime from creation — agent is revoked when elapsed. 0 to disable |
+| `maxAgentsPerUser` | `number` | `25` | Max active agents per user. 0 to disable |
+| `freshSessionWindow` | `number \| function` | `300` | How recent the user's session must be for approval (seconds) |
+| `blockedCapabilities` | `string[]` | `[]` | Capabilities that can never be granted |
+| `requireAuthForCapabilities` | `boolean` | `false` | Require auth to list/describe capabilities |
+| `allowDynamicHostRegistration` | `boolean \| function` | `false` | Allow unknown hosts to self-register |
+| `resolveCapabilities` | `function` | — | Filter capabilities per user context |
+| `resolveQuery` | `function` | — | Custom capability search (replaces built-in BM25) |
+| `resolveAutonomousUser` | `function` | — | Resolve a virtual user for autonomous agents |
+| `resolveGrantTTL` | `function` | — | Per-capability grant TTL |
+| `validateCapabilities` | `function` | — | Validate capability names at registration |
+| `onEvent` | `function` | — | Audit/event callback |
+| `onHostClaimed` | `function` | — | Called when a host is linked to a user |
+| `onAutonomousAgentClaimed` | `function` | — | Called when an autonomous agent is claimed |
+| `trustProxy` | `boolean` | `false` | Trust `X-Forwarded-Proto` for audience validation |
+| `jtiCacheStorage` | `"memory" \| "secondary-storage"` | `"memory"` | Where to store JTI values for replay protection |
+| `jwksCacheStorage` | `"memory" \| "secondary-storage"` | `"memory"` | JWKS cache backend |
+| `dangerouslySkipJtiCheck` | `boolean` | `false` | Disable JWT replay protection (dev only) |
+| `proofOfPresence` | `object` | `{ enabled: false }` | WebAuthn config for approval |
+| `rateLimit` | `Record<path, { window, max }>` | sensible defaults | Per-endpoint rate limits |
+| `schema` | `object` | — | Custom database schema overrides |
+
+### Cache storage
+
+By default, JTI replay protection and JWKS caching use in-memory `Map`s. For multi-instance deployments, switch to `"secondary-storage"` which uses Better Auth's configured `secondaryStorage` (e.g. Redis):
+
+```ts
+agentAuth({
+  jtiCacheStorage: "secondary-storage",
+  jwksCacheStorage: "secondary-storage",
+});
+```
+
+If `secondaryStorage` is available and you're still using `"memory"`, the plugin logs a warning.
+
+### Proof of presence (WebAuthn)
+
+For high-risk capabilities, require physical presence via WebAuthn:
+
+```ts
+agentAuth({
+  proofOfPresence: {
+    enabled: true,
+    rpId: "example.com",       // defaults to hostname from baseURL
+    origin: "https://example.com", // defaults to baseURL origin
+  },
+  capabilities: [
+    {
+      name: "delete_account",
+      approvalStrength: "webauthn", // this capability requires WebAuthn
+    },
+  ],
+});
+```
+
+Requires the `@better-auth/passkey` plugin to be installed so users can register authenticators.
 
 ## Data model
 
-The plugin creates three tables:
+The plugin creates four tables:
 
 | Table | Purpose |
-|-------|---------|
-| **hosts** | Persistent client identities with public keys, linked users, and trust status |
-| **agents** | Per-agent records with status, mode, lifetime clocks, and keypairs |
-| **agent_capability_grants** | Per-capability grants with status, constraints, and metadata |
+|---|---|
+| **agentHost** | Host identities with public keys, linked users, and trust status |
+| **agent** | Per-agent records with status, mode, lifetime clocks, and keypairs |
+| **agentCapabilityGrant** | Per-capability grants with status, constraints, and metadata |
+| **approvalRequest** | Device authorization and CIBA approval requests |
+
+See [Data Model](/docs/data-model) for the full schema.
+
+## Rate limiting
+
+The plugin applies sensible rate limits by default:
+
+| Path | Default |
+|---|---|
+| `/agent/register` | 10 requests / 60s |
+| `/agent/rotate-key`, `/agent/cleanup` | 5 requests / 60s |
+| `/agent/approve-capability` | 5 requests / 60s |
+| All other agent/capability endpoints | 60 requests / 60s |
+
+Override per-endpoint:
+
+```ts
+agentAuth({
+  rateLimit: {
+    "/agent/register": { window: 120, max: 5 },
+    "/capability/execute": { window: 60, max: 200 },
+  },
+});
+```
 
 ## Building from scratch
 
 If you're not using Better Auth, you can implement the protocol from scratch. You need:
 
-- **3 database tables** — hosts, agents, agent capability grants (see [§3 Data Model](/specification#3-data-model))
+- **4 database tables** — hosts, agents, agent capability grants, approval requests (see [Data Model](/docs/data-model))
 - **Ed25519 verification** — verify Host and Agent JWT signatures
 - **Device authorization flow** — RFC 8628 for user approval
 - **Discovery endpoint** — `/.well-known/agent-configuration`

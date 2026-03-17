@@ -2,7 +2,6 @@
 
 import { BookOpen, Code, Globe } from "lucide-react";
 import { motion } from "motion/react";
-import Link from "next/link";
 
 function AgentIcon({ variant }: { variant: "red" | "green" }) {
 	const color =
@@ -178,7 +177,7 @@ export function ProtocolOverview() {
 					<strong>Autonomous agents</strong> — when there{"'"}s no user in the loop, agents today are forced to pretend to be human. Opening a browser, solving a CAPTCHA, and clicking through forms made for humans. Agent Auth lets an agent register and operate directly with its own identity. 
 				</p>
 				<p>
-					<strong>Discovery</strong> — there{"'"}s no standard way for a service to advertise that it supports agents. Agent Auth standardizes a well-known endpoint and a <Link href="/registry" className="underline underline-offset-2 hover:text-foreground/80 transition-colors">registry</Link> of services, so agents can discover services automatically — by URL or by intent.
+					<strong>Discovery</strong> — there{"'"}s no standard way for a service to advertise that it supports agents. Agent Auth standardizes a well-known endpoint and a <a href="https://agent-auth.directory" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground/80 transition-colors">registry</a> of services, so agents can discover services automatically — by URL or by intent.
 				</p>
 			</div>
 
@@ -278,7 +277,7 @@ export function ProtocolOverview() {
 						{
 							label: "Registry",
 							title: "Submit your server",
-							href: "/registry",
+							href: "https://agent-auth.directory",
 							icon: Globe,
 						},
 					].map((item) => (

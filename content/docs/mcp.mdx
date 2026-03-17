@@ -1,0 +1,179 @@
+---
+title: MCP Server
+description: "Run the Agent Auth client as an MCP server — expose protocol tools to AI agents in Claude, Cursor, ChatGPT, and other MCP-compatible hosts."
+section: "Clients"
+---
+
+The `@auth/agent-cli` package includes a built-in MCP (Model Context Protocol) server. When started in MCP mode, it exposes all Agent Auth protocol operations as MCP tools that AI agents can call directly. This is the most common way to give AI tools access to external services through Agent Auth.
+
+## Installation
+
+```bash
+npm install -g @auth/agent-cli
+```
+
+Or run directly with `npx`:
+
+```bash
+npx @auth/agent-cli mcp
+```
+
+## Configure your MCP host
+
+Add the Agent Auth MCP server to your AI tool's configuration.
+
+### Cursor
+
+In your Cursor MCP settings (`.cursor/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "auth-agent": {
+      "command": "npx",
+      "args": [
+        "@auth/agent-cli",
+        "mcp",
+        "--url", "https://api.example.com"
+      ]
+    }
+  }
+}
+```
+
+### Claude Desktop
+
+In your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
+
+```json
+{
+  "mcpServers": {
+    "auth-agent": {
+      "command": "npx",
+      "args": [
+        "@auth/agent-cli",
+        "mcp",
+        "--url", "https://api.example.com"
+      ]
+    }
+  }
+}
+```
+
+### Claude Code
+
+```bash
+claude mcp add auth-agent -- npx @auth/agent-cli mcp --url https://api.example.com
+```
+
+### With multiple providers
+
+Pass multiple `--url` flags to pre-discover several providers at startup:
+
+```json
+{
+  "mcpServers": {
+    "auth-agent": {
+      "command": "npx",
+      "args": [
+        "@auth/agent-cli",
+        "mcp",
+        "--url", "https://api.bank.com",
+        "--url", "https://api.github.com",
+        "--registry-url", "https://registry.example.com"
+      ]
+    }
+  }
+}
+```
+
+## MCP flags
+
+These flags are passed after `mcp` and control server behavior:
+
+| Flag | Env var | Description |
+|---|---|---|
+| `--url <urls...>` | `AGENT_AUTH_URLS` | Provider URLs to auto-discover at startup |
+| `--registry-url <url>` | `AGENT_AUTH_REGISTRY_URL` | Registry URL for provider search |
+| `--storage-dir <path>` | `AGENT_AUTH_STORAGE_DIR` | Storage directory (default: `~/.agent-auth`) |
+| `--host-name <name>` | `AGENT_AUTH_HOST_NAME` | Host name for identification |
+| `--no-browser` | `AGENT_AUTH_NO_BROWSER=1` | Don't auto-open browser for approval URLs |
+
+## Available tools
+
+The MCP server exposes 15 tools that map to the Agent Auth protocol operations. The typical agent workflow is: discover → list capabilities → connect → execute.
+
+### Discovery
+
+| Tool | Parameters | Description |
+|---|---|---|
+| `list_providers` | — | List already discovered/connected providers |
+| `search_providers` | `intent` (required) | Search the registry by name or intent |
+| `discover_provider` | `url` (required) | Look up a provider from its service URL |
+
+### Capabilities
+
+| Tool | Parameters | Description |
+|---|---|---|
+| `list_capabilities` | `provider` (required), `query`, `agent_id`, `limit`, `cursor` | List capabilities offered by a provider |
+| `describe_capability` | `provider` (required), `name` (required), `agent_id` | Get full capability definition including input schema |
+
+### Agent management
+
+| Tool | Parameters | Description |
+|---|---|---|
+| `connect_agent` | `provider` (required), `capabilities`, `mode`, `name`, `reason`, `preferred_method`, `login_hint`, `binding_message`, `force_new` | Register an agent with a provider |
+| `agent_status` | `agent_id` (required) | Check agent status and capability grants |
+| `request_capability` | `agent_id` (required), `capabilities` (required), `reason`, `preferred_method`, `login_hint`, `binding_message` | Request additional capabilities |
+| `disconnect_agent` | `agent_id` (required) | Disconnect and revoke an agent |
+| `reactivate_agent` | `agent_id` (required) | Reactivate an expired agent |
+
+### Execution
+
+| Tool | Parameters | Description |
+|---|---|---|
+| `execute_capability` | `agent_id` (required), `capability` (required), `arguments` | Execute a granted capability |
+
+### Security
+
+| Tool | Parameters | Description |
+|---|---|---|
+| `sign_jwt` | `agent_id` (required), `capabilities`, `audience` | Sign an agent JWT for manual auth |
+| `rotate_agent_key` | `agent_id` (required) | Rotate an agent's keypair |
+| `rotate_host_key` | `issuer` (required) | Rotate the host keypair for a provider |
+| `enroll_host` | `provider` (required), `enrollment_token` (required), `name` | Enroll a host with a one-time enrollment token |
+
+## How it works
+
+1. The CLI starts an MCP server over **stdio** using `@modelcontextprotocol/sdk`
+2. If `--url` is provided, those providers are discovered and cached before the server starts accepting connections
+3. All tools from the `@auth/agent` SDK are registered as MCP tools with JSON Schema validation
+4. When an AI agent calls a tool, the MCP server executes it through the `AgentAuthClient` and returns the result as JSON
+5. Keys and agent connections are persisted to `~/.agent-auth` (or `--storage-dir`) so state survives restarts
+
+## Environment variables
+
+All configuration can also be set via environment variables:
+
+| Variable | Description |
+|---|---|
+| `AGENT_AUTH_STORAGE_DIR` | Storage directory (default: `~/.agent-auth`) |
+| `AGENT_AUTH_REGISTRY_URL` | Registry URL for provider search |
+| `AGENT_AUTH_HOST_NAME` | Host name for identification |
+| `AGENT_AUTH_NO_BROWSER` | Set to `1` to disable auto-opening browser for approval |
+| `AGENT_AUTH_URLS` | Comma-separated provider URLs to auto-discover |
+| `AGENT_AUTH_ENCRYPTION_KEY` | Key for encrypting private keys at rest (AES-256-GCM) |
+| `AGENT_AUTH_PROVIDERS_FILE` | Path to JSON file with provider configs |
+| `AGENT_AUTH_PROVIDERS` | JSON string of provider config(s) |
+
+## Storage
+
+The MCP server uses file-based storage at `~/.agent-auth` by default:
+
+| File | Purpose |
+|---|---|
+| `host.json` | Host identity (shared across providers) |
+| `agents/<agent-id>.json` | Agent connections |
+| `providers/<issuer>.json` | Cached provider configs |
+
+Private keys are encrypted at rest when `AGENT_AUTH_ENCRYPTION_KEY` is set.

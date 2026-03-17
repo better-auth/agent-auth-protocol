@@ -1,0 +1,366 @@
+---
+title: Client SDK
+description: "The @auth/agent TypeScript SDK — embed agent identity, discovery, registration, and capability execution directly in your application."
+section: "Clients"
+---
+
+The `@auth/agent` SDK is a TypeScript library for integrating the Agent Auth Protocol into your application. It handles host keypair management, provider discovery, agent registration, JWT signing, approval polling, and capability execution.
+
+## Installation
+
+```bash
+npm install @auth/agent
+```
+
+## Quick start
+
+```ts
+import { AgentAuthClient } from "@auth/agent";
+
+const client = new AgentAuthClient({
+  registryUrl: "https://registry.example.com",
+});
+
+const config = await client.discoverProvider("https://api.example.com");
+
+const agent = await client.connectAgent({
+  provider: "https://api.example.com",
+  capabilities: [
+    "read_data",
+    { name: "transfer_money", constraints: { amount: { max: 1000 } } },
+  ],
+  name: "my-assistant",
+});
+
+const result = await client.executeCapability({
+  agentId: agent.agentId,
+  capability: "read_data",
+  arguments: { id: "user-123" },
+});
+```
+
+## Configuration
+
+The `AgentAuthClient` constructor accepts these options:
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `storage` | `Storage` | `MemoryStorage` | Pluggable storage for keys and connections |
+| `registryUrl` | `string` | — | Registry URL for `searchProviders` |
+| `allowDirectDiscovery` | `boolean` | `true` if no registry | Allow direct `.well-known` discovery |
+| `providers` | `ProviderConfig[]` | — | Pre-configured providers |
+| `fetch` | `typeof fetch` | `globalThis.fetch` | Custom fetch implementation |
+| `jwtExpirySeconds` | `number` | `60` | JWT token lifetime |
+| `hostName` | `string` | Auto-detected | Human-readable host identifier |
+| `onApprovalRequired` | `(info: ApprovalInfo) => void` | — | Callback when user approval is needed |
+| `onApprovalStatusChange` | `(status: AgentStatus) => void` | — | Callback when agent status changes during polling |
+| `approvalTimeoutMs` | `number` | `300000` (5 min) | How long to poll before timing out |
+
+## Client methods
+
+### Discovery
+
+```ts
+// Discover a provider from its service URL
+const config = await client.discoverProvider("https://api.example.com");
+
+// Search the registry by intent
+const providers = await client.searchProviders("banking");
+
+// List all known/configured providers
+const all = await client.listProviders();
+```
+
+### Capabilities
+
+```ts
+// List capabilities offered by a provider
+const caps = await client.listCapabilities({
+  provider: "https://api.example.com",
+  query: "balance",          // optional search
+  agentId: "agt_abc123",     // optional — filters by agent's grants
+  cursor: undefined,         // pagination cursor
+  limit: 20,                 // max results
+});
+
+// Get full definition including input/output schema
+const cap = await client.describeCapability({
+  provider: "https://api.example.com",
+  name: "check_balance",
+});
+```
+
+### Agent lifecycle
+
+```ts
+// Register an agent
+const agent = await client.connectAgent({
+  provider: "https://api.example.com",
+  capabilities: [
+    "check_balance",
+    { name: "transfer_funds", constraints: { amount: { max: 500 } } },
+  ],
+  mode: "delegated",        // "delegated" | "autonomous"
+  name: "finance-bot",
+  reason: "User wants to check their balance",
+  forceNew: false,           // reuse existing agent if possible
+});
+// → { agentId, hostId, status, capabilityGrants }
+
+// Check agent status and grants
+const status = await client.agentStatus("agt_abc123");
+
+// Request additional capabilities at runtime
+const result = await client.requestCapability({
+  agentId: "agt_abc123",
+  capabilities: ["transfer_funds"],
+  reason: "User asked to transfer money",
+});
+// → { granted: [...], pending: [...], denied: [...] }
+
+// Disconnect (revoke) an agent
+await client.disconnectAgent("agt_abc123");
+
+// Reactivate an expired agent
+const reactivated = await client.reactivateAgent("agt_abc123");
+```
+
+### Execution
+
+```ts
+const result = await client.executeCapability({
+  agentId: "agt_abc123",
+  capability: "check_balance",
+  arguments: { account_id: "acc_456" },
+});
+```
+
+### Key management
+
+```ts
+// Rotate an agent's keypair
+await client.rotateAgentKey("agt_abc123");
+
+// Rotate the host keypair for a provider
+await client.rotateHostKey("https://api.example.com");
+```
+
+### Host enrollment
+
+```ts
+// Enroll a host with a provider-issued enrollment token
+const enrollment = await client.enrollHost({
+  provider: "https://api.example.com",
+  enrollmentToken: "enr_token_abc",
+  name: "my-host",
+});
+```
+
+### Connections
+
+```ts
+// Get a stored agent connection
+const conn = await client.getConnection("agt_abc123");
+
+// List all agent connections for a provider
+const conns = await client.listConnections("https://api.example.com");
+```
+
+### JWT signing
+
+For manual authentication flows where you need to sign JWTs yourself:
+
+```ts
+const { token, expiresAt, expires_in } = await client.signJwt({
+  agentId: "agt_abc123",
+  capabilities: ["check_balance"],
+  audience: "https://api.example.com",
+});
+```
+
+## AI framework integration
+
+The SDK ships with tool adapters for major AI frameworks. These expose all protocol operations as callable tools so agents can discover providers, connect, and execute capabilities through natural language.
+
+### Vercel AI SDK
+
+```ts
+import { generateText } from "ai";
+import { AgentAuthClient, getAgentAuthTools, toAISDKTools } from "@auth/agent";
+
+const client = new AgentAuthClient();
+const tools = await toAISDKTools(getAgentAuthTools(client));
+
+const { text } = await generateText({
+  model: openai("gpt-4o"),
+  tools,
+  prompt: "Transfer $50 to Alice",
+});
+```
+
+The `ai` peer dependency is optional — only needed if you use `toAISDKTools`.
+
+### OpenAI function calling
+
+```ts
+import { AgentAuthClient, getAgentAuthTools, toOpenAITools } from "@auth/agent";
+
+const client = new AgentAuthClient();
+const { definitions, execute } = toOpenAITools(getAgentAuthTools(client), {
+  strict: true,
+});
+
+const res = await openai.chat.completions.create({
+  model: "gpt-4o",
+  tools: definitions,
+  messages,
+});
+
+for (const call of res.choices[0].message.tool_calls ?? []) {
+  const result = await execute(
+    call.function.name,
+    JSON.parse(call.function.arguments),
+  );
+}
+```
+
+### Anthropic Claude
+
+```ts
+import { AgentAuthClient, getAgentAuthTools, toAnthropicTools } from "@auth/agent";
+
+const client = new AgentAuthClient();
+const { definitions, processToolUse } = toAnthropicTools(getAgentAuthTools(client));
+
+const res = await anthropic.messages.create({
+  model: "claude-sonnet-4-20250514",
+  max_tokens: 1024,
+  tools: definitions,
+  messages,
+});
+
+const toolUseBlocks = res.content.filter((b) => b.type === "tool_use");
+if (toolUseBlocks.length > 0) {
+  const results = await processToolUse(toolUseBlocks);
+  messages.push(
+    { role: "assistant", content: res.content },
+    { role: "user", content: results },
+  );
+}
+```
+
+### Filtering tools
+
+You can expose a subset of tools to your agent:
+
+```ts
+import { getAgentAuthTools, filterTools } from "@auth/agent";
+
+const allTools = getAgentAuthTools(client);
+
+// Only include specific tools
+const minimal = filterTools(allTools, {
+  only: ["execute_capability", "agent_status"],
+});
+
+// Exclude sensitive tools
+const safe = filterTools(allTools, {
+  exclude: ["sign_jwt", "rotate_host_key"],
+});
+```
+
+## Available tools
+
+When you call `getAgentAuthTools(client)`, the following tools are returned:
+
+| Tool | Description |
+|---|---|
+| `list_providers` | List discovered/configured providers |
+| `search_providers` | Search registry by intent |
+| `discover_provider` | Look up a provider by URL |
+| `list_capabilities` | List capabilities offered by a provider |
+| `describe_capability` | Get full capability definition and input schema |
+| `connect_agent` | Register an agent with a provider |
+| `execute_capability` | Execute a granted capability |
+| `request_capability` | Request additional capabilities at runtime |
+| `agent_status` | Check agent status and grants |
+| `sign_jwt` | Sign an agent JWT manually |
+| `disconnect_agent` | Revoke an agent |
+| `reactivate_agent` | Reactivate an expired agent |
+| `rotate_agent_key` | Rotate an agent's keypair |
+| `rotate_host_key` | Rotate the host keypair for a provider |
+| `enroll_host` | Enroll a host with an enrollment token |
+
+The tools subpath export is also available if you only need the tools layer:
+
+```ts
+import { getAgentAuthTools, toOpenAITools, filterTools } from "@auth/agent/tools";
+```
+
+## Custom storage
+
+By default, the SDK uses `MemoryStorage` which is lost when the process exits. For persistent storage, implement the `Storage` interface:
+
+```ts
+interface Storage {
+  getHostIdentity(): Promise<HostIdentity | null>;
+  setHostIdentity(host: HostIdentity): Promise<void>;
+  deleteHostIdentity(): Promise<void>;
+  getAgentConnection(agentId: string): Promise<AgentConnection | null>;
+  setAgentConnection(agentId: string, conn: AgentConnection): Promise<void>;
+  deleteAgentConnection(agentId: string): Promise<void>;
+  listAgentConnections(issuer: string): Promise<AgentConnection[]>;
+  getProviderConfig(issuer: string): Promise<ProviderConfig | null>;
+  setProviderConfig(issuer: string, config: ProviderConfig): Promise<void>;
+  listProviderConfigs(): Promise<ProviderConfig[]>;
+}
+```
+
+```ts
+const client = new AgentAuthClient({
+  storage: myDatabaseStorage,
+});
+```
+
+The `@auth/agent-cli` package ships with `FileStorage` for local filesystem persistence — see [CLI](/docs/cli) for details.
+
+## Standalone crypto functions
+
+For advanced use cases, the SDK also exports low-level cryptographic primitives:
+
+```ts
+import { generateKeypair, signHostJWT, signAgentJWT } from "@auth/agent";
+
+const keypair = await generateKeypair();
+
+const hostJwt = await signHostJWT({
+  hostKeypair: keypair,
+  audience: "https://api.example.com",
+  agentPublicKey: agentKeypair.publicKey,
+});
+
+const agentJwt = await signAgentJWT({
+  agentKeypair: agentKeypair,
+  agentId: "agt_abc123",
+  audience: "https://api.example.com",
+  capabilities: ["check_balance"],
+});
+```
+
+## Error handling
+
+The SDK throws `AgentAuthSDKError` with structured error codes:
+
+```ts
+import { AgentAuthSDKError } from "@auth/agent";
+
+try {
+  await client.connectAgent({ provider: "https://api.example.com" });
+} catch (err) {
+  if (err instanceof AgentAuthSDKError) {
+    console.error(err.code);    // e.g. "agent_rejected"
+    console.error(err.message);  // human-readable message
+    console.error(err.status);   // HTTP status code
+  }
+}
+```

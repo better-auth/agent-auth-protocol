@@ -40,6 +40,9 @@ const ITEM_ICONS: Record<string, string> = {
 	approval: "check-circle",
 	"build-server": "wrench",
 	"integrate-client": "plug",
+	"client-sdk": "code",
+	mcp: "cpu",
+	cli: "terminal",
 	sdks: "package",
 	security: "shield",
 	errors: "alert-triangle",
@@ -82,6 +85,11 @@ const SECTION_LAYOUT: { title: string; icon: string; slugs: string[] }[] = [
 		title: "Build",
 		icon: "hammer",
 		slugs: ["build-server", "integrate-client"],
+	},
+	{
+		title: "Clients",
+		icon: "terminal",
+		slugs: ["client-sdk", "mcp", "cli"],
 	},
 	{
 		title: "Reference",

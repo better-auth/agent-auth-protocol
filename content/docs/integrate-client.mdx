@@ -8,57 +8,55 @@ The Agent Auth client sits between your agent and the server. It manages keys, h
 
 ## SDK
 
-The Agent Auth SDK is a TypeScript library you embed directly in your application. It manages keypairs, handles discovery and registration, and signs requests automatically.
+The `@auth/agent` SDK is a TypeScript library you embed directly in your application. It manages keypairs, handles discovery and registration, and signs requests automatically.
 
 ```bash
-npm install agent-auth
+npm install @auth/agent
 ```
 
 ```ts
-import { AgentAuthClient } from "agent-auth";
+import { AgentAuthClient } from "@auth/agent";
 
 const client = new AgentAuthClient({
-  // optional: pre-configure providers
-  providers: [
-    { name: "bank", issuer: "https://auth.bank.com" }
-  ],
-  // optional: configure registry for search
-  registry: "https://registry.agent-auth-protocol.com"
+  registryUrl: "https://registry.example.com",
 });
 ```
 
-The SDK handles host keypair generation and storage, agent keypair management, JWT signing, discovery, and the full registration flow including approval polling.
+The SDK handles host keypair generation and storage, agent keypair management, JWT signing, discovery, and the full registration flow including approval polling. It also ships with tool adapters for Vercel AI SDK, OpenAI, and Anthropic.
+
+See [Client SDK](/docs/client-sdk) for the full API reference.
 
 ## CLI
 
-The CLI is a command-line tool for managing agents, testing connections, and scripting Agent Auth workflows:
+The `@auth/agent-cli` package provides the `auth-agent` command-line tool for managing agents, testing connections, and scripting Agent Auth workflows:
 
 ```bash
 # Discover a provider
-npx agent-auth discover https://bank.com
+npx @auth/agent-cli discover https://bank.com
 
 # Connect an agent
-npx agent-auth connect bank --capabilities check_balance
+npx @auth/agent-cli connect --provider https://bank.com --capabilities check_balance
 
 # Execute a capability
-npx agent-auth execute bank check_balance --args '{"account_id": "acc_123"}'
+npx @auth/agent-cli execute agt_abc123 check_balance --args '{"account_id": "acc_123"}'
 
 # Check agent status
-npx agent-auth status bank
+npx @auth/agent-cli status agt_abc123
 
 # Disconnect
-npx agent-auth disconnect bank
+npx @auth/agent-cli disconnect agt_abc123
 ```
 
-The CLI stores host keypairs locally and manages agent state across invocations. It's useful for testing your server implementation and for scripting agent workflows in CI/CD pipelines.
+The CLI stores host keypairs locally at `~/.agent-auth` and manages agent state across invocations. It's useful for testing your server implementation and for scripting agent workflows in CI/CD pipelines.
+
+See [CLI](/docs/cli) for the full command reference.
 
 ## MCP integration
 
 The most common deployment model is running the client as an **MCP server**. AI tools like Claude Code, Cursor, and ChatGPT connect to MCP servers to access tools. When the Agent Auth client runs as an MCP server, all protocol tools are exposed as MCP tools that agents can call directly.
 
 ```bash
-# Run as MCP server
-npx agent-auth serve
+npx @auth/agent-cli mcp --url https://api.example.com
 ```
 
 Or configure in your MCP settings:
@@ -66,9 +64,9 @@ Or configure in your MCP settings:
 ```json
 {
   "mcpServers": {
-    "agent-auth": {
+    "auth-agent": {
       "command": "npx",
-      "args": ["agent-auth", "serve"]
+      "args": ["@auth/agent-cli", "mcp", "--url", "https://api.example.com"]
     }
   }
 }
@@ -77,6 +75,8 @@ Or configure in your MCP settings:
 This exposes all the standard tools — `list_providers`, `search_providers`, `connect_agent`, `execute_capability`, etc. — as MCP tools that any connected AI agent can use.
 
 The MCP server model means agents don't need to know anything about Agent Auth. They just call MCP tools, and the client handles all the authentication, key management, and protocol details.
+
+See [MCP Server](/docs/mcp) for full configuration and tool reference.
 
 ## Connect and execute
 

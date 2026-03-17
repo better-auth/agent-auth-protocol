@@ -14,7 +14,7 @@ Full reference implementation of the Agent Auth server as a Better Auth plugin. 
 
 ```ts
 import { betterAuth } from "better-auth";
-import { agentAuth } from "better-auth/plugins";
+import { agentAuth } from "@better-auth/agent-auth";
 
 const auth = betterAuth({
   plugins: [agentAuth()],
@@ -29,22 +29,38 @@ const auth = betterAuth({
 
 [View on GitHub →](https://github.com/better-auth/better-auth)
 
-### Agent Auth SDK (Client)
+### `@auth/agent` (Client SDK)
 
-Client SDK for agent runtimes. Manages keypairs, signs requests, handles registration and capability escalation. Can run as an MCP server, CLI tool, or embedded library.
+Client SDK for agent runtimes. Manages keypairs, signs requests, handles registration and capability escalation. Ships with tool adapters for Vercel AI SDK, OpenAI, and Anthropic.
 
 ```bash
-npm install agent-auth
+npm install @auth/agent
 ```
 
 - Ed25519 key generation and management
 - JWT signing for every request
 - Auto-registration with discovery
 - Capability escalation handling
-- MCP server mode
-- CLI interface
+- AI framework tool adapters (Vercel AI SDK, OpenAI, Anthropic)
+- Pluggable storage interface
 
-[View on GitHub →](https://github.com/better-auth/agent-auth-protocol)
+[View documentation →](/docs/client-sdk) · [View on GitHub →](https://github.com/better-auth/agent-auth-protocol)
+
+### `@auth/agent-cli` (CLI & MCP Server)
+
+Command-line tool and MCP server for managing agents. Exposes all protocol operations as CLI commands and MCP tools.
+
+```bash
+npm install -g @auth/agent-cli
+```
+
+- All protocol operations as CLI commands
+- MCP server mode for AI tool ecosystems
+- File-based persistent storage
+- Optional private key encryption (AES-256-GCM)
+- Environment variable configuration
+
+[View CLI docs →](/docs/cli) · [View MCP docs →](/docs/mcp) · [View on GitHub →](https://github.com/better-auth/agent-auth-protocol)
 
 ## Python
 

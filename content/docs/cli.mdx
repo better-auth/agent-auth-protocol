@@ -1,0 +1,211 @@
+---
+title: CLI
+description: "The @auth/agent-cli command-line tool — manage agents, test connections, and script Agent Auth workflows from the terminal."
+section: "Clients"
+---
+
+The `@auth/agent-cli` package provides the `auth-agent` command-line tool for managing agents, testing server implementations, and scripting Agent Auth workflows. It supports every protocol operation and persists state locally.
+
+## Installation
+
+```bash
+npm install -g @auth/agent-cli
+```
+
+Or run directly with `npx`:
+
+```bash
+npx @auth/agent-cli <command>
+```
+
+The binary name is `auth-agent`:
+
+```bash
+auth-agent discover https://api.example.com
+```
+
+## Global options
+
+These apply to all commands:
+
+| Option | Env var | Description |
+|---|---|---|
+| `--storage-dir <path>` | `AGENT_AUTH_STORAGE_DIR` | Storage directory (default: `~/.agent-auth`) |
+| `--registry-url <url>` | `AGENT_AUTH_REGISTRY_URL` | Registry URL for provider search |
+| `--host-name <name>` | `AGENT_AUTH_HOST_NAME` | Host name for identification |
+| `--no-browser` | `AGENT_AUTH_NO_BROWSER=1` | Don't auto-open browser for approval URLs |
+| `--url <urls...>` | `AGENT_AUTH_URLS` | Provider URLs to auto-discover at startup |
+
+## Commands
+
+### Discovery
+
+```bash
+# Discover a provider from its service URL
+auth-agent discover https://api.example.com
+
+# Search the registry by intent
+auth-agent search "banking"
+
+# List all known providers
+auth-agent providers
+```
+
+### Capabilities
+
+```bash
+# List capabilities offered by a provider
+auth-agent capabilities --provider https://api.example.com
+
+# Search capabilities by query
+auth-agent capabilities --provider https://api.example.com --query "balance"
+
+# Get full definition for a capability (including input schema)
+auth-agent describe check_balance --provider https://api.example.com
+```
+
+### Agent lifecycle
+
+```bash
+# Connect an agent to a provider
+auth-agent connect --provider https://api.example.com \
+  --capabilities check_balance transfer_funds \
+  --mode delegated \
+  --name "my-bot" \
+  --reason "Testing balance check"
+
+# Connect with constraints
+auth-agent connect --provider https://api.example.com \
+  --capabilities transfer_funds \
+  --constraints '{"transfer_funds": {"amount": {"max": 500}}}'
+
+# Check agent status
+auth-agent status agt_abc123
+
+# Request additional capabilities
+auth-agent request agt_abc123 \
+  --capabilities transfer_funds \
+  --reason "User wants to transfer money"
+
+# Reactivate an expired agent
+auth-agent reactivate agt_abc123
+
+# Disconnect (revoke) an agent
+auth-agent disconnect agt_abc123
+```
+
+### Execution
+
+```bash
+# Execute a capability
+auth-agent execute agt_abc123 check_balance \
+  --args '{"account_id": "acc_456"}'
+```
+
+### Key management
+
+```bash
+# Rotate an agent's keypair
+auth-agent rotate-agent-key agt_abc123
+
+# Rotate the host keypair for a provider
+auth-agent rotate-host-key https://api.example.com
+```
+
+### Host enrollment
+
+```bash
+# Enroll a host with a provider-issued enrollment token
+auth-agent enroll-host --provider https://api.example.com \
+  --token enr_token_abc \
+  --name "my-host"
+```
+
+### Connections
+
+```bash
+# List agent connections for a provider
+auth-agent connections https://api.example.com
+
+# Get a stored agent connection
+auth-agent connection agt_abc123
+```
+
+### JWT signing
+
+```bash
+# Sign an agent JWT
+auth-agent sign agt_abc123 --capabilities check_balance
+```
+
+### MCP server
+
+```bash
+# Start the MCP server (stdio transport)
+auth-agent mcp --url https://api.example.com
+```
+
+See [MCP Server](/docs/mcp) for full MCP documentation.
+
+## Command reference
+
+| Command | Arguments | Description |
+|---|---|---|
+| `discover` | `<url>` | Discover a provider from a service URL |
+| `search` | `<intent>` | Search the registry for providers |
+| `providers` | — | List known providers |
+| `capabilities` | — | List capabilities (`--provider` required) |
+| `describe` | `<capability-name>` | Get full capability definition (`--provider` required) |
+| `connect` | — | Connect an agent (`--provider` required) |
+| `status` | `<agent-id>` | Check agent status |
+| `sign` | `<agent-id>` | Sign an agent JWT |
+| `request` | `<agent-id>` | Request additional capabilities (`--capabilities` required) |
+| `disconnect` | `<agent-id>` | Disconnect (revoke) an agent |
+| `reactivate` | `<agent-id>` | Reactivate an expired agent |
+| `execute` | `<agent-id> <capability>` | Execute a capability |
+| `connections` | `<issuer>` | List agent connections for a provider |
+| `connection` | `<agent-id>` | Get a stored agent connection |
+| `rotate-agent-key` | `<agent-id>` | Rotate an agent's keypair |
+| `rotate-host-key` | `<issuer>` | Rotate the host keypair |
+| `enroll-host` | — | Enroll a host (`--provider` and `--token` required) |
+| `mcp` | — | Start the MCP server |
+
+## `connect` options
+
+| Option | Description |
+|---|---|
+| `--provider <url>` | Provider URL (required) |
+| `--capabilities <ids...>` | Capabilities to request |
+| `--constraints <json>` | JSON object mapping capability names to constraints |
+| `--mode <mode>` | `delegated` (default) or `autonomous` |
+| `--name <name>` | Agent name |
+| `--reason <reason>` | Reason for connection |
+| `--force-new` | Create a new agent even if one exists |
+| `--preferred-method <method>` | Preferred approval method |
+| `--login-hint <hint>` | Login hint for CIBA |
+| `--binding-message <msg>` | Binding message for CIBA |
+
+## Environment variables
+
+| Variable | Description |
+|---|---|
+| `AGENT_AUTH_STORAGE_DIR` | Storage directory (default: `~/.agent-auth`) |
+| `AGENT_AUTH_REGISTRY_URL` | Registry URL for provider search |
+| `AGENT_AUTH_HOST_NAME` | Host name for identification |
+| `AGENT_AUTH_NO_BROWSER` | Set to `1` to disable auto-opening browser |
+| `AGENT_AUTH_URLS` | Comma-separated provider URLs to auto-discover |
+| `AGENT_AUTH_ENCRYPTION_KEY` | Key for encrypting private keys at rest (AES-256-GCM) |
+| `AGENT_AUTH_PROVIDERS_FILE` | Path to JSON file with provider configs |
+| `AGENT_AUTH_PROVIDERS` | JSON string of provider config(s) |
+
+## Storage
+
+The CLI stores state in `~/.agent-auth` by default (configurable with `--storage-dir` or `AGENT_AUTH_STORAGE_DIR`):
+
+| File | Purpose |
+|---|---|
+| `host.json` | Host identity (keypair and metadata, shared across providers) |
+| `agents/<agent-id>.json` | Agent connection state |
+| `providers/<issuer>.json` | Cached provider configurations |
+
+Set `AGENT_AUTH_ENCRYPTION_KEY` to encrypt private keys at rest using AES-256-GCM.
