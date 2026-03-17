@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { ChevronRight, Menu, Search, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
@@ -242,6 +242,9 @@ function MobileSidebarOverlay({
   sections: DocsSection[];
   pathname: string;
 }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
   return createPortal(
     <AnimatePresence>
       {mobileOpen && (
