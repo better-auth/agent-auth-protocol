@@ -160,7 +160,10 @@ type SearchResult = {
   snippet: string;
 };
 
-function buildSearchIndex(content: string, toc: TocEntry[]): { heading: TocEntry; text: string }[] {
+function buildSearchIndex(
+  content: string,
+  toc: TocEntry[],
+): { heading: TocEntry; text: string }[] {
   const sections: { heading: TocEntry; text: string }[] = [];
   const lines = content.split("\n");
   let currentHeading: TocEntry | null = null;
@@ -206,9 +209,14 @@ function searchSpec(
       if (idx !== -1) {
         const start = Math.max(0, idx - 40);
         const end = Math.min(section.text.length, idx + query.length + 60);
-        snippet = (start > 0 ? "..." : "") + section.text.slice(start, end).trim() + (end < section.text.length ? "..." : "");
+        snippet =
+          (start > 0 ? "..." : "") +
+          section.text.slice(start, end).trim() +
+          (end < section.text.length ? "..." : "");
       } else {
-        snippet = section.text.slice(0, 100).trim() + (section.text.length > 100 ? "..." : "");
+        snippet =
+          section.text.slice(0, 100).trim() +
+          (section.text.length > 100 ? "..." : "");
       }
       results.push({
         heading: section.heading.text,
@@ -292,11 +300,23 @@ function SpecSearch({
 
   return (
     <>
-      <div className="fixed inset-0 z-50 bg-fd-background/60 backdrop-blur-sm" onClick={close} />
+      <div
+        className="fixed inset-0 z-50 bg-fd-background/60 backdrop-blur-sm"
+        onClick={close}
+      />
       <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] px-4 pointer-events-none">
         <div className="w-full max-w-lg pointer-events-auto border border-fd-border bg-fd-background shadow-2xl flex flex-col max-h-[60vh]">
           <div className="flex items-center gap-2.5 px-4 py-3 border-b border-fd-border">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-4 text-fd-muted-foreground shrink-0">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="size-4 text-fd-muted-foreground shrink-0"
+            >
               <circle cx="11" cy="11" r="8" />
               <path d="m21 21-4.3-4.3" />
             </svg>
@@ -391,16 +411,24 @@ export function SpecReader({
                 remarkPlugins={[remarkGfm]}
                 components={{
                   h1: ({ children }) => (
-                    <h1 id={slugify(String(children))} className="spec-h1">{children}</h1>
+                    <h1 id={slugify(String(children))} className="spec-h1">
+                      {children}
+                    </h1>
                   ),
                   h2: ({ children }) => (
-                    <h2 id={slugify(String(children))} className="spec-h2">{children}</h2>
+                    <h2 id={slugify(String(children))} className="spec-h2">
+                      {children}
+                    </h2>
                   ),
                   h3: ({ children }) => (
-                    <h3 id={slugify(String(children))} className="spec-h3">{children}</h3>
+                    <h3 id={slugify(String(children))} className="spec-h3">
+                      {children}
+                    </h3>
                   ),
                   h4: ({ children }) => (
-                    <h4 id={slugify(String(children))} className="spec-h4">{children}</h4>
+                    <h4 id={slugify(String(children))} className="spec-h4">
+                      {children}
+                    </h4>
                   ),
                   code: ({ children, className }) => {
                     if (className?.startsWith("language-")) {
@@ -427,7 +455,11 @@ export function SpecReader({
                       href={href}
                       className="spec-link"
                       target={href?.startsWith("http") ? "_blank" : undefined}
-                      rel={href?.startsWith("http") ? "noopener noreferrer" : undefined}
+                      rel={
+                        href?.startsWith("http")
+                          ? "noopener noreferrer"
+                          : undefined
+                      }
                     >
                       {children}
                     </a>
@@ -441,7 +473,7 @@ export function SpecReader({
         </div>
 
         {/* TOC Sidebar */}
-        <aside className="hidden lg:flex flex-col w-56 xl:w-64 shrink-0 py-8 pr-5 pl-6 border-l border-foreground/6">
+        <aside className="hidden lg:flex flex-col w-56 xl:w-64 shrink-0 pt-8 pb-16 pr-5 pl-6 border-l border-foreground/6">
           <div className="mb-4 pb-4 border-b border-foreground/6">
             <span className="text-[9px] uppercase tracking-widest text-foreground/40 font-medium block mb-2">
               Version

@@ -60,7 +60,7 @@ export default async function Page(props: {
         </article>
 
         {page.data.toc.length > 0 && (
-          <aside className="hidden xl:block w-56 shrink-0 sticky top-[calc(41px+2.5rem)] self-start max-h-[calc(100dvh-41px-5rem)] overflow-y-auto no-scrollbar">
+          <aside className="hidden xl:block w-56 shrink-0 sticky top-[calc(41px+2.5rem)] self-start max-h-[calc(100dvh-41px-5rem-2rem)] overflow-y-auto no-scrollbar">
             <DocsToc toc={page.data.toc} />
           </aside>
         )}

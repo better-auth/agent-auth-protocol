@@ -9,6 +9,12 @@ import {
 } from "next/font/google";
 import { Toaster } from "sonner";
 import { RootProvider } from "fumadocs-ui/provider/next";
+import {
+  AISearch,
+  AISearchPanel,
+  AISearchTrigger,
+} from "@/components/ai/search";
+import { MessageCircleIcon } from "lucide-react";
 
 const fontSans = Geist({
   subsets: ["latin"],
@@ -60,6 +66,16 @@ export default function RootLayout({
       >
         <RootProvider>
           {children}
+          <AISearch>
+            <AISearchPanel />
+            <AISearchTrigger
+              position="float"
+              className="inline-flex items-center gap-2 rounded-full border bg-fd-muted px-4 py-2 text-sm text-fd-muted-foreground hover:text-fd-foreground shadow-sm transition-colors"
+            >
+              <MessageCircleIcon className="size-4" />
+              Ask AI
+            </AISearchTrigger>
+          </AISearch>
           <Toaster
             position="bottom-right"
             toastOptions={{
