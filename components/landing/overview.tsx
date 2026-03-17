@@ -289,7 +289,7 @@ export function ProtocolOverview() {
 						>
 							<div className="flex items-center gap-2">
 								<item.icon className="w-3.5 h-3.5 text-foreground/30 dark:text-foreground/20" />
-								<span className="text-[10px] font-mono uppercase tracking-[0.15em] text-foreground/30 dark:text-foreground/20">
+								<span className="text-[10px] font-mono uppercase tracking-widest text-foreground/30 dark:text-foreground/20">
 									{item.label}
 								</span>
 							</div>

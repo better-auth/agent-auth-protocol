@@ -443,7 +443,7 @@ export function SpecReader({
         {/* TOC Sidebar */}
         <aside className="hidden lg:flex flex-col w-56 xl:w-64 shrink-0 py-8 pr-5 pl-6 border-l border-foreground/6">
           <div className="mb-4 pb-4 border-b border-foreground/6">
-            <span className="text-[9px] uppercase tracking-[0.15em] text-foreground/40 font-medium block mb-2">
+            <span className="text-[9px] uppercase tracking-widest text-foreground/40 font-medium block mb-2">
               Version
             </span>
             <VersionSelect

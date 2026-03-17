@@ -5,6 +5,7 @@ import { ChevronRight, Menu, Search, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import type { DocsSection } from "@/lib/docs";
@@ -133,7 +134,7 @@ function SearchTrigger({ onSearch }: { onSearch?: () => void }) {
     <button
       type="button"
       onClick={openSearch}
-      className="flex w-full items-center gap-2.5 px-4 py-2.5 text-[13px] text-fd-muted-foreground border-y border-fd-border hover:bg-fd-accent/50 transition-colors"
+      className="flex w-full items-center gap-2.5 px-4 py-2.5 text-[13px] text-fd-muted-foreground border-b border-fd-border hover:bg-fd-accent/50 transition-colors"
     >
       <Search className="size-3.5 shrink-0" />
       <span className="flex-1 text-left">Search</span>
@@ -171,65 +172,105 @@ export function DocsSidebar({ sections }: { sections: DocsSection[] }) {
   return (
     <>
       {/* Mobile top bar */}
-      <div className="sticky top-0 z-40 border-b border-fd-border bg-fd-background/95 backdrop-blur-sm lg:hidden">
-        <div className="flex items-center gap-3 px-4 py-2.5">
-          <button
-            type="button"
-            onClick={() => setMobileOpen((v) => !v)}
-            className="flex size-7 items-center justify-center border border-fd-border text-fd-foreground/70 hover:bg-fd-accent transition-colors"
-          >
-            {mobileOpen ? (
-              <X className="size-3.5" />
-            ) : (
-              <Menu className="size-3.5" />
-            )}
-          </button>
-          <Link href="/" className="select-none">
-            <WordmarkLogo className="h-4 w-auto" />
-          </Link>
-          {currentPage && (
-            <>
-              <ChevronRight className="size-3 text-fd-muted-foreground/50 shrink-0" />
-              <span className="text-sm text-fd-foreground truncate">
-                {currentPage.title}
-              </span>
-            </>
-          )}
-          <div className="ml-auto shrink-0">
-            <ThemeToggle />
-          </div>
-        </div>
-      </div>
+      <DocsMobileTopBar
+        mobileOpen={mobileOpen}
+        setMobileOpen={setMobileOpen}
+        currentPage={currentPage}
+      />
 
-      {/* Mobile overlay */}
-      <AnimatePresence>
-        {mobileOpen && (
+      {/* Mobile overlay - rendered via portal to avoid sticky clipping */}
+      <MobileSidebarOverlay
+        mobileOpen={mobileOpen}
+        setMobileOpen={setMobileOpen}
+        sections={sections}
+        pathname={pathname}
+      />
+    </>
+  );
+}
+
+function DocsMobileTopBar({
+  mobileOpen,
+  setMobileOpen,
+  currentPage,
+}: {
+  mobileOpen: boolean;
+  setMobileOpen: (v: boolean | ((v: boolean) => boolean)) => void;
+  currentPage?: { title: string };
+}) {
+  return (
+    <div className="border-b border-fd-border lg:hidden">
+      <div className="flex items-center gap-3 px-4 h-11">
+        <button
+          type="button"
+          onClick={() => setMobileOpen((v) => !v)}
+          className="flex size-7 items-center justify-center border border-fd-border text-fd-foreground/70 hover:bg-fd-accent transition-colors"
+        >
+          {mobileOpen ? (
+            <X className="size-3.5" />
+          ) : (
+            <Menu className="size-3.5" />
+          )}
+        </button>
+        <Link href="/" className="select-none">
+          <WordmarkLogo className="h-4 w-auto" />
+        </Link>
+        {currentPage && (
           <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-40 bg-fd-background/60 backdrop-blur-sm lg:hidden"
-              onClick={() => setMobileOpen(false)}
-            />
-            <motion.div
-              initial={{ x: -SIDEBAR_WIDTH }}
-              animate={{ x: 0 }}
-              exit={{ x: -SIDEBAR_WIDTH }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
-              className="fixed inset-y-0 left-0 z-50 lg:hidden"
-            >
-              <SidebarContent
-                sections={sections}
-                pathname={pathname}
-                onNavigate={() => setMobileOpen(false)}
-              />
-            </motion.div>
+            <ChevronRight className="size-3 text-fd-muted-foreground/50 shrink-0" />
+            <span className="text-sm text-fd-foreground truncate">
+              {currentPage.title}
+            </span>
           </>
         )}
-      </AnimatePresence>
-    </>
+        <div className="ml-auto shrink-0">
+          <ThemeToggle />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MobileSidebarOverlay({
+  mobileOpen,
+  setMobileOpen,
+  sections,
+  pathname,
+}: {
+  mobileOpen: boolean;
+  setMobileOpen: (v: boolean) => void;
+  sections: DocsSection[];
+  pathname: string;
+}) {
+  return createPortal(
+    <AnimatePresence>
+      {mobileOpen && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-40 bg-fd-background/60 backdrop-blur-sm lg:hidden"
+            onClick={() => setMobileOpen(false)}
+          />
+          <motion.div
+            initial={{ x: -SIDEBAR_WIDTH }}
+            animate={{ x: 0 }}
+            exit={{ x: -SIDEBAR_WIDTH }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className="fixed inset-y-0 left-0 z-50 lg:hidden"
+          >
+            <SidebarContent
+              sections={sections}
+              pathname={pathname}
+              onNavigate={() => setMobileOpen(false)}
+            />
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>,
+    document.body,
   );
 }
 
@@ -248,7 +289,7 @@ export function SidebarContent({
       style={{ width: SIDEBAR_WIDTH }}
     >
       {/* Header */}
-      <div className="shrink-0 px-4 py-3">
+      <div className="shrink-0 px-4 h-11 flex items-center border-b border-fd-border">
         <Link
           href="/"
           className="inline-block select-none"
@@ -264,7 +305,7 @@ export function SidebarContent({
         <nav>
           {sections.map((section) => (
             <div key={section.title} className="py-3">
-              <p className="px-4 pb-1.5 text-[10px] font-mono uppercase tracking-[0.15em] text-fd-muted-foreground/50">
+              <p className="px-4 pb-1.5 text-[10px] font-mono uppercase tracking-widest text-fd-muted-foreground/70">
                 {section.title}
               </p>
               <ul>

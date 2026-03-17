@@ -56,6 +56,7 @@ function MermaidContent({ chart }: { chart: string }) {
 			ref={(container) => {
 				if (container) bindFunctions?.(container);
 			}}
+			className="overflow-x-auto max-w-full"
 			dangerouslySetInnerHTML={{ __html: svg }}
 		/>
 	);

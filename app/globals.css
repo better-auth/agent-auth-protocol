@@ -381,13 +381,13 @@
   margin-bottom: 0;
 }
 .spec-prose code {
-	font-family: var(--font-typewriter), ui-monospace, monospace;
-	font-size: 0.8em;
-	padding: 0.12em 0.35em;
-	background: color-mix(in oklch, var(--foreground) 5%, transparent);
-	border: 1px solid color-mix(in oklch, var(--foreground) 8%, transparent);
-	border-radius: 3px;
-	word-break: break-word;
+  font-family: var(--font-typewriter), ui-monospace, monospace;
+  font-size: 0.8em;
+  padding: 0.12em 0.35em;
+  background: color-mix(in oklch, var(--foreground) 5%, transparent);
+  border: 1px solid color-mix(in oklch, var(--foreground) 8%, transparent);
+  border-radius: 3px;
+  word-break: break-word;
 }
 
 /* Specification reader */
@@ -396,6 +396,8 @@
   font-size: 17.5px;
   line-height: 1.9;
   color: color-mix(in oklch, var(--foreground) 78%, transparent);
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 .spec-content p {
   margin-bottom: 1.2em;
@@ -495,7 +497,7 @@
   color: inherit;
 }
 .spec-table {
-  width: 100%;
+  min-width: 100%;
   border-collapse: collapse;
   font-size: 12.5px;
   margin: 1.2em 0;
@@ -509,6 +511,7 @@
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  white-space: nowrap;
   color: color-mix(in oklch, var(--foreground) 50%, transparent);
   background: color-mix(in oklch, var(--foreground) 3%, transparent);
   border-bottom: 1px solid
@@ -516,6 +519,7 @@
 }
 .spec-table td {
   padding: 0.5em 0.75em;
+  white-space: nowrap;
   border-bottom: 1px solid
     color-mix(in oklch, var(--foreground) 5%, transparent);
   color: color-mix(in oklch, var(--foreground) 60%, transparent);
