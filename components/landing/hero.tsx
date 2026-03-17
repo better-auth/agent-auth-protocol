@@ -21,6 +21,14 @@ export function LandingHero() {
 	return (
 		<div className="relative w-full flex flex-col items-center text-center pointer-events-none z-10">
 			<div className="space-y-3 sm:space-y-4">
+			<motion.span
+				initial={{ opacity: 0 }}
+				animate={{ opacity: 1 }}
+				transition={{ duration: 0.2, delay: 0.02, ease: "easeOut" }}
+				className="inline-block font-mono text-[10px] sm:text-[11px] tracking-widest uppercase text-foreground/30"
+			>
+				v1.0-draft
+			</motion.span>
 			<motion.h1
 				initial={{ opacity: 0, y: 6 }}
 				animate={{ opacity: 1, y: 0 }}

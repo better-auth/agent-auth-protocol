@@ -1,0 +1,116 @@
+---
+title: Errors
+description: Error format, common error codes, and per-endpoint error codes in the Agent Auth protocol.
+section: "Reference"
+---
+
+All Agent Auth server endpoints use a standard error response format. Error responses carry a machine-readable code and a human-readable message.
+
+## Error format
+
+```json
+{
+  "error": "error_code",
+  "message": "Human-readable description of what went wrong"
+}
+```
+
+The `error` value is a snake_case string for programmatic handling. The `message` is for debugging — clients should not parse it. Error responses may include additional structured fields to help clients recover (for example, a `violations` array on constraint errors).
+
+## Common error codes
+
+These apply to all endpoints:
+
+| Status | Error Code | Meaning | Client Action |
+|--------|------------|---------|---------------|
+| 400 | `invalid_request` | Malformed JSON, missing required fields, or invalid parameter types | Fix request and retry |
+| 400 | `unknown_constraint_operator` | A constraint contains an unrecognized operator | Remove or replace the unknown operator |
+| 401 | `invalid_jwt` | JWT is invalid, expired, or signature failed | Re-sign and retry |
+| 403 | `agent_revoked` | Agent has been revoked | Cannot recover — create new agent |
+| 403 | `agent_expired` | Agent session has expired | Reactivate via `POST /agent/reactivate` |
+| 403 | `absolute_lifetime_exceeded` | Agent's absolute lifetime has elapsed | Cannot recover — create new agent |
+| 403 | `agent_pending` | Agent is still pending approval | Wait for approval to complete |
+| 403 | `host_revoked` | Host has been revoked | Cannot recover |
+| 403 | `host_pending` | Host is still pending approval | Wait for approval to complete |
+| 403 | `unauthorized` | Caller is not authorized for this operation | Check authorization |
+| 429 | `rate_limited` | Too many requests | Retry after delay (respect `Retry-After` header) |
+| 500 | `internal_error` | Server-side failure | Retry or report |
+
+## Per-endpoint error codes
+
+### Registration (`POST /agent/register`)
+
+| Status | Error Code | Meaning |
+|--------|------------|---------|
+| 400 | `unsupported_mode` | Requested mode is not supported by this server |
+| 400 | `unsupported_algorithm` | Agent's key algorithm is not in the server's supported set |
+| 400 | `invalid_capabilities` | One or more requested capability names don't exist or are blocked |
+| 409 | `agent_exists` | A non-pending agent with this public key already exists under this host |
+
+### Capability request (`POST /agent/request-capability`)
+
+| Status | Error Code | Meaning |
+|--------|------------|---------|
+| 400 | `invalid_capabilities` | One or more requested capability names don't exist or are blocked |
+| 409 | `already_granted` | All requested capabilities are already granted |
+
+### Capability execution (`POST /capability/execute`)
+
+| Status | Error Code | Meaning |
+|--------|------------|---------|
+| 400 | `invalid_request` | Missing or malformed `capability` |
+| 403 | `capability_not_granted` | Agent does not have an active grant |
+| 403 | `constraint_violated` | Arguments violate the grant's constraints |
+| 403 | `agent_revoked` | Agent has been revoked |
+| 403 | `agent_expired` | Agent session has expired |
+| 404 | `capability_not_found` | Capability name does not exist |
+
+### Constraint violation detail
+
+When execution arguments violate grant constraints, the error response should include a `violations` array:
+
+```json
+{
+  "error": "constraint_violated",
+  "message": "Execution arguments violate grant constraints",
+  "violations": [
+    { "field": "amount", "constraint": { "max": 1000 }, "actual": 5000 },
+    { "field": "currency", "constraint": { "in": ["USD"] }, "actual": "GBP" }
+  ]
+}
+```
+
+The `violations` array helps agents self-correct by showing exactly which arguments exceeded the grant's scope.
+
+### Reactivation (`POST /agent/reactivate`)
+
+| Status | Error Code | Meaning |
+|--------|------------|---------|
+| 404 | `agent_not_found` | Agent ID doesn't exist |
+| 200 | — | Agent is `active` — return current status (no-op) |
+| 403 | `agent_revoked` / `agent_rejected` / `agent_claimed` / `agent_pending` | Agent is not in `expired` state |
+| 403 | `absolute_lifetime_exceeded` | Agent's absolute lifetime has elapsed |
+
+### Revocation
+
+| Status | Error Code | Meaning |
+|--------|------------|---------|
+| 404 | `agent_not_found` | Agent ID doesn't exist |
+| 404 | `host_not_found` | Host ID doesn't exist |
+
+### Key rotation
+
+| Status | Error Code | Meaning |
+|--------|------------|---------|
+| 400 | `unsupported_algorithm` | New key's algorithm is not supported |
+
+### Capability listing and describe
+
+| Status | Error Code | Meaning |
+|--------|------------|---------|
+| 401 | `authentication_required` | Server requires auth to list capabilities |
+| 404 | `capability_not_found` | Capability name doesn't exist |
+
+## Handling unknown error codes
+
+Servers may return additional error codes beyond those listed. Clients should handle unknown codes gracefully by falling back to the HTTP status code semantics. For device authorization endpoints, error responses follow [RFC 8628 §3.5](https://datatracker.ietf.org/doc/html/rfc8628#section-3.5).

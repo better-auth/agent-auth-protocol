@@ -1,0 +1,123 @@
+---
+title: Authentication
+description: How hosts and agents authenticate using Ed25519 keypairs, short-lived JWTs, and optional proof-of-possession profiles.
+section: "Concepts"
+---
+
+Authentication in Agent Auth is built on Ed25519 keypairs and short-lived JWTs. There are two token types — Host JWTs for management operations and Agent JWTs for capability execution — each with distinct claims and verification flows.
+
+## Keypairs
+
+Both hosts and agents use EdDSA over Ed25519 keypairs in JWK format. The private key never leaves the client — the server stores only public keys or JWKS URLs.
+
+Public keys can be provided in two ways:
+
+- **Inline (JWK)** — sent directly during registration. Simplest case.
+- **JWKS URL** — published at a URL the server can fetch. Useful for key rotation and multi-service deployments where the same key needs to be verified by multiple services.
+
+```json
+{
+  "kty": "OKP",
+  "crv": "Ed25519",
+  "x": "base64url-encoded-public-key"
+}
+```
+
+In this spec version, `Ed25519` is the only defined algorithm. The `algorithms` field in [discovery](/docs/discovery) lists what the server accepts.
+
+## Host JWT
+
+Hosts authenticate by signing short-lived JWTs with their private key. Host JWTs are used for registration, status checks, reactivation, revocation, and key rotation.
+
+The JWT header must set `typ` to `host+jwt`. Servers reject host-authenticated requests where `typ` doesn't match.
+
+| Claim | Type | Required | Description |
+|-------|------|----------|-------------|
+| `iss` | string | Yes | JWK thumbprint (RFC 7638, SHA-256) of the host's signing public key |
+| `aud` | string | Yes | Server's `issuer` URL from discovery |
+| `iat` | number | Yes | Issued-at timestamp |
+| `exp` | number | Yes | Expiration timestamp |
+| `jti` | string | Yes | Unique token identifier |
+| `host_public_key` | JWK | Conditional | Inline host public key (required unless `host_jwks_url` is provided) |
+| `host_jwks_url` | string | Conditional | JWKS URL for the host's public keys |
+| `agent_public_key` | JWK | Conditional | Inline agent public key (required for registration) |
+| `agent_jwks_url` | string | Conditional | JWKS URL for the agent's keys (required for registration if no inline key) |
+
+```json
+{
+  "iss": "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs",
+  "aud": "https://api.example.com",
+  "iat": 1710000000,
+  "exp": 1710000060,
+  "jti": "h-abc123",
+  "host_public_key": { "kty": "OKP", "crv": "Ed25519", "x": "host-pub-key..." },
+  "agent_public_key": { "kty": "OKP", "crv": "Ed25519", "x": "agent-pub-key..." }
+}
+```
+
+The `iss` claim is always the JWK thumbprint of the signing key. For inline-key hosts, the server identifies the host by `iss`. For JWKS-based hosts, the server identifies the host by `host_jwks_url` — `iss` still matches the thumbprint of the current signing key, but the URL is the stable identifier across key rotations.
+
+## Agent JWT
+
+Agents authenticate capability execution with short-lived JWTs signed by the agent's private key. Agent JWTs should expire within **60 seconds**. There are no refresh tokens — the client signs a fresh JWT for every request.
+
+The JWT header must set `typ` to `agent+jwt`.
+
+| Claim | Type | Required | Description |
+|-------|------|----------|-------------|
+| `iss` | string | Yes | The host's identifier (JWK thumbprint of the host's signing key) |
+| `sub` | string | Yes | Agent ID |
+| `aud` | string | Yes | The URL of the intended recipient (see below) |
+| `iat` | number | Yes | Issued-at timestamp |
+| `exp` | number | Yes | Expiration timestamp |
+| `jti` | string | Yes | Unique token identifier |
+| `capabilities` | string[] | No | Restrict this JWT to specific capabilities |
+
+The `aud` claim must be set to the resolved execution location — the capability's `location` if set, or the server's `default_location` from discovery. For non-execution requests (like capability listing with grant status), `aud` must be the server's `issuer` URL.
+
+```json
+{
+  "iss": "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs",
+  "sub": "agt_k7x9m2",
+  "aud": "https://auth.bank.com/capability/execute",
+  "iat": 1710000000,
+  "exp": 1710000060,
+  "jti": "a-xyz789"
+}
+```
+
+The optional `capabilities` claim restricts the JWT to specific capabilities. If present, the server rejects requests for capabilities not in the list. If absent, the JWT is valid for all the agent's granted capabilities.
+
+## Verification
+
+When a server receives an Agent JWT, it performs the following verification:
+
+1. Verify the JWT header `typ` is `agent+jwt`
+2. Extract `iss` (host) and `sub` (agent) from the JWT
+3. Verify `aud` matches the server's own URL
+4. Look up the host by `iss` — reject if unknown, revoked, or pending
+5. Look up the agent by `sub` — verify it belongs to the resolved host
+6. Check agent status — reject if not `active`
+7. Verify the Ed25519 signature against the agent's stored public key
+8. Check `exp`, `iat`, and `jti` for replay protection
+9. If proof of possession is required, validate DPoP or mTLS binding
+10. Resolve the agent's granted capabilities
+11. If the JWT has a `capabilities` claim, intersect with granted capabilities
+12. If the matching grant has constraints, validate that request arguments satisfy them
+
+Host JWT verification follows a similar flow — see [§4.5.1](/specification#451-host-jwt-verification) in the specification for the full algorithm.
+
+## Replay detection
+
+Every JWT must include a unique `jti` claim. The server must cache seen `jti` values and reject duplicates within the JWT's lifetime window.
+
+With a 60-second JWT lifetime and 30-second clock skew tolerance, the effective replay window is 90 seconds. An in-memory cache or bloom filter with a TTL matching this window is sufficient — persistence is not required. The cache is partitioned by identity (agent ID or host ID).
+
+## Proof of possession (optional)
+
+The base security model — short-lived JWTs over TLS — is sufficient for most deployments. For higher-security environments, servers may require additional proof of possession:
+
+- **DPoP** ([RFC 9449](https://datatracker.ietf.org/doc/html/rfc9449)) — the client sends a separate DPoP proof JWT on each request. The agent JWT should include `cnf.jkt` to bind the token to the DPoP proof key.
+- **mTLS** ([RFC 8705](https://datatracker.ietf.org/doc/html/rfc8705)) — the client authenticates with a TLS client certificate. The agent JWT should include `cnf.x5t#S256` to bind it to the certificate.
+
+These are optional enhancements that add defense-in-depth for environments where token theft or replay is a realistic threat.

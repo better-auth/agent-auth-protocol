@@ -161,9 +161,85 @@ The server manages agent lifecycle through several endpoints:
 - `POST /host/revoke` — revoke a host and cascade to all its agents
 - `POST /host/rotate-key` — rotate a host's keypair
 
+## Async and streaming execution
+
+The execute endpoint supports three interaction modes:
+
+- **Sync** (default) — the server returns the result directly in the response body
+- **Async** — the server returns `202 Accepted` with a `status_url` for polling. The client polls (with a fresh Agent JWT on each request) until the status is `completed` or `failed`
+- **Streaming** — the server returns a `200` response with `Content-Type: text/event-stream` and streams Server-Sent Events
+
+### Async responses
+
+```json
+{
+  "status": "pending",
+  "status_url": "https://auth.bank.com/capabilities/status/job_xyz"
+}
+```
+
+Polling requests must include an Agent JWT — the server verifies the requesting agent matches the one that initiated execution. Since agent JWTs are short-lived (≤60 seconds), the client mints a fresh JWT for each poll. Clients should use exponential backoff when polling.
+
+### Streaming
+
+For streaming capabilities, the server uses these SSE event types:
+
+| Event type | Data | Description |
+|------------|------|-------------|
+| `data` | Capability-specific JSON chunk | Incremental result |
+| `error` | Error object | An error occurred during streaming |
+| `done` | Empty or final result | Stream complete — client must close the connection |
+
+An SSE stream can outlive the agent JWT that initiated it. The server authenticates at connection time and should enforce a maximum stream duration. Servers that require continuous authentication should terminate the stream at JWT expiry. Servers that allow long-running streams must check agent and host revocation status periodically.
+
+## Introspection
+
+The `POST /agent/introspect` endpoint lets resource servers that are separate from the auth server validate agent JWTs without direct access to agent public keys. Following the model of [RFC 7662](https://datatracker.ietf.org/doc/html/rfc7662), it accepts a JWT and returns whether the agent is active along with compact grant information.
+
+```json
+{
+  "active": true,
+  "agent_id": "agt_abc123",
+  "host_id": "hst_xyz789",
+  "user_id": "user_alice",
+  "agent_capability_grants": [
+    { "capability": "check_balance", "status": "active" },
+    { "capability": "transfer_domestic", "status": "active" }
+  ],
+  "mode": "delegated",
+  "expires_at": "2026-02-28T14:30:00Z"
+}
+```
+
+Unlike other endpoints, introspect returns compact grants (`capability` and `status` only) — resource servers need to verify grants, not capability schemas. The introspect endpoint should be protected with server-to-server authentication (shared secrets, mutual TLS, or network-level restrictions).
+
+## Resource server challenge (WWW-Authenticate)
+
+When an agent reaches a resource server without a valid Agent JWT — for example, from training data or user instructions — the resource server can include a `WWW-Authenticate` header using the `AgentAuth` scheme to point the agent toward discovery:
+
+```
+HTTP/1.1 401 Unauthorized
+WWW-Authenticate: AgentAuth discovery="https://auth.example.com/.well-known/agent-configuration"
+```
+
+This is useful when the resource server and auth server are on different domains. Clients that receive this challenge should fetch the discovery URL, register, and retry the request. If the agent JWT is present but the agent lacks the required capability, the server should return `403` with `capability_not_granted` instead.
+
+## Observability
+
+The JWT-based authentication model provides per-agent, per-call traceability by default. Every authenticated request contains a JWT with:
+
+| Claim | What it tells you |
+|-------|-------------------|
+| `sub` | Which agent made the call |
+| `jti` | Unique call identifier (for correlation and replay detection) |
+| `iat` | When the JWT was issued |
+| `exp` | When it expires |
+
+Combined with the agent's host and user identifiers, the server can reconstruct the full chain: **which user** → **which host** → **which agent** → **which capability** → **when**. Servers should log at least: agent ID, capability name, timestamp, and result for each capability call.
+
 ## Approval methods
 
-When a registration or capability request requires user consent, the server returns an approval object. The protocol supports:
+When a registration or capability request requires user consent, the server returns an approval object. See [Approval Methods](/docs/approval) for full details. The protocol supports:
 
 - **Device Authorization** (RFC 8628) — the user visits a URL and enters a code, like logging into a streaming app on a TV
 - **CIBA** (Client Initiated Backchannel Authentication) — the server pushes a notification to the user's device

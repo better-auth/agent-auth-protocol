@@ -10,11 +10,16 @@
     "host",
     "capabilities",
     "discovery",
+    "authentication",
+    "approval",
     "---Build---",
     "build-server",
     "integrate-client",
     "---Reference---",
     "sdks",
-    "security"
+    "security",
+    "errors",
+    "data-model",
+    "privacy"
   ]
 }

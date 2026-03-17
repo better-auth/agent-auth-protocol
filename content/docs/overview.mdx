@@ -3,17 +3,17 @@ title: Overview
 description: How Agent Auth addresses the gaps in existing authentication models for AI agents.
 ---
 
-Every auth model we've built for the web — OAuth, sessions, API keys — assumes two kinds of actors: a human user and a static application, with predefined scopes. Agents are neither.
+Every auth model for delegating access to external systems assumes a closed-loop client — software that declares its behavior upfront, gets approved, and does exactly what it said it would. The entire model depends on being able to enumerate what the client will do before it does it.
 
-They range from ephemeral one-shot tasks to long-running background workers and multi-step systems, calling external services without constant human interaction, sometimes on behalf of a user, sometimes entirely on their own. They are dynamic, non-deterministic, and often do varying tasks over time.
+Agents aren't closed-loop. An agent is a non-deterministic runtime — it decides what to do based on context, changes direction mid-session, and may need capabilities it didn't know about when it started. You can't scope it in advance because you don't know what it'll need until it's already running. It might read a balance, decide to initiate a transfer, discover a new service, and call it — all in a single run that no one planned for at authorization time.
 
-There is no standard way to give an agent an identity, scope its permissions based on its specific tasks, audit its actions, or revoke it without revoking everything.
+Nothing in existing auth accounts for this kind of actor. There is no standard way to give an agent an identity, scope its permissions based on what it actually does, audit its actions individually, or revoke it without revoking everything.
 
 ## Delegated Agents
 
-Every auth model we use (OAuth, API keys, sessions) to share user resources with external systems is, at the limit, user impersonation with scopes. The server sees who authorized the request and what they authorized. It never sees who is actually making it.
+Every auth model for sharing user resources with external systems is, at the limit, user impersonation with scopes. The server sees who authorized the request and what they authorized. It never sees who is actually making it.
 
-When an agent acts on behalf of a user, today it typically uses the user's OAuth token or a shared client credential. That collapses the runtime agent into someone else's identity:
+When an agent acts on behalf of a user, it typically uses the user's token or a shared client credential. That collapses the runtime agent into someone else's identity:
 
 - **No visibility:** The server can't tell which agent made a request. There's no audit trail per agent — every call looks like it came from the user or at best the client application.
 - **No scoping:** Every agent gets a static set of permissions that are shared across all agents. You can't give one agent to do one thing and another agent to do another thing.
@@ -25,7 +25,7 @@ Instead of broad scopes like "write access to accounts," the server grants named
 
 ## Autonomous Agents
 
-Existing auth models tightly couple the human user and the application. When an agent needs to act on its own — without a user in the loop — there is no identity model for it. The agent is forced to pretend to be a human user: opening a browser, solving a CAPTCHA, and clicking through a signup flow just to use a service. There is no standard way for an agent to register itself, prove its identity, or receive capabilities without impersonating a person.
+Existing auth tightly couples the human user and the application. When an agent needs to act on its own — without a user in the loop — there is no identity model for it. The agent is forced to pretend to be a human user: opening a browser, solving a CAPTCHA, and clicking through a signup flow just to use a service. There is no standard way for an agent to register itself, prove its identity, or receive capabilities without impersonating a person.
 
 Agent Auth gives each autonomous agent its own identity. No user session, no impersonation. The agent registers directly with its own keypair, authenticates with signed JWTs, and the server attributes every action to the exact agent instance.
 
@@ -35,7 +35,7 @@ There's no standard way for a service to advertise that it supports agents. Ever
 
 Agent Auth defines a well-known endpoint and a registry protocol so agents can find and connect to services automatically:
 
-- **By URL** — the agent fetches `/.well-known/agent-auth` from a domain and gets the full configuration.
+- **By URL** — the agent fetches `/.well-known/agent-configuration` from a domain and gets the full configuration.
 - **By intent** — the agent describes what it wants to do in natural language, and a registry returns matching services.
 
 ## What the specification covers

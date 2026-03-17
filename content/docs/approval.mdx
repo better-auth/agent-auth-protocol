@@ -1,0 +1,93 @@
+---
+title: Approval Methods
+description: How user consent works in Agent Auth — device authorization, CIBA, method selection, and the approval object schema.
+section: "Concepts"
+---
+
+When a registration or capability request requires user consent, the server returns an **approval object** describing how the client should facilitate it. The protocol defines two core methods — device authorization and CIBA — and supports server-defined extensions.
+
+## Approval object
+
+The approval object appears in responses from registration, capability requests, and reactivation when user consent is required. It always includes a `method` field plus method-specific fields:
+
+| Field | Type | Methods | Description |
+|-------|------|---------|-------------|
+| `method` | string | All | The selected approval method |
+| `verification_uri` | string | device_authorization | URL the user navigates to |
+| `verification_uri_complete` | string | device_authorization | Pre-filled URL including the user code |
+| `user_code` | string | device_authorization | Code the user enters at the verification URI |
+| `binding_message` | string | ciba | Short message displayed to the user |
+| `expires_in` | number | All | Seconds until the approval flow expires |
+| `interval` | number | All | Minimum polling interval in seconds |
+| `notification_url` | string | All | SSE endpoint for real-time updates (extension) |
+
+## Device authorization (RFC 8628)
+
+The baseline approval method. Every conformant server must support this. Used when the client cannot directly interact with the user — the user navigates to a URL and enters a code on a separate device, like logging into a streaming app on a TV.
+
+```json
+{
+  "approval": {
+    "method": "device_authorization",
+    "verification_uri": "https://bank.com/device",
+    "verification_uri_complete": "https://bank.com/device?code=ABCD-1234",
+    "user_code": "ABCD-1234",
+    "expires_in": 300,
+    "interval": 5
+  }
+}
+```
+
+The flow:
+
+1. Server returns the verification URL, user code, expiration, and polling interval
+2. Client presents the URL and code to the user (opens browser, displays in terminal)
+3. User authenticates and approves at the URL
+4. Client polls `GET /agent/status` at the `interval` rate until the agent's status changes from `pending` to `active` (approved) or `rejected` (denied)
+
+If the user denies, the agent transitions to `rejected` — the client must not automatically retry. Pending registrations that are retried are handled idempotently (the server returns the existing state).
+
+## CIBA (Client Initiated Backchannel Authentication)
+
+Used when the server can reach the user directly — through a mobile app, email, or in-app notification. CIBA provides a better experience than device authorization when the server already knows the user's identity, since the user doesn't need to navigate to a URL.
+
+```json
+{
+  "approval": {
+    "method": "ciba",
+    "expires_in": 300,
+    "interval": 5,
+    "binding_message": "Approve connection for Bank balance checker"
+  }
+}
+```
+
+The server notifies the user through its notification channel (push notification, email, SMS, in-app), and the client polls `GET /agent/status` at the returned interval until the agent leaves `pending` state.
+
+Clients may include `login_hint` and `binding_message` on registration or capability requests to help the server route the approval, but the server decides whether to honor them.
+
+## Method selection
+
+When a server supports multiple methods, it chooses based on context. Clients may include a `preferred_method` hint in registration and capability requests, but the server makes the final decision.
+
+General guidance:
+
+- **CIBA** — when the server already knows the user (the host is linked or the client provides a `login_hint` the server can resolve)
+- **Device authorization** — when the user is unknown and must navigate to a URL themselves
+
+## Polling
+
+After initiating an approval flow, the client polls `GET /agent/status` at the `interval` returned in the approval object. The agent's status changes from `pending` to:
+
+- **`active`** — the user approved. The response includes capability grants with full details.
+- **`rejected`** — the user denied. Terminal for that registration attempt.
+
+For capability escalation requests, the individual grant statuses change independently. The agent remains `active` while specific grants move from `pending` to `active` or `denied`.
+
+## Real-time notification (extension)
+
+Polling is the baseline. Servers may optionally include a `notification_url` in the approval object — an SSE endpoint that fires an event when approval completes, is denied, or expires. If the URL is absent or the connection fails, the client must fall back to polling.
+
+## Server-defined methods
+
+Servers may expose custom approval methods beyond device authorization and CIBA. Extension-defined methods appear in the discovery `approval_methods` list and in the returned approval `method` value. Clients that don't recognize an extension method should report it as unsupported rather than guessing the semantics.

@@ -36,10 +36,15 @@ const ITEM_ICONS: Record<string, string> = {
 	host: "monitor",
 	capabilities: "key",
 	discovery: "compass",
+	authentication: "lock",
+	approval: "check-circle",
 	"build-server": "wrench",
 	"integrate-client": "plug",
 	sdks: "package",
 	security: "shield",
+	errors: "alert-triangle",
+	"data-model": "database",
+	privacy: "eye-off",
 };
 
 function getPageBySlug(slug: string): DocsNavItem | null {
@@ -62,7 +67,16 @@ const SECTION_LAYOUT: { title: string; icon: string; slugs: string[] }[] = [
 	{
 		title: "Learn",
 		icon: "blocks",
-		slugs: ["servers", "client", "agents", "host", "capabilities", "discovery"],
+		slugs: [
+			"servers",
+			"client",
+			"agents",
+			"host",
+			"capabilities",
+			"discovery",
+			"authentication",
+			"approval",
+		],
 	},
 	{
 		title: "Build",
@@ -72,7 +86,7 @@ const SECTION_LAYOUT: { title: string; icon: string; slugs: string[] }[] = [
 	{
 		title: "Reference",
 		icon: "book",
-		slugs: ["sdks", "security"],
+		slugs: ["sdks", "security", "errors", "data-model", "privacy"],
 	},
 ];
 

@@ -93,4 +93,70 @@ A capability grant can carry **constraints** — restrictions on the input value
 }
 ```
 
-Instead of granting "transfer money" with no limits, the server can grant "transfer up to $1,000 in USD to account acc_456." Constraints can be proposed by the agent, imposed by the server, or both — the tightest constraint from either source wins.
+Instead of granting "transfer money" with no limits, the server can grant "transfer up to $1,000 in USD to account acc_456." Constraints can be proposed by the agent, imposed by the server, or both — the tightest constraint from either source wins. The server must not widen constraints beyond what the agent requested without a new approval — it can only narrow them.
+
+### Constraint operators
+
+Constraint values use one of two forms:
+
+- **Exact value** — `"field": value`. The agent must supply exactly this value. Shorthand for equality.
+- **Operator object** — `"field": { "op": value }`. The value must satisfy the operator.
+
+| Operator | Type | Meaning |
+|----------|------|---------|
+| `max` | number | Value must be ≤ `max` |
+| `min` | number | Value must be ≥ `min` |
+| `in` | array | Value must be one of the listed values |
+| `not_in` | array | Value must not be one of the listed values |
+
+Operators can be combined on a single field: `{ "min": 0, "max": 1000 }` means the value must be between 0 and 1000 inclusive. Exact values and operator objects cannot be combined on the same field.
+
+If a server encounters an unknown constraint operator, it rejects the request with `400 unknown_constraint_operator` rather than silently ignoring it — ignoring an unknown constraint could grant broader access than intended.
+
+## Describe capability
+
+Servers expose two endpoints for capability discovery:
+
+- **`GET /capability/list`** — lightweight listing with `name`, `description`, and `grant_status` (when authenticated with an Agent JWT). Supports search via a `query` parameter and cursor-based pagination.
+- **`GET /capability/describe?name={name}`** — full detail for a single capability, including `input` and `output` schemas.
+
+Agents call `describe` when they need to know a capability's input shape before executing, or to understand the shape of the data it returns. Both endpoints support three authentication modes:
+
+| Auth | What's returned |
+|------|-----------------|
+| **No auth** | Public capabilities only |
+| **Host JWT** | Capabilities available to the host's linked user |
+| **Agent JWT** | All capabilities with per-agent grant status |
+
+### Pagination
+
+The list endpoint supports cursor-based pagination:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `query` | string | Search query to filter capabilities |
+| `cursor` | string | Opaque pagination cursor from the previous response |
+| `limit` | number | Maximum capabilities to return |
+
+The response includes `next_cursor` (opaque cursor for the next page) and `has_more` (boolean). Servers with a small capability set may return all capabilities in a single response.
+
+## Capability location
+
+Capabilities can specify a custom execution `location` — a URL where the capability is executed, separate from the server's main execute endpoint. This enables architectures where the auth server manages registration and grants while different backend services handle execution.
+
+```json
+{
+  "name": "check_balance",
+  "description": "Check account balance",
+  "location": "https://banking-api.example.com/agent/execute",
+  "input": { ... }
+}
+```
+
+When a capability has a `location`, the client sends the execute request to that URL and sets the Agent JWT's `aud` claim to match. When no `location` is set, the client uses the server's `default_location` from [discovery](/docs/discovery). The service at the location validates the JWT — verifying that `aud` matches its own URL — checks grants (via [introspection](/specification#512-introspect) or local verification), and processes the request.
+
+## Capability naming
+
+Capability names are opaque strings at the protocol layer. They should only include lowercase ASCII alphanumeric characters and underscores (`[a-z0-9_]+`) and use consistent `snake_case` within a provider.
+
+Servers may remove or rename capabilities at any time. Existing grants for a removed capability become inoperative. When an agent attempts to execute a removed capability, the server returns `403 capability_not_granted`.

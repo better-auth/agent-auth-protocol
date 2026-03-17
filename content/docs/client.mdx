@@ -22,6 +22,7 @@ A client exposes these standard tools to agents:
 | `search_providers` | Search a registry for providers matching an intent |
 | `discover_provider` | Discover a provider from a direct URL |
 | `list_capabilities` | List capabilities available from a provider |
+| `describe_capability` | Get full detail for a single capability (input/output schemas) |
 | `connect_agent` | Register an agent with a server and handle approval |
 | `execute_capability` | Execute a capability on a server |
 | `sign_jwt` | Sign a raw JWT for direct server-to-server use |
@@ -92,7 +93,21 @@ The client manages two types of keypairs:
 - **Host keypair** — persistent, one per server. Used to sign Host JWTs for registration and management operations. Stored securely on the client.
 - **Agent keypair** — per-agent, created at connection time. Used to sign Agent JWTs for capability execution. Can be stored in memory or persisted depending on the client.
 
-Both use Ed25519 (the only algorithm defined in this spec version). The private keys never leave the client — the server only stores public keys.
+Both use Ed25519 (the only algorithm defined in this spec version). The private keys never leave the client — the server only stores public keys. See [Authentication](/docs/authentication) for the full JWT format and verification flow.
+
+## Error handling
+
+Clients should handle errors from the server gracefully. Common patterns:
+
+- **`401 invalid_jwt`** — re-sign the JWT and retry. The JWT may have expired or the signature may not match.
+- **`403 agent_expired`** — the agent's session has timed out. Call `reactivate_agent` to bring it back with default capabilities.
+- **`403 agent_revoked`** — the agent has been permanently revoked. A new agent must be created via `connect_agent`.
+- **`403 capability_not_granted`** — the agent doesn't have this capability. Call `request_capability` to request it.
+- **`403 constraint_violated`** — the request arguments exceed the grant's constraints. The error response includes a `violations` array showing which arguments need adjustment.
+- **`429 rate_limited`** — too many requests. Respect the `Retry-After` header if present, or use exponential backoff.
+- **`400 invalid_capabilities`** — one or more requested capability names don't exist. The error response should include the list of invalid names so the agent can self-correct.
+
+For a full list of error codes, see [Errors](/docs/errors).
 
 ## Deployment models
 

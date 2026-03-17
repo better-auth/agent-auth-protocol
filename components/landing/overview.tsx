@@ -85,24 +85,16 @@ export function ProtocolOverview() {
 			transition={{ duration: 0.5, delay: 0.1, ease: "easeOut" }}
 			className="mx-auto max-w-4xl px-5 sm:px-6 py-16 sm:py-20"
 		>
-			<div className="spec-prose mb-16">
+		<div className="spec-prose mb-16">
 				<p>
-					Everything we{"'"}ve built for auth on the web assumes two kinds of actors: a human user and a closed loop application, with predefined scopes and known execution paths.
+					Every auth model for delegating access to external systems assumes a closed-loop client — software that declares its behavior upfront, gets approved, and does exactly what it said it would. Agents aren{"'"}t closed-loop. They{"'"}re non-deterministic, change what they need mid-session, and may call services they discovered at runtime.
 				</p>
 				<p>
-					Agents are dynamic, non-deterministic, and vary their tasks over time — sometimes acting on behalf of a user, sometimes entirely on their own, calling external services, discovering tools at runtime, needing one capability now and a different one later, often running long after the human who started them has moved on.
+					When you authorize three agents, they share one token, look identical to the server, and get the same permissions. You can{"'"}t scope them individually, revoke one without revoking all, or trace which did what.
 				</p>
 				<p>
-					These problems share a single root cause: existing auth — OAuth, API keys, sessions — has no concept of an "agent", a distinct runtime actor. The server sees a credential, and credentials identify resources, not the specific actor using them. Without per-agent identity, the server cannot tell which agent made a request, cannot scope one differently from another, and cannot revoke one without affecting every other. There is no lifecycle, no state transitions, no way to expire an agent that should have stopped running hours ago.
+				Agent Auth makes the agent a first-class principal. Each one gets its own identity, its own capabilities, and its own lifecycle. You scope what it can do, constrain how it does it, control what conditions are required, and revoke it without touching anything else.
 				</p>
-				<p>
-					Agent Auth solves this by making the runtime agent a first-class principal:
-				</p>
-				<ul className="list-disc list-inside">
-					<li><strong>Identity</strong> — each agent is registered with its own identity, scoped to a specific task or session. The server knows exactly which agent is acting.</li>
-					<li><strong>Capabilities</strong> — instead of coarse-grained scopes, agents are granted specific capabilities that can be escalated or revoked at runtime.</li>
-					<li><strong>Lifecycle</strong> — every agent is governed by session TTL, max lifetime, and revocation. The server can expire or terminate one agent without affecting any other.</li>
-				</ul>
 			</div>
 
 			{/* Delegated — diagram */}
@@ -174,16 +166,19 @@ export function ProtocolOverview() {
 				</div>
 			</div>
 
-			{/* Autonomous + Discovery — prose */}
+			{/* Three problems */}
 			<div className="spec-prose mb-12">
 				<p>
-					Beyond solving the identity problem for <strong>delegated agents</strong> — agents acting on behalf of a user — Agent Auth addresses two other structural gaps:
+					The protocol is designed to solve three problems:
 				</p>
 				<p>
-					<strong>Autonomous agents.</strong> When there{"'"}s no user in the loop at all, agents today are forced to pretend to be human — opening a browser, solving a CAPTCHA, clicking through a signup flow. Agent Auth lets an agent register directly with its own identity. When a user later claims the agent, its activity history is attributed to them and capabilities are re-granted under user context.
+					<strong>Delegated agents</strong> — agents acting on behalf of a user get their own identity, scoped capabilities, and an independent lifecycle. Revoke one, limit another, audit each individually.
 				</p>
 				<p>
-					<strong>Discovery.</strong> There{"'"}s no standard way for a service to advertise that it supports agents or how an agent should begin authenticating. Agent Auth standardizes a well-known endpoint and a <Link href="/registry" className="underline underline-offset-2 hover:text-foreground/80 transition-colors">registry</Link> so agents can discover services automatically — by URL or by intent.
+					<strong>Autonomous agents</strong> — when there{"'"}s no user in the loop, agents today are forced to pretend to be human. Opening a browser, solving a CAPTCHA, and clicking through forms made for humans. Agent Auth lets an agent register and operate directly with its own identity. 
+				</p>
+				<p>
+					<strong>Discovery</strong> — there{"'"}s no standard way for a service to advertise that it supports agents. Agent Auth standardizes a well-known endpoint and a <Link href="/registry" className="underline underline-offset-2 hover:text-foreground/80 transition-colors">registry</Link> of services, so agents can discover services automatically — by URL or by intent.
 				</p>
 			</div>
 
@@ -203,10 +198,13 @@ export function ProtocolOverview() {
 
 				<div className="spec-prose">
 					<p>
-						<strong>Comprehensive:</strong> This protocol is intentionally broad. It covers everything from intent-based service lookup to constrained capabilities to action execution. It's designed to work with existing infrastructure without requiring a lot of assumptions or changes.
+						<strong>Comprehensive:</strong> This protocol is intentionally broad. It covers everything from intent-based service lookup to constrained capabilities to action execution.
 					</p>
 					<p>
 						<strong>Implementation-oriented:</strong> This protocol ships with official implementations. We expect most use cases to be served through them. The specification exists to enable additional implementations and custom use cases.
+					</p>
+					<p>
+						<strong>Easy to adopt:</strong> It's designed for existing infrastructure. The official implementations ship with adapters that turn your existing OpenAPI / MCP tools into an Agent Auth server.
 					</p>
 					<p>
 						<strong>Open source:</strong> This project is developed in the open. The spec and reference implementations are open source, and we welcome contributions, feedback, and implementations from the community.

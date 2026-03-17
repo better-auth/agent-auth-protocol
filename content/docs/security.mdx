@@ -85,8 +85,65 @@ Servers must implement rate limiting. Agents can generate high request volumes �
 
 Both servers and clients fetch external URLs as part of the protocol. Servers fetching JWKS URLs must apply:
 
-- **IP filtering** — block private, loopback, and link-local ranges
+- **IP filtering** — block private, loopback, and link-local ranges (`127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.0.0/16`, `::1`, `fc00::/7`). Resolve DNS before connecting and check the resolved IP — not just the hostname.
 - **DNS rebinding protection** — pin the resolved IP for the request duration
 - **HTTPS only** — reject `http://` URLs
+- **Redirect limits** — follow at most 3 redirects, validating each target against IP filtering rules
 - **Response size limits** — cap response bodies (e.g. 1 MB for JWKS)
-- **Timeouts** — enforce connect and read timeouts
+- **Timeouts** — enforce connect and read timeouts (e.g. 5 seconds each)
+
+Clients fetching discovery endpoints, OpenAPI specs, or server JWKS should apply: HTTPS only, response size limits, timeouts, and redirect limits.
+
+Clients must also validate URLs returned by the server — `status_url` (async polling), `verification_uri` (device authorization), and `notification_url` (real-time approval). A malicious server could return URLs that point to the client's local network or serve phishing pages. For `status_url`, the URL must share the same origin as the server's `issuer` URL.
+
+## JWKS content validation
+
+After fetching a JWKS document, servers and clients must validate its contents:
+
+- The response must be valid JSON conforming to RFC 7517 §5
+- The `keys` array must contain at least one key
+- Only asymmetric key types (`RSA`, `EC`, `OKP`) are permitted — reject symmetric keys (`kty: "oct"`)
+- Servers should limit the number of keys (e.g. 20) to prevent signature-verification abuse
+- Cache JWKS responses with a maximum duration (e.g. 24 hours) and minimum refresh interval (e.g. 5 minutes)
+
+## Discovery downgrade attacks
+
+The `algorithms` field in discovery tells clients which key types the server accepts. If an attacker modifies the discovery document in transit (via a compromised cache or DNS hijack), they could force clients to register with weaker algorithms. TLS is the primary defense. Clients should reject unexpected algorithm downgrades — if a server previously supported `Ed25519` and a subsequent discovery fetch no longer lists it, the client should warn the user or refuse to proceed.
+
+## Constraint enforcement atomicity
+
+Constraints are validated when the server processes the execution request, but the underlying data may change between validation and execution (a TOCTOU gap). Servers should validate constraints and execute atomically where possible (e.g. within a database transaction), re-validate at each step for multi-step operations, and ensure constraint-validated operations are idempotent.
+
+## Cross-server capability confusion
+
+Each agent JWT includes an `aud` claim set to the server's URL. Servers must reject JWTs where `aud` doesn't match. Clients must set `aud` to the specific server's URL for each request and must never reuse a signed JWT across servers — even if two servers share a capability name.
+
+## Implementation guidance
+
+### Caching
+
+- **Agent and host data** — cache status, public keys, and granted capabilities in memory with a short TTL (5–30 seconds). Revocation propagation is delayed by at most the cache TTL. Use shorter TTLs or event-driven invalidation for stricter revocation requirements.
+- **Discovery** — cache locally and re-fetch no more than once per hour. Force a re-fetch on unexpected `404` or `410`. Maximum cache lifetime of 24 hours.
+- **Capabilities** — cache `list` and `describe` responses. A `max-age` of 300 (five minutes) is recommended. Invalidate on `capability_not_found` errors during execution. Cache must be keyed by both endpoint URL and requesting identity.
+- **JWKS** — cache responses and refresh periodically (every 5 minutes or on `kid` miss). Handle unavailability gracefully — use previously cached keys.
+- **Replay detection** — the `jti` cache does not need persistence. An in-memory cache or bloom filter with a 90-second TTL is sufficient.
+
+### Key storage
+
+Clients should store private keys securely:
+
+- **Desktop/server** — OS keychain, encrypted file, or hardware security module
+- **Memory-only** — acceptable for ephemeral agents where key loss is tolerable
+- **Environment variables** — common but less secure (visible to process inspection tools)
+
+### Pending agent cleanup
+
+Servers should periodically clean up agents that remain in `pending` state beyond a server-defined threshold (e.g. 24 hours, 7 days). Cleaned-up pending agents are deleted, not revoked — they never became active. Hosts in `pending` state should be cleaned up similarly.
+
+### User-facing terminology
+
+The protocol uses "host" to describe the client's persistent identity. In user-facing surfaces — dashboards, approval screens, settings — servers should present hosts using familiar labels such as "Connected Apps," "Applications," or "Authorized Apps."
+
+### Display-text safety
+
+Several protocol fields shown on approval screens are attacker-controlled: `name`, `reason`, `host_name`, and `binding_message`. Servers must sanitize these fields before rendering — strip HTML, limit length, and escape special characters. Servers should warn users when display names resemble well-known brands (homoglyph detection) and must not render these fields as trusted content.

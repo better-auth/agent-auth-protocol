@@ -24,17 +24,23 @@ export function LandingFooter() {
 
 			<div className="relative px-5 sm:px-6 lg:px-7 py-6 lg:py-8">
 				<div className="flex items-center justify-between">
-					<span className="text-[10px] text-foreground/40 ">
-		
+					<span className="text-[10px] text-foreground/40 flex items-center gap-2">
 						<Link
 							href="https://better-auth.com"
 							target="_blank"
 							rel="noopener noreferrer"
 							className="hover:text-foreground/60 transition-colors"
 						>
-							©
-							Better Auth Inc.
+							© Better Auth Inc.
 						</Link>
+						<span className="text-foreground/20">·</span>
+						<a
+							href="mailto:contact@better-auth.com"
+							className="inline-flex items-center gap-1 hover:text-foreground/60 transition-colors"
+						>
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3"><path d="M2.5 3A1.5 1.5 0 0 0 1 4.5v.793c.026.009.051.02.076.032L7.674 8.51c.206.1.446.1.652 0l6.598-3.185A.755.755 0 0 1 15 5.293V4.5A1.5 1.5 0 0 0 13.5 3h-11Z" /><path d="M15 6.954 8.978 9.86a2.25 2.25 0 0 1-1.956 0L1 6.954V11.5A1.5 1.5 0 0 0 2.5 13h11a1.5 1.5 0 0 0 1.5-1.5V6.954Z" /></svg>
+							contact@better-auth.com
+						</a>
 					</span>
 					<div className="flex items-center gap-3">
 						<Link

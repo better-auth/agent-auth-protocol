@@ -1,0 +1,70 @@
+---
+title: Data Model
+description: Field-level reference for the three core data types in Agent Auth — hosts, agents, and agent capability grants.
+section: "Reference"
+---
+
+The protocol operates on three data types: hosts, agents, and agent capability grants. This page defines their logical fields. Implementations may store these however they choose — the protocol-facing behavior is the contract, not the storage layout.
+
+## Host
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique identifier |
+| `name` | string? | Human-readable name (e.g. `"MacBook-Pro"`, `"CI Server"`). Informational only — servers must not use it for authorization. |
+| `public_key` | JWK? | Ed25519 public key. Present when inline key registration is used. |
+| `jwks_url` | string? | JWKS endpoint URL. Present when JWKS-based registration is used. |
+| `user_id` | string? | ID of the linked user in the server's auth system. Set when a user approves and trusts the host. |
+| `default_capabilities` | string[] | Default capabilities for agents registered under this host |
+| `status` | enum | `active`, `pending`, `revoked`, `rejected` |
+| `activated_at` | datetime? | Last activation |
+| `expires_at` | datetime? | TTL deadline |
+| `last_used_at` | datetime? | Last host JWT usage |
+| `created_at` | datetime | Created |
+| `updated_at` | datetime | Last modified |
+
+A `?` on the type indicates the field is **nullable** — it may be present with a `null` value.
+
+## Agent
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique identifier |
+| `name` | string | Human-readable name for the agent |
+| `host_id` | string (FK) | The host this agent is registered under |
+| `user_id` | string? (FK) | The effective user context this agent acts on behalf of |
+| `public_key` | JWK? | Ed25519 public key. Present when inline key registration is used. |
+| `jwks_url` | string? | JWKS endpoint URL. Present when JWKS-based registration is used. |
+| `status` | enum | `active`, `pending`, `expired`, `revoked`, `rejected`, `claimed` |
+| `mode` | string | `"delegated"` or `"autonomous"`. Immutable after creation. |
+| `last_used_at` | datetime? | Last authenticated request |
+| `activated_at` | datetime? | Last activation |
+| `expires_at` | datetime? | TTL deadline |
+| `created_at` | datetime | Created |
+| `updated_at` | datetime | Last modified |
+
+## Agent Capability Grant
+
+Capabilities are stored as individual grant records rather than flat arrays on the agent. This enables per-capability metadata (expiry, grant source, reason) and granular revocation.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique identifier |
+| `agent_id` | string (FK) | The agent this grant belongs to |
+| `capability` | string | The granted capability identifier |
+| `status` | enum | `active`, `pending`, or `denied` |
+| `constraints` | object? | Input constraints on this grant. Keys are input field names; values are exact values or operator objects (`max`, `min`, `in`, `not_in`). |
+| `granted_by` | string? (FK) | User or system actor who granted this capability. Informational for audit. |
+| `denied_by` | string? (FK) | User or system actor who denied this capability. Present only when status is `denied`. |
+| `reason` | string? | Why this capability was granted, requested, or denied. |
+| `expires_at` | datetime? | When this specific grant expires (independent of agent TTL) |
+| `created_at` | datetime | Created |
+| `updated_at` | datetime | Last modified |
+
+An agent's effective capabilities are all grants where `status = "active"` and `expires_at` is null or in the future.
+
+## Storage flexibility
+
+Implementations may use flat arrays on the agent model instead of a separate grants table, but must support at minimum per-capability status tracking (`active` vs `pending`). The `agent_capability_grants` array in the status response is the protocol-facing contract — how it's stored internally is an implementation choice.
+
+The core protocol models an agent as having one effective user context at a time (`agent.user_id`). A grant may record a different `granted_by` value for audit purposes — for example, an admin may approve a capability — but that does not change which user the agent acts for.

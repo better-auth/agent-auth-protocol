@@ -1,0 +1,39 @@
+---
+title: Privacy
+description: Privacy considerations for Agent Auth — host key correlation, agent activity tracking, autonomous agent data, and capability requests as behavioral signals.
+section: "Reference"
+---
+
+Agent Auth's per-agent traceability is a feature for security and auditing, but it also raises privacy concerns. This page covers the key privacy considerations for implementers and deployers.
+
+## Host key correlation
+
+A host uses the same keypair (or JWKS URL) across all servers it connects to. Two colluding servers can correlate activity: if `bank.com` and `shop.com` both see the same host public key, they know the same client environment is connecting to both.
+
+This is a deliberate design trade-off. A shared host identity enables host reputation — servers can build trust for a host based on behavior over time. It also keeps client implementation simple: one keypair per host, no per-server key management.
+
+Clients that require unlinkability across servers may generate a separate host keypair per server — either randomly or by deriving per-server keys from a single root secret using HKDF ([RFC 5869](https://datatracker.ietf.org/doc/html/rfc5869)) with the server's `issuer` URL as context.
+
+## Agent activity tracking
+
+The protocol provides per-agent, per-call traceability by design. The server has a complete record of every capability an agent executed, when, and with what inputs.
+
+- Servers should define and publish data retention policies for agent activity logs
+- Servers should provide users with the ability to view and delete agent activity data associated with their account
+- Servers must not share per-agent activity data with third parties without user consent
+
+## Autonomous agent data
+
+Autonomous agents can register and operate without a user in the loop. When a host is linked to a user, autonomous agents under it are [claimed](/docs/host#autonomous-agent-claiming) and their activity history is attributed to the user. The user may not be aware of what the agent did before the host was linked.
+
+Servers should provide the user with visibility into the autonomous agent's activity before completing the claiming process.
+
+## Capability requests as behavioral signal
+
+The capabilities an agent requests reveal intent. A request for `transfer_international` tells the server the user is planning an international transfer, even if the transfer never happens. Pending capability requests (user hasn't approved yet) are also stored server-side.
+
+Servers should treat pending and denied capability requests with the same data protection as granted capabilities.
+
+## Metadata and reason fields
+
+The `reason` field on registration and capability requests is freetext. Agents may include sensitive information (e.g. "User wants to transfer $50,000 to account ending in 4321"). Servers that store these fields should apply the same access controls and retention policies as other personally identifiable information.
