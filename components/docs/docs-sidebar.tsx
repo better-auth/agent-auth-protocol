@@ -123,7 +123,7 @@ export function DocsSidebar({ sections }: { sections: DocsSection[] }) {
 							<Menu className="size-3.5" />
 						)}
 					</button>
-				<Link href="/" className="select-none text-sm uppercase">
+				<Link href="/" className="select-none">
 					<WordmarkLogo className="h-4 w-auto" />
 				</Link>
 					{currentPage && (
@@ -190,7 +190,7 @@ export function SidebarContent({
 			<div className="shrink-0 px-4 py-3">
 				<Link
 				href="/"
-				className="inline-block select-none text-sm uppercase"
+				className="inline-block select-none"
 				onClick={onNavigate}
 			>
 				<WordmarkLogo className="h-4 w-auto" />

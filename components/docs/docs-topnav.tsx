@@ -27,7 +27,7 @@ export function DocsTopNav() {
 				{!isDocsPath && (
 					<Link
 						href="/"
-						className="px-4 py-1 select-none text-sm uppercase text-fd-foreground"
+						className="px-4 py-4 select-none"
 					>
 						<WordmarkLogo className="h-4 w-auto" />
 					</Link>
