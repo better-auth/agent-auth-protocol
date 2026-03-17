@@ -1,9 +1,8 @@
 "use client";
 
-import { use, useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { createHighlighter } from "shiki";
 import {
   AnchorProvider,
   ScrollProvider,
@@ -20,40 +19,6 @@ function slugify(text: string) {
     .toLowerCase()
     .replace(/[^\w\s-]/g, "")
     .replace(/\s+/g, "-");
-}
-
-const highlighterPromise = createHighlighter({
-  themes: ["one-light", "one-dark-pro"],
-  langs: ["json", "typescript", "javascript", "bash", "http", "text"],
-});
-
-function CodeBlock({
-  children,
-  className,
-}: {
-  children: string;
-  className?: string;
-}) {
-  const lang = className?.replace("language-", "") || "text";
-
-  if (lang === "mermaid") {
-    return <Mermaid chart={children.trim()} />;
-  }
-
-  const highlighter = use(highlighterPromise);
-  const loaded = highlighter.getLoadedLanguages();
-  const safeLang = loaded.includes(lang) ? lang : "text";
-  const html = highlighter.codeToHtml(children.trim(), {
-    lang: safeLang,
-    themes: { light: "one-light", dark: "one-dark-pro" },
-  });
-  return (
-    <div
-      className="spec-code [&_pre]:!bg-transparent [&_pre]:!p-0 [&_pre]:!m-0"
-      // biome-ignore lint: shiki output is sanitized
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
-  );
 }
 
 function isSectionChild(parentText: string, childText: string): boolean {
@@ -189,6 +154,130 @@ function SpecToc({
   );
 }
 
+let highlightStyleInjected = false;
+function injectHighlightStyle() {
+  if (highlightStyleInjected || typeof document === "undefined") return;
+  const style = document.createElement("style");
+  style.textContent = `::highlight(spec-search) { background-color: #facc15; color: #1a1a1a; }`;
+  document.head.appendChild(style);
+  highlightStyleInjected = true;
+}
+
+function SpecSearch({
+  containerRef,
+}: {
+  containerRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+  const highlightsRef = useRef<Range[]>([]);
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        e.stopPropagation();
+        setOpen(true);
+      }
+      if (e.key === "Escape" && open) {
+        setOpen(false);
+        setQuery("");
+        clearHighlights();
+      }
+    }
+    document.addEventListener("keydown", onKeyDown, true);
+    return () => document.removeEventListener("keydown", onKeyDown, true);
+  }, [open]);
+
+  useEffect(() => {
+    if (open) {
+      inputRef.current?.focus();
+      injectHighlightStyle();
+    }
+  }, [open]);
+
+  function clearHighlights() {
+    if (typeof CSS !== "undefined" && CSS.highlights) {
+      CSS.highlights.delete("spec-search");
+    }
+  }
+
+  useEffect(() => {
+    if (!query || query.length < 2) {
+      clearHighlights();
+      return;
+    }
+
+    const container = containerRef.current;
+    if (!container || !CSS.highlights) return;
+
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+    const ranges: Range[] = [];
+    const lowerQuery = query.toLowerCase();
+
+    let node: Node | null;
+    while ((node = walker.nextNode())) {
+      const text = node.textContent?.toLowerCase() ?? "";
+      let idx = text.indexOf(lowerQuery);
+      while (idx !== -1) {
+        const range = new Range();
+        range.setStart(node, idx);
+        range.setEnd(node, idx + query.length);
+        ranges.push(range);
+        idx = text.indexOf(lowerQuery, idx + 1);
+      }
+    }
+
+    const highlight = new Highlight(...ranges);
+    CSS.highlights.set("spec-search", highlight);
+    highlightsRef.current = ranges;
+
+    if (ranges.length > 0) {
+      const first = ranges[0];
+      const rect = first.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      container.scrollTo({
+        top: rect.top - containerRect.top + container.scrollTop - 100,
+        behavior: "smooth",
+      });
+    }
+  }, [query, containerRef]);
+
+  if (!open) return null;
+
+  return (
+    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-4">
+      <div className="flex items-center gap-2 border border-fd-border bg-fd-background shadow-lg px-3 py-2">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-4 text-fd-muted-foreground shrink-0">
+          <circle cx="11" cy="11" r="8" />
+          <path d="m21 21-4.3-4.3" />
+        </svg>
+        <input
+          ref={inputRef}
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search specification..."
+          className="flex-1 bg-transparent text-sm text-fd-foreground placeholder:text-fd-muted-foreground/50 outline-none"
+        />
+        {highlightsRef.current.length > 0 && query.length >= 2 && (
+          <span className="text-[11px] text-fd-muted-foreground/60 shrink-0">
+            {highlightsRef.current.length} found
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={() => { setOpen(false); setQuery(""); clearHighlights(); }}
+          className="text-fd-muted-foreground hover:text-fd-foreground text-xs"
+        >
+          ESC
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function SpecReader({
   content,
   toc,
@@ -222,54 +311,35 @@ export function SpecReader({
     <AnchorProvider toc={tocItems}>
       <div className="flex flex-1 min-h-0">
         {/* Reader */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto relative">
+          <SpecSearch containerRef={scrollRef} />
           <article className="mx-auto max-w-4xl px-5 sm:px-8 py-14 sm:py-20">
             <div className="spec-content">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={{
-                  h1: ({ children }) => {
-                    const text = String(children);
-                    const id = slugify(text);
-                    return (
-                      <h1 id={id} className="spec-h1">
-                        {children}
-                      </h1>
-                    );
-                  },
-                  h2: ({ children }) => {
-                    const text = String(children);
-                    const id = slugify(text);
-                    return (
-                      <h2 id={id} className="spec-h2">
-                        {children}
-                      </h2>
-                    );
-                  },
-                  h3: ({ children }) => {
-                    const text = String(children);
-                    const id = slugify(text);
-                    return (
-                      <h3 id={id} className="spec-h3">
-                        {children}
-                      </h3>
-                    );
-                  },
-                  h4: ({ children }) => {
-                    const text = String(children);
-                    const id = slugify(text);
-                    return (
-                      <h4 id={id} className="spec-h4">
-                        {children}
-                      </h4>
-                    );
-                  },
+                  h1: ({ children }) => (
+                    <h1 id={slugify(String(children))} className="spec-h1">{children}</h1>
+                  ),
+                  h2: ({ children }) => (
+                    <h2 id={slugify(String(children))} className="spec-h2">{children}</h2>
+                  ),
+                  h3: ({ children }) => (
+                    <h3 id={slugify(String(children))} className="spec-h3">{children}</h3>
+                  ),
+                  h4: ({ children }) => (
+                    <h4 id={slugify(String(children))} className="spec-h4">{children}</h4>
+                  ),
                   code: ({ children, className }) => {
                     if (className?.startsWith("language-")) {
+                      const lang = className.replace("language-", "");
+                      if (lang === "mermaid") {
+                        return <Mermaid chart={String(children).trim()} />;
+                      }
                       return (
-                        <CodeBlock className={className}>
-                          {String(children)}
-                        </CodeBlock>
+                        <pre className="spec-code">
+                          <code>{String(children).trim()}</code>
+                        </pre>
                       );
                     }
                     return <code className="spec-inline-code">{children}</code>;
@@ -285,11 +355,7 @@ export function SpecReader({
                       href={href}
                       className="spec-link"
                       target={href?.startsWith("http") ? "_blank" : undefined}
-                      rel={
-                        href?.startsWith("http")
-                          ? "noopener noreferrer"
-                          : undefined
-                      }
+                      rel={href?.startsWith("http") ? "noopener noreferrer" : undefined}
                     >
                       {children}
                     </a>

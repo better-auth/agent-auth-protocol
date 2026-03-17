@@ -55,7 +55,7 @@ export function LandingContent() {
 			/>
 
 			{/* Hero */}
-			<div className="relative overflow-hidden min-h-[80dvh] flex items-center justify-center">
+			<div className="relative overflow-hidden min-h-[60dvh] flex items-center justify-center">
 				<HalftoneBackground />
 				<HeroIdentityBg />
 

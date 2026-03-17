@@ -7,6 +7,14 @@
 
 @custom-variant dark (&:is(.dark *));
 
+.dark {
+  --color-fd-background: #000000;
+  --color-fd-card: #000000;
+  --color-fd-popover: #0a0a0a;
+  --color-fd-muted: hsl(0, 0%, 6%);
+  --color-fd-border: hsl(0, 0%, 50%, 0.15);
+}
+
 @layer utilities {
   .animate-fade-in {
     animation: fadeIn 0.3s ease-out forwards;
@@ -112,11 +120,11 @@
 }
 
 .dark {
-  --background: hsl(220 8% 4%);
+  --background: #000000;
   --foreground: oklch(0.985 0.001 106.423);
-  --card: oklch(0.147 0.004 49.25);
+  --card: #000000;
   --card-foreground: oklch(0.985 0.001 106.423);
-  --popover: oklch(0.147 0.004 49.25);
+  --popover: #0a0a0a;
   --popover-foreground: oklch(0.985 0.001 106.423);
   --primary: oklch(0.985 0.001 106.423);
   --primary-foreground: oklch(0.216 0.006 56.043);
@@ -131,14 +139,14 @@
   --border: oklch(0.268 0.007 34.298);
   --input: oklch(0.268 0.007 34.298);
   --ring: oklch(0.553 0.013 58.071);
-  --shader-bg: #0e0e0e;
+  --shader-bg: #000000;
   --shader-filter: contrast(2.4) brightness(3.5);
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.216 0.006 56.043);
+  --sidebar: #000000;
   --sidebar-foreground: oklch(0.985 0.001 106.423);
   --sidebar-primary: oklch(0.488 0.243 264.376);
   --sidebar-primary-foreground: oklch(0.985 0.001 106.423);
@@ -254,7 +262,7 @@
   }
 
   body {
-    @apply bg-background text-foreground selection:bg-foreground selection:text-background;
+    @apply bg-background text-foreground selection:bg-foreground selection:text-background overflow-x-hidden;
   }
 }
 

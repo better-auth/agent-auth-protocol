@@ -1,18 +1,19 @@
 {
   "title": "Documentation",
   "pages": [
-    "---Introduction---",
+    "---Get Started---",
     "introduction",
-    "---Concepts---",
+    "---Core Concepts---",
     "servers",
     "client",
-    "capabilities",
-    "host",
     "agents",
+    "host",
+    "capabilities",
     "discovery",
-    "---Develop---",
+    "---Build---",
     "build-server",
     "integrate-client",
+    "---Reference---",
     "sdks",
     "security"
   ]
