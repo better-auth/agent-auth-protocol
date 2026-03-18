@@ -6,7 +6,7 @@ import {
 	wrapLanguageModel,
 	type UIMessage,
 } from "ai";
-import { devToolsMiddleware } from "@ai-sdk/devtools";
+import type { LanguageModelMiddleware } from "ai";
 import { z } from "zod/v4";
 import { source } from "@/lib/source";
 import { initAdvancedSearch } from "fumadocs-core/search/server";
@@ -153,11 +153,18 @@ ${getPageListing()}`;
 export async function POST(req: Request) {
 	const { messages }: { messages?: UIMessage[] } = await req.json();
 
+	const middlewares: LanguageModelMiddleware[] = [];
+
+	if (process.env.NODE_ENV === "development") {
+		const { devToolsMiddleware } = await import("@ai-sdk/devtools");
+		middlewares.push(devToolsMiddleware());
+	}
+
 	const model = wrapLanguageModel({
 		model: openrouter.chat(
 			process.env.OPENROUTER_MODEL ?? "moonshotai/kimi-k2.5",
 		),
-		middleware: devToolsMiddleware(),
+		middleware: middlewares,
 	});
 
 	const result = streamText({
