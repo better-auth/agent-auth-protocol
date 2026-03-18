@@ -101,7 +101,7 @@ export function LandingHero() {
 					</button>
 					<span className="h-5 w-px bg-gradient-to-b from-transparent via-foreground/15 to-transparent" />
 					<a
-						href="/playground"
+						href="/demo"
 						className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-primary text-primary-foreground hover:bg-primary/90 text-[11px] sm:text-xs font-mono uppercase tracking-wider transition-colors"
 					>
 						<Play className="w-3 h-3 fill-current" />

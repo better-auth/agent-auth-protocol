@@ -42,6 +42,19 @@ function tocEntriesToItems(toc: TocEntry[]): TOCItemType[] {
   }));
 }
 
+function HashSync() {
+  const activeAnchor = useActiveAnchor();
+  const lastAnchorRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!activeAnchor || activeAnchor === lastAnchorRef.current) return;
+    lastAnchorRef.current = activeAnchor;
+    window.history.replaceState(null, "", `#${activeAnchor}`);
+  }, [activeAnchor]);
+
+  return null;
+}
+
 function SpecToc({
   toc,
   onNavigate,
@@ -399,8 +412,19 @@ export function SpecReader({
     [],
   );
 
+  useEffect(() => {
+    const hash = window.location.hash.slice(1);
+    if (!hash) return;
+
+    const raf = requestAnimationFrame(() => {
+      scrollToId(decodeURIComponent(hash), "instant");
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [scrollToId]);
+
   return (
     <AnchorProvider toc={tocItems}>
+      <HashSync />
       <div className="flex flex-1 min-h-0">
         {/* Reader */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto relative">

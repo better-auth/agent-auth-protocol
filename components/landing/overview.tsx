@@ -180,7 +180,7 @@ export function ProtocolOverview() {
 					<strong>Delegated agents</strong> — when an agent acts on behalf of a user, it gets its own identity, fine-grained capabilities with constraints, and an independent lifecycle the server can audit and control.
 				</p>
 				<p>
-					<strong>Autonomous agents</strong> — when there{"'"}s no user in the loop, lets an agent register and operate directly with its own identity — without being forced to pretend to be human by opening a browser, solving a CAPTCHA, or clicking through forms built for people.
+					<strong>Autonomous agents</strong> — when there{"'"}s no user in the loop, lets an agent register and operate directly with its own identity — without being forced to pretend to be human by opening a browser, solving a CAPTCHA, or clicking through forms built for people. A user can link to the agent later, claiming its activity history and taking over governance.
 				</p>
 				<p>
 					<strong>Discovery</strong> — standardizes a well-known endpoint and a <a href="https://agent-auth.directory" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground/80 transition-colors">registry</a> so agents can find and connect to services automatically — by URL or by describing what they need in natural language. This avoids the need for pre-configuring services.
