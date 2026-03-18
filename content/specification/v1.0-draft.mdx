@@ -1841,7 +1841,7 @@ The error value is a machine-readable code (a snake_case string). The message va
 
 Servers MAY return additional error codes beyond those listed. Clients SHOULD handle unknown error codes gracefully by falling back to the HTTP status code.
 
-For device authorization endpoints (§7.1), error responses follow [RFC 8628 §3.5](https://datatracker.ietf.org/doc/html/rfc8628#section-3.5). For CIBA endpoints (§7.2), error responses follow [OpenID CIBA Core §13](https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html#rfc.section.13).
+Approval-related error codes from device authorization (e.g. `authorization_pending`, `slow_down`, `access_denied` per [RFC 8628 §3.5](https://datatracker.ietf.org/doc/html/rfc8628#section-3.5)) and CIBA (per [OpenID CIBA Core §13](https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html#rfc.section.13)) are used as the `error` value. The error format on all Agent Auth endpoints uses the standard shape defined above (`error` + `message`), not the OAuth `error_description` field.
 
 ### 5.14 Resource Server Challenge (Optional)
 
