@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, Globe } from "lucide-react";
+import { Check, Copy, Globe, Play } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
 import {
@@ -21,15 +21,7 @@ export function LandingHero() {
 	return (
 		<div className="relative w-full flex flex-col items-center text-center pointer-events-none z-10">
 			<div className="space-y-3 sm:space-y-4">
-			<motion.span
-				initial={{ opacity: 0 }}
-				animate={{ opacity: 1 }}
-				transition={{ duration: 0.2, delay: 0.02, ease: "easeOut" }}
-				className="inline-block font-mono text-[10px] sm:text-[11px] tracking-widest uppercase text-foreground/30"
-			>
-				v1.0-draft
-			</motion.span>
-			<motion.h1
+		<motion.h1
 				initial={{ opacity: 0, y: 6 }}
 				animate={{ opacity: 1, y: 0 }}
 				transition={{ duration: 0.25, delay: 0.08, ease: "easeOut" }}
@@ -86,16 +78,16 @@ export function LandingHero() {
 					animate={{ opacity: 1, y: 0 }}
 					transition={{ duration: 0.3, delay: 0.18, ease: "easeOut" }}
 					data-hero-fade
-					className="pt-2 sm:pt-3"
+					className="pt-2 sm:pt-3 flex items-center justify-center gap-4 pointer-events-auto"
 				>
 					<button
 						onClick={handleCopy}
 						type="button"
-						className="pointer-events-auto group inline-flex items-center gap-0 border border-foreground/10 transition-all cursor-pointer overflow-hidden"
+						className="group inline-flex items-center gap-0 border border-foreground/10 transition-all cursor-pointer overflow-hidden"
 					>
 						<span className="flex items-center gap-2 bg-foreground/5 px-2 py-1.5 border-r border-foreground/10">
 							<ChevronRightIcon className="w-3 h-3 text-foreground/50" />
-							<code className="text-sm  font-mono text-foreground/70 group-hover:text-foreground/90 transition-colors">
+							<code className="text-sm font-mono text-foreground/70 group-hover:text-foreground/90 transition-colors">
 								npx auth ai
 							</code>
 						</span>
@@ -107,6 +99,14 @@ export function LandingHero() {
 							)}
 						</span>
 					</button>
+					<span className="h-5 w-px bg-gradient-to-b from-transparent via-foreground/15 to-transparent" />
+					<a
+						href="/playground"
+						className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-primary text-primary-foreground hover:bg-primary/90 text-[11px] sm:text-xs font-mono uppercase tracking-wider transition-colors"
+					>
+						<Play className="w-3 h-3 fill-current" />
+						Try Demo
+					</a>
 				</motion.div>
 			</div>
 		</div>

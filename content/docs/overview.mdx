@@ -1,17 +1,17 @@
 ---
 title: Overview
-description: How Agent Auth addresses the gaps in existing authentication models for AI agents.
+description: Why existing auth has no concept of "agent" and how Agent Auth makes the runtime agent a first-class principal.
 ---
 
-Every auth model for delegating access to external systems assumes a closed-loop client — software that declares its behavior upfront, gets approved, and does exactly what it said it would. The entire model depends on being able to enumerate what the client will do before it does it.
+Everything we've built for auth on the web assumes two kinds of actors: a human user and a static application, with predefined scopes and known execution paths.
 
-Agents aren't closed-loop. An agent is a non-deterministic runtime — it decides what to do based on context, changes direction mid-session, and may need capabilities it didn't know about when it started. You can't scope it in advance because you don't know what it'll need until it's already running. It might read a balance, decide to initiate a transfer, discover a new service, and call it — all in a single run that no one planned for at authorization time.
+Agents fit neither role. They act on behalf of a user or entirely on their own, call external services, discover tools at runtime, need one capability now and a different one later, and often run long after the human who started them has moved on.
 
-Nothing in existing auth accounts for this kind of actor. There is no standard way to give an agent an identity, scope its permissions based on what it actually does, audit its actions individually, or revoke it without revoking everything.
+These problems share a single root cause: **existing auth has no concept of "agent."** The server sees a credential, and credentials identify resources — not the specific actor using them. Without per-agent identity, the server cannot tell which agent made a request, cannot scope one differently from another, and cannot revoke one without affecting every other. There is no lifecycle, no state transitions, no way to expire an agent that should have stopped running hours ago.
+
+Agent Auth makes the runtime agent a first-class principal. Each agent is registered with its own identity, granted specific capabilities, and governed by a lifecycle the server controls. The server sees exactly which agent is acting, what it is authorized to do, and can terminate one without affecting anything else.
 
 ## Delegated Agents
-
-Every auth model for sharing user resources with external systems is, at the limit, user impersonation with scopes. The server sees who authorized the request and what they authorized. It never sees who is actually making it.
 
 When an agent acts on behalf of a user, it typically uses the user's token or a shared client credential. That collapses the runtime agent into someone else's identity:
 
@@ -19,13 +19,11 @@ When an agent acts on behalf of a user, it typically uses the user's token or a 
 - **No scoping:** Every agent gets a static set of permissions that are shared across all agents. You can't give one agent to do one thing and another agent to do another thing.
 - **No isolation:** You can't revoke one agent without revoking all of them. A compromised agent means rotating credentials for everything.
 
-**Agent Auth** makes every agent a first-class principal. Each agent registers under a host with its own keypair. Every request is signed with the agent's private key. The server verifies it cryptographically and sees both the user and the specific agent acting for them.
-
-Instead of broad scopes like "write access to accounts," the server grants named capabilities with per-field constraints — `transfer_domestic` capped at $1,000 to a specific account. Each grant is scoped to the individual agent and independently revocable. One agent misbehaves, you revoke that agent. Everything else keeps running.
+Agent Auth gives each agent its own keypair and its own registration. Every request is signed by the specific agent that made it. The server verifies it cryptographically and sees both the user and the exact agent acting for them. Instead of broad scopes like "write access to accounts," the server grants named capabilities with per-field constraints — `transfer_domestic` capped at $1,000 to a specific account. Each grant is scoped to the individual agent and independently revocable.
 
 ## Autonomous Agents
 
-Existing auth tightly couples the human user and the application. When an agent needs to act on its own — without a user in the loop — there is no identity model for it. The agent is forced to pretend to be a human user: opening a browser, solving a CAPTCHA, and clicking through a signup flow just to use a service. There is no standard way for an agent to register itself, prove its identity, or receive capabilities without impersonating a person.
+When an agent needs to act on its own — without a user in the loop — there is no identity model for it. Existing auth tightly couples the human user and the application. The agent is forced to pretend to be a human: opening a browser, solving a CAPTCHA, and clicking through a signup flow just to use a service.
 
 Agent Auth gives each autonomous agent its own identity. No user session, no impersonation. The agent registers directly with its own keypair, authenticates with signed JWTs, and the server attributes every action to the exact agent instance.
 

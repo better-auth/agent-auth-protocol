@@ -86,13 +86,16 @@ export function ProtocolOverview() {
 		>
 		<div className="spec-prose mb-16">
 				<p>
-					Every auth model for delegating access to external systems assumes a closed-loop client — software that declares its behavior upfront, gets approved, and does exactly what it said it would. Agents aren{"'"}t closed-loop. They{"'"}re non-deterministic, change what they need mid-session, and may call services they discovered at runtime.
+					Everything we{"'"}ve built for auth on the web assumes two kinds of actors: a human user and a static application, with predefined scopes and known execution paths.
 				</p>
 				<p>
-					When you authorize three agents, they share one token, look identical to the server, and get the same permissions. You can{"'"}t scope them individually, revoke one without revoking all, or trace which did what.
+					Agents fit neither role. They act on behalf of a user or entirely on their own, call external services, discover tools at runtime, need one capability now and a different one later, and often run long after the human who started them has moved on.
 				</p>
 				<p>
-				Agent Auth makes the agent a first-class principal. Each one gets its own identity, its own capabilities, and its own lifecycle. You scope what it can do, constrain how it does it, control what conditions are required, and revoke it without touching anything else.
+					These problems share a single root cause: existing auth has no concept of {'"'}agent.{'"'} The server sees a credential, and credentials identify resources — not the specific actor using them. Without per-agent identity, the server cannot tell which agent made a request, cannot scope one differently from another, and cannot revoke one without affecting every other.
+				</p>
+				<p>
+				Agent Auth makes the runtime agent a first-class principal. Each agent is registered with its own identity, granted specific capabilities, and governed by a lifecycle the server controls. The server sees exactly which agent is acting, what it is authorized to do, and can terminate one without affecting anything else.
 				</p>
 			</div>
 
@@ -137,9 +140,9 @@ export function ProtocolOverview() {
 						<div className="flex items-center justify-center gap-3 sm:gap-4">
 							<div className="flex flex-col gap-1.5 shrink-0">
 								{[
-									{ id: "agt_1", cap: "check_balance" },
-									{ id: "agt_2", cap: "transfer_funds · ≤500 · USD" },
-									{ id: "agt_3", cap: "list_txns" },
+									{ id: "agt_1", cap: "read:accounts", constraint: "own · last_90d" },
+									{ id: "agt_2", cap: "transfer:funds", constraint: "≤500 · USD · domestic" },
+									{ id: "agt_3", cap: "read:txns", constraint: "own · readonly · 50/hr" },
 								].map((row) => (
 									<div
 										key={row.id}
@@ -149,8 +152,11 @@ export function ProtocolOverview() {
 										<span className="text-[10px] font-mono text-foreground/65 dark:text-foreground/50">
 											{row.id}
 										</span>
-										<span className="text-[9px] font-mono text-foreground/35 dark:text-foreground/25">
+										<span className="text-[9px] font-mono text-emerald-600/50 dark:text-emerald-400/35">
 											{row.cap}
+										</span>
+										<span className="text-[8px] font-mono text-foreground/30 dark:text-foreground/20">
+											{row.constraint}
 										</span>
 									</div>
 								))}
@@ -159,7 +165,7 @@ export function ProtocolOverview() {
 							<ServerNode label="Server" />
 						</div>
 						<p className="text-[11px] text-emerald-600/50 dark:text-emerald-400/35 leading-relaxed mt-4">
-							Each agent has its own identity. Every request traces back to a specific agent.
+							Each agent has its own identity with scoped capabilities and constraints. Every request traces back to a specific agent.
 						</p>
 					</div>
 				</div>
@@ -171,13 +177,13 @@ export function ProtocolOverview() {
 					The protocol is designed to solve three problems:
 				</p>
 				<p>
-					<strong>Delegated agents</strong> — agents acting on behalf of a user get their own identity, scoped capabilities, and an independent lifecycle. Revoke one, limit another, audit each individually.
+					<strong>Delegated agents</strong> — when an agent acts on behalf of a user, it gets its own identity, fine-grained capabilities with constraints, and an independent lifecycle the server can audit and control.
 				</p>
 				<p>
-					<strong>Autonomous agents</strong> — when there{"'"}s no user in the loop, agents today are forced to pretend to be human. Opening a browser, solving a CAPTCHA, and clicking through forms made for humans. Agent Auth lets an agent register and operate directly with its own identity. 
+					<strong>Autonomous agents</strong> — when there{"'"}s no user in the loop, lets an agent register and operate directly with its own identity — without being forced to pretend to be human by opening a browser, solving a CAPTCHA, or clicking through forms built for people.
 				</p>
 				<p>
-					<strong>Discovery</strong> — there{"'"}s no standard way for a service to advertise that it supports agents. Agent Auth standardizes a well-known endpoint and a <a href="https://agent-auth.directory" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground/80 transition-colors">registry</a> of services, so agents can discover services automatically — by URL or by intent.
+					<strong>Discovery</strong> — standardizes a well-known endpoint and a <a href="https://agent-auth.directory" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground/80 transition-colors">registry</a> so agents can find and connect to services automatically — by URL or by describing what they need in natural language. This avoids the need for pre-configuring services.
 				</p>
 			</div>
 
@@ -197,7 +203,7 @@ export function ProtocolOverview() {
 
 				<div className="spec-prose">
 					<p>
-						<strong>Comprehensive:</strong> This protocol is intentionally broad. It covers everything from intent-based service lookup to constrained capabilities to action execution.
+						<strong>Comprehensive:</strong> This protocol is intentionally broad. It covers identity, registration, capabilities, discovery, and lifecycle — everything an agent needs to operate as a first-class principal.
 					</p>
 					<p>
 						<strong>Implementation-oriented:</strong> This protocol ships with official implementations. We expect most use cases to be served through them. The specification exists to enable additional implementations and custom use cases.
