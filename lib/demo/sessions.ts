@@ -5,6 +5,7 @@ export interface DemoSession {
   storage: MemoryStorage;
   pendingApproval: ApprovalInfo | null;
   lastAgentId: string | null;
+  awaitingChoice: boolean;
 }
 
 const globalStore = globalThis as unknown as {
@@ -61,6 +62,7 @@ export function getOrCreateSession(id: string): DemoSession {
     storage,
     pendingApproval: null,
     lastAgentId: null,
+    awaitingChoice: false,
   };
 
   sessions.set(id, session);

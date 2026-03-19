@@ -77,6 +77,7 @@ export default function RootLayout({
             <AISearchPanel />
             <AISearchTrigger
               position="float"
+              hideOnPaths={["/demo"]}
               className="inline-flex items-center gap-2 rounded-full border bg-fd-muted px-4 py-2 text-sm text-fd-muted-foreground hover:text-fd-foreground shadow-sm transition-colors"
             >
               <MessageCircleIcon className="size-4" />

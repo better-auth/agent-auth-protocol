@@ -61,9 +61,18 @@ export function AISearch({ children }: { children: ReactNode }) {
 export function AISearchTrigger({
 	position = "default",
 	className,
+	hideOnPaths,
 	...props
-}: ComponentProps<"button"> & { position?: "default" | "float" }) {
+}: ComponentProps<"button"> & { position?: "default" | "float"; hideOnPaths?: string[] }) {
 	const { open, setOpen } = useAISearchContext();
+	const [hidden, setHidden] = useState(false);
+
+	useEffect(() => {
+		if (!hideOnPaths?.length) return;
+		setHidden(hideOnPaths.some((p) => window.location.pathname.startsWith(p)));
+	}, [hideOnPaths]);
+
+	if (hidden) return null;
 
 	return (
 		<button

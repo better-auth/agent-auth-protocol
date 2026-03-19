@@ -1,6 +1,5 @@
 "use client";
-
-import { BookOpen, Code, Globe } from "lucide-react";
+import { CodeIcon, GlobeIcon, ReaderIcon } from "@radix-ui/react-icons";
 import { motion } from "motion/react";
 
 function AgentIcon({ variant }: { variant: "red" | "green" }) {
@@ -90,9 +89,6 @@ export function ProtocolOverview() {
 				</p>
 				<p>
 					Agents fit neither role. They act on behalf of a user or entirely on their own, call external services, discover tools at runtime, need one capability now and a different one later, and often run long after the human who started them has moved on.
-				</p>
-				<p>
-					These problems share a single root cause: existing auth has no concept of {'"'}agent.{'"'} The server sees a credential, and credentials identify resources — not the specific actor using them. Without per-agent identity, the server cannot tell which agent made a request, cannot scope one differently from another, and cannot revoke one without affecting every other.
 				</p>
 				<p>
 				Agent Auth makes the runtime agent a first-class principal. Each agent is registered with its own identity, granted specific capabilities, and governed by a lifecycle the server controls. The server sees exactly which agent is acting, what it is authorized to do, and can terminate one without affecting anything else.
@@ -272,19 +268,19 @@ export function ProtocolOverview() {
 							label: "Docs",
 							title: "Read the documentation",
 							href: "/docs",
-							icon: BookOpen,
+							icon: ReaderIcon,
 						},
 						{
 							label: "SDKs",
 							title: "Official implementations",
 							href: "/docs/implementations",
-							icon: Code,
+							icon: CodeIcon,
 						},
 						{
 						label: "Directory",
 						title: "Submit your server",
 						href: "https://agent-auth.directory",
-							icon: Globe,
+							icon: GlobeIcon,
 						},
 					].map((item) => (
 						<a

@@ -13,6 +13,11 @@ import {
   type ApprovalInfo,
 } from "@auth/agent";
 import { getOrCreateSession, type DemoSession } from "@/lib/demo/sessions";
+import {
+  chatRateLimit,
+  dailyBudgetLimit,
+  getClientIp,
+} from "@/lib/demo/rate-limit";
 
 const openrouter = createOpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY,
@@ -38,21 +43,30 @@ You can connect to any Agent Auth-compatible provider to perform actions. This d
 - Format results clearly. For emails: subject, from, date, snippet. For deploy results: include the live URL prominently.
 - Never fabricate data. Only show results from actual API calls.
 
-
 ## Task guidelines
 
 - When sending emails, only include the deployed URL and a brief message — NEVER include the user's personal email data.
 - Only request additional capabilities when you actually need them for the current task and they are denied.
+- When describing autonomous mode results, say the resource was "created without your account" or "not linked to your account yet." NEVER say "under my agent" or "under my own agent" — the user doesn't know what an "agent" is in this context. Offer to claim ownership for them — say something like "Would you like to claim this to link it to your account?" If the user agrees, call claim_agent with the agent_id from the autonomous connection.
+
+## Mode selection
+
+After finding a relevant provider via search, use the present_options tool to let the user choose how to connect. Do NOT list options as text — the UI renders clickable buttons from the tool call. After calling present_options, STOP and wait for the user to click a choice. Do NOT call connect_agent until the user has responded.
+
+Use these exact options:
+- value: "delegated", label: "On my behalf", description: "You'll sign in to approve — the agent acts under your account"
+- value: "autonomous", label: "Independently", description: "The agent creates its own account — you can claim ownership later"
 
 ## Important
 
 - Always search or discover before connecting.
 - If connect_agent returns "pending_approval", STOP calling tools immediately. The user must approve first. After they approve, the system sends an automatic message — only THEN should you continue.
-- If connect_agent returns an action_required with choose_mode, do NOT show mode options to the user. Pick the right mode yourself based on the guidance above and call connect_agent again with the mode parameter.
+- If connect_agent returns an action_required with choose_mode, call connect_agent again with the mode the user already selected.
 - If execute_capability fails with capability_not_granted, use request_capability to escalate.
-- When request_capability returns a pending status or approval URL, tell the user to visit the provider's approval dashboard to approve the new capability. For Gmail, that's https://gmail.agent-auth.directory/dashboard/approvals. Do NOT suggest reconnecting or creating a new agent — the existing connection just needs the new capability approved. STOP and WAIT for the user to tell you they approved.
+- If request_capability returns "pending_approval" with an approval URL, STOP calling tools immediately — the user must approve first via the approval card. After they approve, the system sends an automatic message — only THEN should you continue.
+- If request_capability returns a pending status WITHOUT an approval URL (async/CIBA flow), the UI already shows a card with the dashboard link. Tell the user briefly: "You should have a notification on the provider's dashboard — click the button above to approve, then let me know when you're done." NEVER say "check the approval card above" — there is no approval card for this flow. NEVER paste dashboard URLs in your message — the UI card already has the link. Just refer to the button and STOP.
+- Do NOT suggest reconnecting or creating a new agent when escalation is pending. The existing connection just needs the new capability approved.
 - NEVER call agent_status in a loop or repeatedly. Call it ONCE after the user approves, confirm it's active, and immediately proceed to execute.
-- NEVER suggest reconnecting or creating a new agent when escalation is pending. The user just needs to approve the additional capability.
 - You can connect to MULTIPLE providers in the same session. Each provider has its own agent_id and capabilities.`;
 
 const DEMO_TOOLS = [
@@ -121,6 +135,43 @@ function wrapBlockingTool(
   };
 }
 
+function wrapEscalationTool(
+  tool: AgentAuthTool,
+  session: DemoSession,
+): AgentAuthTool {
+  const wrapped = wrapBlockingTool(tool, session);
+  return {
+    ...wrapped,
+    async execute(args, ctx) {
+      const result = await wrapped.execute(args, ctx);
+      if (
+        result &&
+        typeof result === "object" &&
+        "status" in result &&
+        typeof (result as Record<string, unknown>).status === "string" &&
+        ((result as Record<string, unknown>).status as string).includes(
+          "pending",
+        ) &&
+        !("approvalUrl" in result)
+      ) {
+        const agentId =
+          typeof args.agent_id === "string" ? args.agent_id : null;
+        let dashboardUrl = "";
+        if (agentId) {
+          const conn = await session.storage.getAgentConnection(agentId);
+          if (conn?.issuer) {
+            dashboardUrl = `${conn.issuer.replace(/\/$/, "")}/dashboard/approvals`;
+          }
+        }
+        (result as Record<string, unknown>).dashboardUrl = dashboardUrl;
+        (result as Record<string, unknown>).message =
+          "STOP. The provider will notify the user asynchronously. Tell them to visit their provider's approvals dashboard to grant this capability, then STOP and WAIT.";
+      }
+      return result;
+    },
+  };
+}
+
 async function safeExecute(
   tool: AgentAuthTool,
   args: Record<string, unknown>,
@@ -146,7 +197,7 @@ function buildTools(session: DemoSession) {
     if (tool.name === "claim_agent")
       return wrapBlockingTool(tool, session, true);
     if (tool.name === "request_capability")
-      return wrapBlockingTool(tool, session);
+      return wrapEscalationTool(tool, session);
     return tool;
   });
 
@@ -159,10 +210,14 @@ function buildTools(session: DemoSession) {
     }
   > = {};
 
-  const requiresApproval = new Set([
+  const blockedWhenWaiting = new Set([
+    "connect_agent",
+    "claim_agent",
     "execute_capability",
     "batch_execute_capabilities",
     "agent_status",
+    "request_capability",
+    "disconnect_agent",
   ]);
 
   for (const tool of rawTools) {
@@ -171,9 +226,17 @@ function buildTools(session: DemoSession) {
       description: tool.description,
       inputSchema: jsonSchema(tool.parameters),
       execute: (args) => {
+        if (session.awaitingChoice && blockedWhenWaiting.has(originalTool.name)) {
+          return Promise.resolve({
+            error:
+              "Cannot proceed — waiting for the user to make a choice. STOP immediately.",
+          });
+        }
         if (
-          requiresApproval.has(originalTool.name) &&
-          session.pendingApproval
+          session.pendingApproval &&
+          (originalTool.name === "execute_capability" ||
+            originalTool.name === "batch_execute_capabilities" ||
+            originalTool.name === "agent_status")
         ) {
           return Promise.resolve({
             error:
@@ -185,10 +248,89 @@ function buildTools(session: DemoSession) {
     };
   }
 
+  tools["present_options"] = {
+    description:
+      "Present the user with clickable options to choose from. Use this whenever you need the user to make a decision (e.g., connection mode, provider selection). After calling this tool, STOP immediately and wait for the user to click a choice.",
+    inputSchema: jsonSchema({
+      type: "object",
+      properties: {
+        message: {
+          type: "string",
+          description: "Brief question or context for the choice",
+        },
+        options: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              value: {
+                type: "string",
+                description: "Machine-readable identifier for the option",
+              },
+              label: {
+                type: "string",
+                description: "Short button label shown to the user",
+              },
+              description: {
+                type: "string",
+                description: "Optional one-line description below the label",
+              },
+            },
+            required: ["value", "label"],
+          },
+          description: "2-4 options for the user to choose from",
+        },
+      },
+      required: ["message", "options"],
+    }),
+    execute: async (args: Record<string, unknown>) => {
+      if (session.awaitingChoice) {
+        return {
+          error:
+            "A choice is already pending. STOP and wait for the user to respond.",
+        };
+      }
+      session.awaitingChoice = true;
+      return {
+        status: "awaiting_choice",
+        message: args.message,
+        options: args.options,
+      };
+    },
+  };
+
   return tools;
 }
 
 export async function POST(req: Request) {
+  const ip = getClientIp(req);
+
+  const [perUser, global] = await Promise.all([
+    chatRateLimit.limit(ip),
+    dailyBudgetLimit.limit("global"),
+  ]);
+
+  if (!perUser.success) {
+    return Response.json(
+      { error: "Too many requests. Please wait a moment and try again." },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(Math.ceil((perUser.reset - Date.now()) / 1000)),
+          "X-RateLimit-Limit": String(perUser.limit),
+          "X-RateLimit-Remaining": String(perUser.remaining),
+        },
+      },
+    );
+  }
+
+  if (!global.success) {
+    return Response.json(
+      { error: "The demo has reached its daily usage limit. Please try again tomorrow." },
+      { status: 429 },
+    );
+  }
+
   const {
     messages,
     sessionId,
@@ -203,6 +345,7 @@ export async function POST(req: Request) {
   }
 
   const session = getOrCreateSession(sessionId);
+  session.awaitingChoice = false;
 
   const result = streamText({
     model: openrouter.chat(
