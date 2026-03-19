@@ -24,6 +24,7 @@ import {
 	TargetIcon,
 	PlayIcon,
 	LayersIcon,
+	IdCardIcon,
 	CopyIcon,
 } from "@radix-ui/react-icons";
 import ReactMarkdown from "react-markdown";
@@ -237,6 +238,84 @@ function ProtocolProgressBar({
 	);
 }
 
+/* ─── Agent ID badge (desktop header) ───────────────────────── */
+
+function AgentIdBadge({ connections }: { connections: AgentConnection[] }) {
+	const [open, setOpen] = useState(false);
+
+	if (connections.length === 0) return null;
+
+	return (
+		<div className="hidden lg:block relative">
+			<button
+				type="button"
+				onClick={() => setOpen(!open)}
+				className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono text-foreground/40 hover:text-foreground/60 border border-foreground/8 hover:border-foreground/15 bg-foreground/2 hover:bg-foreground/4 transition-all cursor-pointer"
+			>
+				<IdCardIcon className="w-3.5 h-3.5" />
+				<span className="truncate max-w-[120px]">{connections[0].agentId.slice(0, 12)}…</span>
+			</button>
+			<AnimatePresence>
+				{open && (
+					<>
+						<div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+						<motion.div
+							initial={{ opacity: 0, y: 4 }}
+							animate={{ opacity: 1, y: 0 }}
+							exit={{ opacity: 0, y: 4 }}
+							transition={{ duration: 0.15 }}
+							className="absolute left-0 top-full mt-1.5 z-50 w-[320px] border border-foreground/10 bg-background shadow-lg shadow-foreground/5"
+						>
+							<div className="px-3.5 py-3 space-y-2.5">
+								<div className="flex items-center gap-2">
+									<IdCardIcon className="w-3.5 h-3.5 text-foreground/30" />
+									<span className="text-[11px] font-mono uppercase tracking-[0.12em] text-foreground/35">
+										Agent Identity
+									</span>
+									<button type="button" onClick={() => setOpen(false)} className="ml-auto p-0.5 text-foreground/25 hover:text-foreground/50 transition-colors cursor-pointer">
+										<Cross2Icon className="w-3 h-3" />
+									</button>
+								</div>
+								<p className="text-[12.5px] text-foreground/50 leading-[1.7]" style={{ fontFamily: "var(--font-content), Georgia, serif" }}>
+									An <strong className="text-foreground/70">Agent ID</strong> is a unique identifier assigned to the agent when it registers with a provider. It{"'"}s tied to the agent{"'"}s <strong className="text-foreground/70">Ed25519 keypair</strong> and used to sign every request — so the provider can verify who{"'"}s calling, what they{"'"}re allowed to do, and trace every action back to this identity.
+								</p>
+								<div className="space-y-1.5">
+									{connections.map((conn) => (
+										<div key={conn.agentId} className="px-2.5 py-2 bg-foreground/2 border border-foreground/6">
+											<div className="flex items-center gap-1.5 mb-1">
+												<span className={`text-[9px] font-mono uppercase tracking-[0.1em] px-1.5 py-0.5 ${conn.mode === "autonomous" ? "text-amber-600/70 dark:text-amber-400/70 bg-amber-500/8 border border-amber-500/15" : "text-emerald-600/70 dark:text-emerald-400/70 bg-emerald-500/8 border border-emerald-500/15"}`}>
+													{conn.mode}
+												</span>
+											</div>
+											<p className="text-[11px] font-mono text-foreground/45 break-all leading-relaxed">
+												{conn.agentId}
+											</p>
+											{conn.providerUrl && (
+												<p className="text-[10px] font-mono text-foreground/25 mt-1 truncate">
+													{conn.providerUrl.replace(/^https?:\/\//, "")}
+												</p>
+											)}
+										</div>
+									))}
+								</div>
+								<a
+									href="/specification#53-agent-registration"
+									target="_blank"
+									rel="noopener noreferrer"
+									className="inline-flex items-center gap-1 text-[11px] font-mono text-foreground/25 hover:text-foreground/50 underline underline-offset-2 decoration-foreground/10 hover:decoration-foreground/30 transition-colors"
+								>
+									§5.3 Agent Registration
+									<ExternalLinkIcon className="w-2.5 h-2.5" />
+								</a>
+							</div>
+						</motion.div>
+					</>
+				)}
+			</AnimatePresence>
+		</div>
+	);
+}
+
 /* ─── Sidebar ───────────────────────────────────────────────── */
 
 const mdComponents = {
@@ -393,16 +472,19 @@ function Sidebar({
 															const TIcon = meta.icon;
 															const hasErr = tc.state === "error" || (tc.output && typeof tc.output === "object" && "error" in (tc.output as Record<string, unknown>));
 															return (
-															<button
+															<motion.button
 																key={j}
 																type="button"
+																initial={{ opacity: 0, scale: 0.9 }}
+																animate={tc.state === "running" ? { opacity: [0.6, 1, 0.6], scale: 1 } : { opacity: 1, scale: 1 }}
+																transition={tc.state === "running" ? { opacity: { duration: 1.8, repeat: Infinity, ease: "easeInOut" }, scale: { duration: 0.2 } } : { duration: 0.2, delay: j * 0.04 }}
 																onClick={() => setSelectedTool(tc)}
 																className={`inline-flex items-center gap-1 px-2 py-1 text-[11px] font-mono border transition-colors cursor-pointer ${tc.state === "running" ? "border-foreground/10 bg-foreground/3 text-foreground/35 hover:bg-foreground/5 tool-running" : hasErr ? "border-destructive/15 bg-destructive/3 text-destructive/50 hover:bg-destructive/6" : "border-foreground/6 bg-foreground/3 text-foreground/35 hover:bg-foreground/5 hover:text-foreground/50"}`}
 															>
-																{tc.state === "running" ? <TIcon className="w-2.5 h-2.5" /> : hasErr ? <ExclamationTriangleIcon className="w-2.5 h-2.5" /> : <TIcon className="w-2.5 h-2.5" />}
+																{tc.state === "running" ? <span className="animate-spin" style={{ animationDuration: "2.5s" }}><TIcon className="w-2.5 h-2.5" /></span> : hasErr ? <ExclamationTriangleIcon className="w-2.5 h-2.5" /> : <TIcon className="w-2.5 h-2.5" />}
 																{meta.label}
 																{tc.state === "done" && !hasErr && <CheckIcon className="w-2 h-2 text-emerald-500/70" />}
-															</button>
+															</motion.button>
 															);
 														})}
 													</div>
@@ -727,11 +809,17 @@ function InlineToolPills({ toolParts }: { toolParts: ToolPart[] }) {
 	if (groups.length === 0) return null;
 	return (
 		<div className="flex flex-wrap gap-1 my-1">
-			{groups.map((g) => {
+			{groups.map((g, i) => {
 				const meta = TOOL_META[g.name] ?? { label: g.name, icon: LightningBoltIcon }; const Icon = meta.icon; const hasError = g.state === "error";
 				return (
-				<motion.span key={g.name} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`inline-flex items-center gap-1 px-2 py-0.5 border text-[11px] font-mono ${g.state === "running" ? "border-foreground/10 bg-foreground/2 text-foreground/35 tool-running" : hasError ? "border-destructive/15 bg-destructive/3 text-destructive/50" : "border-foreground/6 text-foreground/30"}`}>
-					{g.state === "running" ? <Icon className="w-2.5 h-2.5" /> : hasError ? <ExclamationTriangleIcon className="w-2.5 h-2.5" /> : <Icon className="w-2.5 h-2.5" />}
+				<motion.span
+					key={g.name}
+					initial={{ opacity: 0, scale: 0.9, y: 4 }}
+					animate={g.state === "running" ? { opacity: [0.6, 1, 0.6], scale: 1, y: 0 } : { opacity: 1, scale: 1, y: 0 }}
+					transition={g.state === "running" ? { opacity: { duration: 1.8, repeat: Infinity, ease: "easeInOut" }, scale: { duration: 0.25 }, y: { duration: 0.25, delay: i * 0.05 } } : { duration: 0.25, delay: i * 0.05 }}
+					className={`inline-flex items-center gap-1 px-2 py-0.5 border text-[11px] font-mono ${g.state === "running" ? "border-foreground/10 bg-foreground/2 text-foreground/35 tool-running" : hasError ? "border-destructive/15 bg-destructive/3 text-destructive/50" : "border-foreground/6 text-foreground/30"}`}
+				>
+					{g.state === "running" ? <span className="animate-spin" style={{ animationDuration: "2.5s" }}><Icon className="w-2.5 h-2.5" /></span> : hasError ? <ExclamationTriangleIcon className="w-2.5 h-2.5" /> : <Icon className="w-2.5 h-2.5" />}
 						{meta.label}{g.count > 1 && <span className="text-foreground/20">×{g.count}</span>}
 						{g.state === "done" && <CheckIcon className="w-2 h-2 text-emerald-500/70" />}
 					</motion.span>
@@ -1472,7 +1560,7 @@ export function InteractiveDemo() {
 	const isGuided = wtPromptIdx < WALKTHROUGH_PROMPTS.length;
 	const isComplete = wtPromptIdx >= WALKTHROUGH_PROMPTS.length;
 
-	const { active: activePhases, completed: completedPhases, discoveredProviders, toolsByPhase } = derivePhases(messages);
+	const { active: activePhases, completed: completedPhases, discoveredProviders, agentConnections, toolsByPhase } = derivePhases(messages);
 
 	const stepComplete = wtPromptIdx === 0 || (wtPromptIdx === 1 && (capturedUrl !== null || completedPhases.has("execution"))) || (wtPromptIdx === 2 && completedPhases.has("claim")) || wtPromptIdx >= 3;
 	const currentPrompt = isGuided && !isStreaming && !awaitingApproval && stepComplete
@@ -1712,14 +1800,14 @@ export function InteractiveDemo() {
 									A chatbot integrated with the Agent Auth SDK — authenticate, authorize, and act on behalf of users. Press <strong className="text-foreground/50">Send</strong> to start.
 								</p>
 							</div>
-							<form onSubmit={onSubmit} className="w-full max-w-lg border border-foreground/8 px-3 sm:px-4 py-2.5 sm:py-3 flex items-center gap-2 sm:gap-3">
+							<form onSubmit={onSubmit} className="w-full max-w-lg border border-foreground/12 shadow-[0_4px_24px_rgba(0,0,0,0.08),0_1px_4px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.4),0_1px_4px_rgba(0,0,0,0.3)] bg-background px-3 sm:px-4 py-2.5 sm:py-3 flex items-center gap-2 sm:gap-3">
 								<input
 									value={input}
 									onChange={(e) => setInput(e.target.value)}
 									placeholder="Type a prompt…"
 									className="flex-1 bg-transparent text-[13px] sm:text-[14px] outline-none placeholder:text-foreground/25 text-foreground/80 min-w-0"
 								/>
-								<button type="submit" disabled={!input.trim()} className="p-1.5 sm:p-2 text-foreground/30 hover:text-foreground/60 disabled:opacity-20 disabled:cursor-not-allowed transition-colors cursor-pointer shrink-0">
+								<button type="submit" disabled={!input.trim()} className="p-1.5 sm:p-2 bg-primary text-primary-foreground rounded-sm disabled:opacity-30 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors cursor-pointer shrink-0">
 									<PaperPlaneIcon className="w-4 h-4" />
 								</button>
 							</form>
@@ -1727,6 +1815,11 @@ export function InteractiveDemo() {
 					) : (
 						<>
 							<ProtocolProgressBar activePhases={activePhases} completedPhases={completedPhases} onOpen={() => setSidebarOpen(true)} />
+							{agentConnections.length > 0 && (
+								<div className="hidden lg:flex items-center gap-2 px-4 py-1.5 border-b border-foreground/6">
+									<AgentIdBadge connections={agentConnections} />
+								</div>
+							)}
 							<div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 min-h-0 overflow-y-auto px-3 sm:px-5 py-3 sm:py-5 space-y-3 sm:space-y-4">
 							{messages.map((msg, i) =>
 								msg.role === "user" ? <UserMessage key={msg.id} content={getTextFromParts(msg)} /> : <AssistantMessage key={msg.id} parts={msg.parts as MessagePart[]} onApprove={handleApprove} isApproved={approvedCount > 0 && !awaitingApproval} onChoice={handleChoice} choiceDisabled={i !== messages.length - 1 || isStreaming} />,
