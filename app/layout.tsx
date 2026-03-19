@@ -48,6 +48,13 @@ const fontContent = EB_Garamond({
 export const metadata: Metadata = {
   title: "Agent Auth",
   description: "Agent identity provider for @better-auth/agent-auth",
+  openGraph: {
+    images: [{ url: "/og.png" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    images: ["/og.png"],
+  },
 };
 
 export const viewport: Viewport = {
