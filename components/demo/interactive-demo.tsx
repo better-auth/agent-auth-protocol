@@ -1444,9 +1444,14 @@ export function InteractiveDemo() {
 				<button
 					type="button"
 					onClick={() => setShowToolsDialog(true)}
-					className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium text-foreground/50 hover:text-foreground/80 border border-foreground/10 hover:border-foreground/20 bg-foreground/2 hover:bg-foreground/4 transition-all cursor-pointer shrink-0 mt-0.5"
+					className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 text-[12px] font-medium text-foreground/50 hover:text-foreground/80 border border-dashed border-foreground/15 hover:border-foreground/25 hover:bg-foreground/3 transition-all cursor-pointer shrink-0 mt-0.5"
 				>
-					<LightningBoltIcon className="w-3 h-3" />
+					<span className="flex items-center -space-x-1.5">
+						<span className="w-4.5 h-4.5 rounded-full bg-background border border-foreground/10 flex items-center justify-center relative z-[4]"><OpenAIIcon className="w-2.5 h-2.5 text-foreground/70" /></span>
+						<span className="w-4.5 h-4.5 rounded-full bg-background border border-foreground/10 flex items-center justify-center relative z-[3]"><ClaudeIcon className="w-2.5 h-2.5 text-[#D97757]" /></span>
+						<span className="w-4.5 h-4.5 rounded-full bg-background border border-foreground/10 flex items-center justify-center relative z-[2]"><CursorIcon className="w-2.5 h-2.5 text-foreground/70" /></span>
+						<span className="w-4.5 h-4.5 rounded-full bg-background border border-foreground/10 flex items-center justify-center relative z-[1]"><VercelIcon className="w-2.5 h-2.5 text-foreground/70" /></span>
+					</span>
 					Try with your tools
 					<ArrowRightIcon className="w-3 h-3 opacity-50" />
 				</button>

@@ -291,18 +291,20 @@ export function SidebarContent({
 	pathname,
 	onNavigate,
 	showHeader = true,
+	headerSlot,
 }: {
 	sections: DocsSection[];
 	pathname: string;
 	onNavigate?: () => void;
 	showHeader?: boolean;
+	headerSlot?: React.ReactNode;
 }) {
 	return (
 		<div
 			className="flex h-full flex-col border-r border-fd-border bg-fd-card"
 			style={{ width: SIDEBAR_WIDTH }}
 		>
-			{showHeader && (
+			{headerSlot ? headerSlot : showHeader ? (
 				<div className="shrink-0 px-4 h-11 flex items-center border-b border-fd-border">
 					<Link
 						href="/"
@@ -312,7 +314,7 @@ export function SidebarContent({
 						<WordmarkLogo className="h-4 w-auto" />
 					</Link>
 				</div>
-			)}
+			) : null}
 			<SearchTrigger onSearch={onNavigate} />
 
       {/* Sections */}

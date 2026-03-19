@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { DocsSidebar, SidebarContent } from "@/components/docs/docs-sidebar";
+import { SidebarContent } from "@/components/docs/docs-sidebar";
 import { DocsTopNav } from "@/components/docs/docs-topnav";
 import type { DocsSection } from "@/lib/docs";
 
@@ -22,10 +22,7 @@ export function DocsLayoutShell({
 	return (
 		<div className="min-h-dvh">
 			<div className="sticky top-0 z-40 bg-fd-card/95 backdrop-blur-sm">
-				<div className={showSidebar ? "lg:hidden" : "hidden"}>
-					<DocsSidebar sections={sections} />
-				</div>
-				<DocsTopNav />
+				<DocsTopNav sections={sections} />
 			</div>
 
 			<aside
