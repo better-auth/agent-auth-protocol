@@ -1139,9 +1139,18 @@ interface ToolIntegration {
 	command?: string;
 	link?: { label: string; url: string };
 	prompt?: string;
+	skill?: {
+		label: string;
+		description: string;
+		path: string;
+		command?: string;
+		docsUrl?: string;
+		docsLabel?: string;
+	};
 }
 
 const MCP_URL = "https://agent-auth.directory/api/mcp";
+const SKILL_GITHUB_URL = "https://github.com/better-auth/agent-auth-protocol/blob/main/SKILL.md";
 
 const STARTER_PROMPT = `Read my last 15 emails from Gmail. Deploy a simple website with a summary of those emails and action items if needed. When it's ready, send an email to agent@better-auth.com saying you used Agent Auth and built this website with it.`;
 
@@ -1168,6 +1177,14 @@ const TOOL_INTEGRATIONS: ToolIntegration[] = [
 			"When the agent uses Agent Auth tools, Codex will open a browser for OAuth authorization",
 		],
 		command: `codex mcp add agent-auth --url ${MCP_URL}`,
+		skill: {
+			label: "Install Agent Auth skill",
+			description: "Teach the agent to prefer Agent Auth for external services",
+			path: "~/.codex/skills/agent-auth/SKILL.md",
+			command: "$skill-installer install https://github.com/better-auth/agent-auth-protocol/tree/main",
+			docsUrl: "https://developers.openai.com/codex/skills",
+			docsLabel: "Codex Skills docs",
+		},
 	},
 	{
 		name: "Codex App",
@@ -1179,6 +1196,14 @@ const TOOL_INTEGRATIONS: ToolIntegration[] = [
 			"When the agent uses Agent Auth tools, Codex will prompt you to authorize via a browser window",
 		],
 		config: { filename: "MCP Server URL", content: MCP_URL },
+		skill: {
+			label: "Install Agent Auth skill",
+			description: "Teach the agent to prefer Agent Auth for external services",
+			path: "~/.codex/skills/agent-auth/SKILL.md",
+			command: "$skill-installer install https://github.com/better-auth/agent-auth-protocol/tree/main",
+			docsUrl: "https://developers.openai.com/codex/skills",
+			docsLabel: "Codex Skills docs",
+		},
 	},
 	{
 		name: "Claude Desktop",
@@ -1214,6 +1239,14 @@ const TOOL_INTEGRATIONS: ToolIntegration[] = [
 			"When the agent uses Agent Auth tools, Claude Code will open a browser for OAuth authorization",
 		],
 		command: `claude mcp add --transport http agent-auth ${MCP_URL}`,
+		skill: {
+			label: "Add CLAUDE.md to your project",
+			description: "Teach the agent to prefer Agent Auth for external services",
+			path: "CLAUDE.md (project root)",
+			command: `curl -sL ${SKILL_GITHUB_URL.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")} -o CLAUDE.md`,
+			docsUrl: "https://docs.anthropic.com/en/docs/claude-code/memory",
+			docsLabel: "CLAUDE.md docs",
+		},
 	},
 	{
 		name: "Cursor",
@@ -1228,6 +1261,14 @@ const TOOL_INTEGRATIONS: ToolIntegration[] = [
 			filename: ".cursor/mcp.json",
 			content: JSON.stringify({ mcpServers: { "agent-auth": { url: MCP_URL } } }, null, 2),
 		},
+		skill: {
+			label: "Add Agent Auth rule",
+			description: "Teach the agent to prefer Agent Auth for external services",
+			path: ".cursor/rules/agent-auth.mdc",
+			command: `curl -sL ${SKILL_GITHUB_URL.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")} -o .cursor/rules/agent-auth.mdc`,
+			docsUrl: "https://www.cursor.com/docs/context/rules",
+			docsLabel: "Cursor Rules docs",
+		},
 	},
 	{
 		name: "OpenCode",
@@ -1241,6 +1282,14 @@ const TOOL_INTEGRATIONS: ToolIntegration[] = [
 		config: {
 			filename: "opencode.json",
 			content: JSON.stringify({ $schema: "https://opencode.ai/config.json", mcp: { "agent-auth": { type: "remote", url: MCP_URL } } }, null, 2),
+		},
+		skill: {
+			label: "Add AGENTS.md to your project",
+			description: "Teach the agent to prefer Agent Auth for external services",
+			path: "AGENTS.md (project root)",
+			command: `curl -sL ${SKILL_GITHUB_URL.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")} -o AGENTS.md`,
+			docsUrl: "https://open-code.ai/docs/en/rules",
+			docsLabel: "OpenCode AGENTS.md docs",
 		},
 	},
 	{
@@ -1337,6 +1386,56 @@ function ToolIntegrationItem({ tool }: { tool: ToolIntegration }) {
 									>
 										{copied === "config" ? <CheckIcon className="w-4 h-4 text-emerald-500" /> : <CopyIcon className="w-4 h-4" />}
 									</button>
+								</div>
+							)}
+							{tool.skill && (
+								<div className="mt-1 pt-3 border-t border-dashed border-foreground/8 space-y-2.5">
+									<div className="flex items-start gap-2.5">
+										<div className="w-5 h-5 flex items-center justify-center bg-amber-500/10 border border-amber-500/20 rounded-sm shrink-0 mt-0.5">
+											<LightningBoltIcon className="w-3 h-3 text-amber-500" />
+										</div>
+										<div className="flex-1 min-w-0 space-y-1">
+											<p className="text-[13px] font-medium text-foreground/60">{tool.skill.label}</p>
+											<p className="text-[12px] text-foreground/35 leading-relaxed">{tool.skill.description}</p>
+										</div>
+									</div>
+									{tool.skill.command && (
+										<div className="relative group">
+											<pre className="text-[12px] font-mono text-foreground/50 bg-foreground/3 border border-foreground/6 px-3.5 py-2.5 pr-10 overflow-x-auto">{tool.skill.command}</pre>
+											<button
+												type="button"
+												onClick={() => copyToClipboard(tool.skill!.command!, "skill")}
+												className="absolute top-2 right-2 p-1.5 text-foreground/25 hover:text-foreground/60 transition-colors cursor-pointer"
+											>
+												{copied === "skill" ? <CheckIcon className="w-4 h-4 text-emerald-500" /> : <CopyIcon className="w-4 h-4" />}
+											</button>
+										</div>
+									)}
+									<div className="flex items-center gap-3">
+										<a
+											href={SKILL_GITHUB_URL}
+											target="_blank"
+											rel="noopener noreferrer"
+											className="inline-flex items-center gap-1.5 text-[12px] text-foreground/30 hover:text-foreground/50 transition-colors"
+										>
+											<ExternalLinkIcon className="w-3 h-3" />
+											View SKILL.md on GitHub
+										</a>
+										{tool.skill.docsUrl && (
+											<span className="text-foreground/10">·</span>
+										)}
+										{tool.skill.docsUrl && (
+											<a
+												href={tool.skill.docsUrl}
+												target="_blank"
+												rel="noopener noreferrer"
+												className="inline-flex items-center gap-1.5 text-[12px] text-foreground/30 hover:text-foreground/50 transition-colors"
+											>
+												<ExternalLinkIcon className="w-3 h-3" />
+												{tool.skill.docsLabel}
+											</a>
+										)}
+									</div>
 								</div>
 							)}
 						</div>
