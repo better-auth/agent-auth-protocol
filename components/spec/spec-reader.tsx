@@ -42,14 +42,38 @@ function tocEntriesToItems(toc: TocEntry[]): TOCItemType[] {
   }));
 }
 
+const HASH_SYNC_DELAY_MS = 160;
+
 function HashSync() {
   const activeAnchor = useActiveAnchor();
-  const lastAnchorRef = useRef<string | null>(null);
+  const timeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (!activeAnchor || activeAnchor === lastAnchorRef.current) return;
-    lastAnchorRef.current = activeAnchor;
-    window.history.replaceState(null, "", `#${activeAnchor}`);
+    if (!activeAnchor) return;
+
+    const nextHash = `#${activeAnchor}`;
+
+    if (window.location.hash === nextHash) {
+      return;
+    }
+
+    if (timeoutRef.current !== null) {
+      window.clearTimeout(timeoutRef.current);
+    }
+
+    timeoutRef.current = window.setTimeout(() => {
+      if (window.location.hash !== nextHash) {
+        window.history.replaceState(null, "", nextHash);
+      }
+      timeoutRef.current = null;
+    }, HASH_SYNC_DELAY_MS);
+
+    return () => {
+      if (timeoutRef.current !== null) {
+        window.clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
   }, [activeAnchor]);
 
   return null;
@@ -407,7 +431,11 @@ export function SpecReader({
       const elRect = el.getBoundingClientRect();
       const offset = elRect.top - containerRect.top + container.scrollTop - 24;
       container.scrollTo({ top: offset, behavior });
-      window.history.replaceState(null, "", `#${id}`);
+
+      const nextHash = `#${id}`;
+      if (window.location.hash !== nextHash) {
+        window.history.replaceState(null, "", nextHash);
+      }
     },
     [],
   );
