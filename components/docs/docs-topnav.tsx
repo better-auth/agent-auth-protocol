@@ -9,7 +9,7 @@ import { WordmarkLogo } from "@/components/icons";
 const TABS = [
 	{ label: "Docs", href: "/docs", match: "/docs" },
 	{ label: "Specification", href: "/specification/v1.0-draft", match: "/specification" },
-	{ label: "Directory", href: "/registry", match: "/registry" },
+	{ label: "Directory", href: "/directory", match: "/directory" },
 	{ label: "Demo", href: "/demo", match: "/demo" },
 ];
 

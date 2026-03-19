@@ -66,7 +66,7 @@ export function LandingHero() {
 					</a>
 					<span className="text-foreground/20 select-none font-light">/</span>
 					<a
-					href="/registry"
+					href="/directory"
 					className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs font-mono uppercase tracking-wider text-foreground/50 hover:text-foreground transition-colors"
 				>
 					<Globe className="w-3.5 h-3.5" />
