@@ -117,7 +117,7 @@ sequenceDiagram
     Server-->>Client: (C) agent_id + grants (active or pending)
 
     opt If Pending
-        Client->>User: (D) user_code + verification_uri
+        Client->>User: (D) approval prompt
         User-->>Client: approval
     end
 
@@ -137,10 +137,10 @@ sequenceDiagram
 - **(A)** Agent requests connection via client tools (`connect_agent` with requested capabilities, reason, and mode).
 - **(B)** Client registers agent with the authorization server, presenting a host JWT containing the agent's public key and requested capabilities.
 - **(C)** Authorization server returns agent ID and capability grants — either active (auto-approved) or pending (approval required).
-- **(D)** If pending, the resource owner (user) approves via device authorization ([RFC 8628](https://datatracker.ietf.org/doc/html/rfc8628)) or [CIBA](https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html). The client facilitates the approval flow and polls for completion.
+- **(D)** If pending, the client facilitates user approval via the server's chosen method — device authorization ([RFC 8628](https://datatracker.ietf.org/doc/html/rfc8628)), [CIBA](https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html), or another supported method (§7). The client polls for completion.
 - **(E)** Client returns agent ID and granted capabilities to the agent.
 - **(F)** Agent calls `execute_capability` (§6.10) on the client with a capability name and arguments.
-- **(G)** Client resolves the capability's location (§2.15) — the capability's `location` if set, or the server's `default_location` from discovery. Signs a short-lived agent JWT with `aud` set to the location URL and sends the request.
+- **(G)** Client signs a short-lived agent JWT and sends the execution request to the capability's location (§2.15).
 - **(H)** The service at the location validates the JWT (including `aud` match), checks the agent's granted capabilities, and executes the requested capability.
 - **(I)** The service returns the execution result to the client.
 - **(J)** Client returns the result to the agent.

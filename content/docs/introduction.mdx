@@ -34,7 +34,7 @@ Agent Auth makes each runtime agent a first-class principal. Instead of borrowin
 
 - **Per-agent identity** — every agent gets its own ID and cryptographic keys
 - **Scoped capabilities** — agents only get access to the specific actions they need
-- **User-controlled approval** — capabilities are approved through a device authorization flow
+- **User-controlled approval** — capabilities are approved through device authorization, CIBA, or other server-supported methods
 - **Independent lifecycle** — each agent can be revoked or expired without affecting others
 - **Full audit trail** — every action is attributed to a specific agent
 - **Discovery** — agents find services automatically via well-known endpoints and directory search
@@ -57,16 +57,16 @@ sequenceDiagram
     Client->>Server: GET /.well-known/agent-configuration
     Server-->>Client: Discovery document
 
-    Client->>Server: POST /agents/register (host JWT + agent pubkey)
-    Server-->>Client: agent_id + device_code
+    Client->>Server: POST /agent/register (host JWT + agent pubkey)
+    Server-->>Client: agent_id + pending capabilities
 
-    Client->>User: "Approve these capabilities?"
-    User->>Server: Approves via device authorization flow
+    Client->>User: Approval prompt
+    User-->>Client: Approval
 
-    Client->>Server: POST /agents/token (poll for grant)
+    Client->>Server: GET /agent/status (poll for approval)
     Server-->>Client: Capability grants
 
-    Client->>Server: API request (Ed25519-signed JWT)
+    Client->>Server: POST /capability/execute (agent JWT)
     Server-->>Client: Response
 ```
 
