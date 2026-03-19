@@ -9,11 +9,11 @@ export const metadata = {
 
 export default function RegistryPage() {
 	return (
-		<div className="mx-auto max-w-2xl px-6 py-16 lg:py-24">
+		<div className="max-w-3xl px-6 py-16 lg:py-24">
 			<h1 className="text-3xl font-semibold tracking-tight text-fd-foreground">
 				Directory
 			</h1>
-			<p className="mt-4 text-fd-muted-foreground text-[15px] leading-relaxed max-w-lg">
+			<p className="mt-4 text-fd-muted-foreground text-[15px] leading-relaxed max-w-2xl">
 				An Agent Auth directory is a searchable index of services that implement the
 				Agent Auth protocol. It&apos;s part of the protocol&apos;s{" "}
 				<Link
@@ -25,7 +25,7 @@ export default function RegistryPage() {
 				— instead of hardcoding every service endpoint, agents can query a
 				directory to find services by intent, capability, or domain.
 			</p>
-			<p className="mt-3 text-fd-muted-foreground text-[15px] leading-relaxed max-w-lg">
+			<p className="mt-3 text-fd-muted-foreground text-[15px] leading-relaxed max-w-2xl">
 				A directory indexes servers that publish a{" "}
 				<code className="text-fd-foreground text-[13px] bg-fd-accent/50 px-1 py-0.5">
 					/.well-known/agent-configuration
@@ -35,7 +35,7 @@ export default function RegistryPage() {
 				directory returns matching services with their capabilities, endpoint
 				URLs, and registration requirements.
 			</p>
-			<p className="mt-3 text-fd-muted-foreground text-[15px] leading-relaxed max-w-lg">
+			<p className="mt-3 text-fd-muted-foreground text-[15px] leading-relaxed max-w-2xl">
 				Anyone can run their own directory. The protocol defines the interface,
 				not the operator. Server operators can also register their endpoints
 				on any public directory to make them discoverable by agents.
@@ -48,7 +48,7 @@ export default function RegistryPage() {
 				<p className="mt-2 text-[15px] text-fd-foreground font-medium">
 					agent-auth.directory
 				</p>
-				<p className="mt-1.5 text-[13px] text-fd-muted-foreground leading-relaxed max-w-md">
+				<p className="mt-1.5 text-[13px] text-fd-muted-foreground leading-relaxed max-w-xl">
 					We maintain a public, open directory where server operators can
 					list their services and agents can discover them. Browse existing
 					services or register your own.

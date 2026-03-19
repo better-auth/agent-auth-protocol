@@ -287,30 +287,33 @@ function MobileSidebarOverlay({
 }
 
 export function SidebarContent({
-  sections,
-  pathname,
-  onNavigate,
+	sections,
+	pathname,
+	onNavigate,
+	showHeader = true,
 }: {
-  sections: DocsSection[];
-  pathname: string;
-  onNavigate?: () => void;
+	sections: DocsSection[];
+	pathname: string;
+	onNavigate?: () => void;
+	showHeader?: boolean;
 }) {
-  return (
-    <div
-      className="flex h-full flex-col border-r border-fd-border bg-fd-card"
-      style={{ width: SIDEBAR_WIDTH }}
-    >
-      {/* Header */}
-      <div className="shrink-0 px-4 h-11 flex items-center border-b border-fd-border">
-        <Link
-          href="/"
-          className="inline-block select-none"
-          onClick={onNavigate}
-        >
-          <WordmarkLogo className="h-4 w-auto" />
-        </Link>
-      </div>
-      <SearchTrigger onSearch={onNavigate} />
+	return (
+		<div
+			className="flex h-full flex-col border-r border-fd-border bg-fd-card"
+			style={{ width: SIDEBAR_WIDTH }}
+		>
+			{showHeader && (
+				<div className="shrink-0 px-4 h-11 flex items-center border-b border-fd-border">
+					<Link
+						href="/"
+						className="inline-block select-none"
+						onClick={onNavigate}
+					>
+						<WordmarkLogo className="h-4 w-auto" />
+					</Link>
+				</div>
+			)}
+			<SearchTrigger onSearch={onNavigate} />
 
       {/* Sections */}
       <div className="flex-1 overflow-y-auto no-scrollbar">

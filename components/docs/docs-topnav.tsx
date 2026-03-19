@@ -33,14 +33,13 @@ export function DocsTopNav() {
 				</div>
 			)}
 			<div className="flex items-center">
-				{!isDocsPath && (
-					<Link
-						href="/"
-						className="px-4 h-11 items-center select-none hidden lg:inline-flex"
-					>
-						<WordmarkLogo className="h-4 w-auto" />
-					</Link>
-				)}
+				<Link
+					href="/"
+					className="shrink-0 px-4 h-11 items-center select-none hidden lg:inline-flex w-[280px]"
+				>
+					<WordmarkLogo className="h-4 w-auto" />
+				</Link>
+				<div className="flex-1" />
 				<nav className="flex items-center overflow-x-auto no-scrollbar">
 					{TABS.map((tab) => {
 						const active = pathname.startsWith(tab.match);
@@ -63,11 +62,9 @@ export function DocsTopNav() {
 						);
 					})}
 				</nav>
-				{!isDocsPath && (
-					<div className="ml-auto px-4 hidden lg:block">
-						<ThemeToggle />
-					</div>
-				)}
+				<div className="px-4 hidden lg:block">
+					<ThemeToggle />
+				</div>
 			</div>
 		</div>
 	);

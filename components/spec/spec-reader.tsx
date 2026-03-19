@@ -429,7 +429,7 @@ export function SpecReader({
         {/* Reader */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto relative">
           <SpecSearch content={content} toc={toc} onNavigate={scrollToId} />
-          <article className="mx-auto max-w-4xl px-5 sm:px-8 py-14 sm:py-20">
+          <article className="max-w-4xl px-5 sm:px-8 py-14 sm:py-20">
             <div className="spec-content">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}

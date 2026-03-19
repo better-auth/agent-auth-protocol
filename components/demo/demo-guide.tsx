@@ -541,7 +541,7 @@ export function DemoGuide() {
 
 								<PromptBlock
 									label="Copy this prompt"
-									prompt='Send an email to agent-auth@better-auth.com with the subject "Hello from Agent Auth" and the message "Hey, I just tried Agent Auth!"'
+									prompt='Send an email to agent@better-auth.com with the subject "Hello from Agent Auth" and the message "Hey, I just tried Agent Auth!"'
 								/>
 
 								<div className="border border-foreground/8 bg-foreground/2 p-4">

@@ -7,6 +7,7 @@ import { DocsTopNav } from "@/components/docs/docs-topnav";
 import type { DocsSection } from "@/lib/docs";
 
 const SIDEBAR_WIDTH = 280;
+const NAV_HEIGHT = 45;
 
 export function DocsLayoutShell({
 	sections,
@@ -20,27 +21,33 @@ export function DocsLayoutShell({
 
 	return (
 		<div className="min-h-dvh">
+			<div className="sticky top-0 z-40 bg-fd-card/95 backdrop-blur-sm">
+				<div className={showSidebar ? "lg:hidden" : "hidden"}>
+					<DocsSidebar sections={sections} />
+				</div>
+				<DocsTopNav />
+			</div>
+
 			<aside
-				className="fixed inset-y-0 left-0 z-30 hidden lg:flex"
+				className="fixed bottom-0 left-0 z-30 hidden lg:flex"
 				style={{
+					top: NAV_HEIGHT,
 					transform: showSidebar
 						? "translateX(0)"
 						: `translateX(-${SIDEBAR_WIDTH}px)`,
 				}}
 			>
-				<SidebarContent sections={sections} pathname={pathname} />
+				<SidebarContent
+					sections={sections}
+					pathname={pathname}
+					showHeader={false}
+				/>
 			</aside>
 
 			<div
 				className="max-lg:ml-0!"
-				style={{ marginLeft: showSidebar ? SIDEBAR_WIDTH : 0 }}
+				style={{ marginLeft: showSidebar ? SIDEBAR_WIDTH : 24 }}
 			>
-				<div className="sticky top-0 z-30 bg-fd-card/95 backdrop-blur-sm">
-					<div className={showSidebar ? "lg:hidden" : "hidden"}>
-						<DocsSidebar sections={sections} />
-					</div>
-					<DocsTopNav />
-				</div>
 				{children}
 			</div>
 		</div>
