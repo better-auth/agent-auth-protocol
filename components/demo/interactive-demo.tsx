@@ -1090,12 +1090,9 @@ function WelcomeDialog({ onClose }: { onClose: () => void }) {
 						<div className="flex items-start gap-2.5 px-2.5 sm:px-3 py-2 sm:py-2.5 border border-amber-500/15 bg-amber-500/5">
 							<ExclamationTriangleIcon className="w-4 h-4 text-amber-500/70 mt-0.5 shrink-0" />
 							<p className="text-[12.5px] sm:text-[13px] text-foreground/55 leading-relaxed">
-								When you connect Gmail, you{"'"}ll see a Google warning about the app not being verified — that{"'"}s expected for this demo proxy. <strong className="text-foreground/75">The agent never sees your token</strong> — it{"'"}s stored only on the proxy side.
+								When you try to connect Gmail, you may see a Google warning about the app not being verified — it{"'"}s safe as long as you trust us. The token is only stored on the proxy side. <strong className="text-foreground/75">The agent never sees your token.</strong> You can <a href="https://gmail.agent-auth.directory/dashboard/settings" target="_blank" rel="noopener" className="underline underline-offset-2 text-foreground/70 hover:text-foreground/90 transition-colors">delete your account</a> after you{"'"}re done with the demo.
 							</p>
 						</div>
-						<p>
-							If you{"'"}d rather not connect Gmail, the agent can still do plenty with Agent Deploy alone. You can <a href="https://gmail.agent-auth.directory/dashboard/settings" target="_blank" rel="noopener" className="underline underline-offset-2 text-foreground/70 hover:text-foreground/90 transition-colors">delete your account from the proxy</a> at any time.
-						</p>
 					</div>
 				</div>
 
