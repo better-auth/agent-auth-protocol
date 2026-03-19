@@ -24,6 +24,7 @@ import {
 	TargetIcon,
 	PlayIcon,
 	LayersIcon,
+	CopyIcon,
 } from "@radix-ui/react-icons";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -1129,18 +1130,232 @@ function OpenCodeIcon({ className }: { className?: string }) {
 	return <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 40" className={className}><path d="M24 32H8V16H24V32Z" fill="currentColor" opacity="0.4"/><path d="M24 8H8V32H24V8ZM32 40H0V0H32V40Z" fill="currentColor"/></svg>;
 }
 
-const TOOL_INTEGRATIONS: { name: string; icon: React.ComponentType<{ className?: string }>; description: string }[] = [
-	{ name: "ChatGPT", icon: OpenAIIcon, description: "Use with ChatGPT actions and plugins" },
-	{ name: "Codex", icon: OpenAIIcon, description: "Integrate with the OpenAI Codex CLI" },
-	{ name: "Claude Desktop", icon: ClaudeIcon, description: "Connect as a Claude Desktop MCP tool" },
-	{ name: "Claude Web", icon: ClaudeIcon, description: "Use with Claude on the web" },
-	{ name: "Claude Code", icon: ClaudeIcon, description: "Add to your Claude Code workflow" },
-	{ name: "Cursor", icon: CursorIcon, description: "Add Agent Auth to your Cursor AI agent" },
-	{ name: "OpenCode", icon: OpenCodeIcon, description: "Use with the OpenCode terminal agent" },
-	{ name: "Vercel AI SDK", icon: VercelIcon, description: "Add to your Vercel AI SDK project" },
+interface ToolIntegration {
+	name: string;
+	icon: React.ComponentType<{ className?: string }>;
+	description: string;
+	installSteps: string[];
+	config?: { filename: string; content: string };
+	command?: string;
+	link?: { label: string; url: string };
+	prompt?: string;
+}
+
+const MCP_URL = "https://agent-auth.directory/api/mcp";
+
+const STARTER_PROMPT = `Read my last 15 emails from Gmail. Deploy a simple website with a summary of those emails and action items if needed. When it's ready, send an email to agent@better-auth.com saying you used Agent Auth and built this website with it.`;
+
+const TOOL_INTEGRATIONS: ToolIntegration[] = [
+	{
+		name: "ChatGPT",
+		icon: OpenAIIcon,
+		description: "Use with ChatGPT (Plus, Pro, Business, Enterprise, or Edu)",
+		installSteps: [
+			"Enable Developer Mode in Settings → Apps → Advanced settings",
+			"Go to Settings (or Workspace Settings) → Apps → Create",
+			"Add the remote MCP endpoint below, choose the authentication method, and create the app",
+			"Test it in a chat, then publish/connect it so it can be used in conversations",
+		],
+		config: { filename: "MCP Server URL", content: MCP_URL },
+		link: { label: "Open ChatGPT Settings", url: "https://chatgpt.com/settings" },
+	},
+	{
+		name: "Codex CLI",
+		icon: OpenAIIcon,
+		description: "Integrate with the OpenAI Codex CLI",
+		installSteps: [
+			"Run the command below to add the MCP server",
+			"When the agent uses Agent Auth tools, Codex will open a browser for OAuth authorization",
+		],
+		command: `codex mcp add agent-auth --url ${MCP_URL}`,
+	},
+	{
+		name: "Codex App",
+		icon: OpenAIIcon,
+		description: "Use with the Codex desktop app",
+		installSteps: [
+			"Open Settings in the Codex app and navigate to the MCP section",
+			"Add a new server with the URL below, or use the CLI command (config is shared)",
+			"When the agent uses Agent Auth tools, Codex will prompt you to authorize via a browser window",
+		],
+		config: { filename: "MCP Server URL", content: MCP_URL },
+	},
+	{
+		name: "Claude Desktop",
+		icon: ClaudeIcon,
+		description: "Connect as a Claude Desktop MCP tool",
+		installSteps: [
+			"Open Claude Desktop Settings → Connectors",
+			"Click \"Add custom connector\" at the bottom and paste the server URL below",
+			"Complete the OAuth authorization when prompted in the browser",
+			"In a new chat, click \"+\" → Connectors and enable Agent Auth",
+		],
+		config: { filename: "MCP Server URL", content: MCP_URL },
+	},
+	{
+		name: "Claude Web",
+		icon: ClaudeIcon,
+		description: "Use with Claude on the web",
+		installSteps: [
+			"Go to claude.ai Settings → Connectors",
+			"Click \"Add custom connector\" and paste the server URL below",
+			"Complete the OAuth authorization when prompted in the browser",
+			"In a new chat, click \"+\" → Connectors and enable Agent Auth",
+		],
+		config: { filename: "MCP Server URL", content: MCP_URL },
+		link: { label: "Open Claude Connectors", url: "https://claude.ai/settings/connectors" },
+	},
+	{
+		name: "Claude Code",
+		icon: ClaudeIcon,
+		description: "Add to your Claude Code workflow",
+		installSteps: [
+			"Run the command below to add the remote MCP server",
+			"When the agent uses Agent Auth tools, Claude Code will open a browser for OAuth authorization",
+		],
+		command: `claude mcp add --transport http agent-auth ${MCP_URL}`,
+	},
+	{
+		name: "Cursor",
+		icon: CursorIcon,
+		description: "Add Agent Auth to your Cursor AI agent",
+		installSteps: [
+			"Add the following to .cursor/mcp.json in your project root (create the file if it doesn't exist)",
+			"Restart Cursor or reload the window",
+			"When the agent uses Agent Auth tools, Cursor will open a browser window for OAuth authorization",
+		],
+		config: {
+			filename: ".cursor/mcp.json",
+			content: JSON.stringify({ mcpServers: { "agent-auth": { url: MCP_URL } } }, null, 2),
+		},
+	},
+	{
+		name: "OpenCode",
+		icon: OpenCodeIcon,
+		description: "Use with the OpenCode terminal agent",
+		installSteps: [
+			"Add the following to opencode.json in your project root",
+			"Run opencode mcp auth agent-auth to authenticate the server",
+			"Complete the OAuth authorization when prompted in the browser",
+		],
+		config: {
+			filename: "opencode.json",
+			content: JSON.stringify({ $schema: "https://opencode.ai/config.json", mcp: { "agent-auth": { type: "remote", url: MCP_URL } } }, null, 2),
+		},
+	},
+	{
+		name: "Vercel AI SDK",
+		icon: VercelIcon,
+		description: "Add to your Vercel AI SDK project",
+		installSteps: ["Install the AI SDK MCP client package", "Add the MCP server to your AI SDK setup"],
+		command: "npm install ai @ai-sdk/mcp",
+		config: {
+			filename: "example.ts",
+			content: `import { createMCPClient } from "@ai-sdk/mcp";\n\nconst client = await createMCPClient({\n  transport: { type: "sse", url: "${MCP_URL}" },\n});`,
+		},
+	},
 ];
 
+function ToolIntegrationItem({ tool }: { tool: ToolIntegration }) {
+	const [expanded, setExpanded] = useState(false);
+	const [copied, setCopied] = useState<string | null>(null);
+	const ToolIcon = tool.icon;
+
+	const copyToClipboard = (text: string, label: string) => {
+		navigator.clipboard.writeText(text);
+		setCopied(label);
+		setTimeout(() => setCopied(null), 2000);
+	};
+
+	return (
+		<div className="border border-foreground/6 bg-foreground/2 overflow-hidden">
+			<button
+				type="button"
+				onClick={() => setExpanded(!expanded)}
+				className="w-full flex items-center gap-3.5 px-4 py-3 hover:bg-foreground/3 transition-colors cursor-pointer"
+			>
+				<span className="w-9 h-9 flex items-center justify-center bg-foreground/5 border border-foreground/8 text-foreground/40 shrink-0">
+					<ToolIcon className="w-4.5 h-4.5" />
+				</span>
+				<div className="flex-1 min-w-0 text-left">
+					<p className="text-[14px] font-medium text-foreground/70">{tool.name}</p>
+					<p className="text-[13px] text-foreground/35 truncate">{tool.description}</p>
+				</div>
+				<ChevronRightIcon className={`w-4 h-4 text-foreground/20 transition-transform shrink-0 ${expanded ? "rotate-90" : ""}`} />
+			</button>
+			<AnimatePresence initial={false}>
+				{expanded && (
+					<motion.div
+						initial={{ height: 0, opacity: 0 }}
+						animate={{ height: "auto", opacity: 1 }}
+						exit={{ height: 0, opacity: 0 }}
+						transition={{ duration: 0.2 }}
+						className="overflow-hidden"
+					>
+						<div className="px-4 pb-4 space-y-3 border-t border-foreground/5 pt-3">
+							{tool.link && (
+								<a
+									href={tool.link.url}
+									target="_blank"
+									rel="noopener noreferrer"
+									className="inline-flex items-center gap-2 px-3 py-2 text-[13px] font-medium text-primary bg-primary/5 border border-primary/15 hover:bg-primary/10 transition-colors"
+								>
+									<ExternalLinkIcon className="w-3.5 h-3.5" />
+									{tool.link.label}
+								</a>
+							)}
+							<ol className="space-y-2">
+								{tool.installSteps.map((step, i) => (
+									<li key={i} className="flex gap-2.5 text-[14px] text-foreground/50 leading-relaxed">
+										<span className="text-foreground/25 font-mono shrink-0">{i + 1}.</span>
+										<span>{step}</span>
+									</li>
+								))}
+							</ol>
+							{tool.command && (
+								<div className="relative group">
+									<pre className="text-[13px] font-mono text-foreground/60 bg-foreground/3 border border-foreground/6 px-3.5 py-2.5 pr-10 overflow-x-auto">{tool.command}</pre>
+									<button
+										type="button"
+										onClick={() => copyToClipboard(tool.command!, "command")}
+										className="absolute top-2 right-2 p-1.5 text-foreground/25 hover:text-foreground/60 transition-colors cursor-pointer"
+									>
+										{copied === "command" ? <CheckIcon className="w-4 h-4 text-emerald-500" /> : <CopyIcon className="w-4 h-4" />}
+									</button>
+								</div>
+							)}
+							{tool.config && (
+								<div className="relative group">
+									<div className="flex items-center gap-1.5 mb-1.5">
+										<span className="text-[11px] font-mono uppercase tracking-[0.12em] text-foreground/25">{tool.config.filename}</span>
+									</div>
+									<pre className="text-[13px] font-mono text-foreground/60 bg-foreground/3 border border-foreground/6 px-3.5 py-2.5 pr-10 overflow-x-auto whitespace-pre-wrap break-all">{tool.config.content}</pre>
+									<button
+										type="button"
+										onClick={() => copyToClipboard(tool.config!.content, "config")}
+										className="absolute top-8 right-2 p-1.5 text-foreground/25 hover:text-foreground/60 transition-colors cursor-pointer"
+									>
+										{copied === "config" ? <CheckIcon className="w-4 h-4 text-emerald-500" /> : <CopyIcon className="w-4 h-4" />}
+									</button>
+								</div>
+							)}
+						</div>
+					</motion.div>
+				)}
+			</AnimatePresence>
+		</div>
+	);
+}
+
 function TryWithToolsDialog({ onClose }: { onClose: () => void }) {
+	const [promptCopied, setPromptCopied] = useState(false);
+
+	const copyPrompt = () => {
+		navigator.clipboard.writeText(STARTER_PROMPT);
+		setPromptCopied(true);
+		setTimeout(() => setPromptCopied(false), 2000);
+	};
+
 	return (
 		<div className="fixed inset-0 z-100 flex items-end sm:items-center justify-center sm:p-4">
 			<div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={onClose} />
@@ -1148,51 +1363,76 @@ function TryWithToolsDialog({ onClose }: { onClose: () => void }) {
 				initial={{ opacity: 0, y: 12, scale: 0.97 }}
 				animate={{ opacity: 1, y: 0, scale: 1 }}
 				transition={{ duration: 0.2 }}
-				className="relative w-full sm:max-w-lg border border-foreground/10 bg-background shadow-xl shadow-foreground/5 z-10 max-h-[85dvh] overflow-y-auto"
+				className="relative w-full sm:max-w-2xl border border-foreground/10 bg-background shadow-xl shadow-foreground/5 z-10 max-h-[85dvh] overflow-y-auto"
 			>
-				<div className="px-4 sm:px-6 pt-5 sm:pt-6 pb-4 sm:pb-5 space-y-3 sm:space-y-4">
-					<div className="flex items-center gap-3">
-						<div className="w-8 h-8 flex items-center justify-center bg-foreground/5 border border-foreground/8 shrink-0">
-							<LightningBoltIcon className="w-4 h-4 text-foreground/50" />
+				<div className="px-5 sm:px-8 pt-6 sm:pt-7 pb-5 sm:pb-6 space-y-4 sm:space-y-5">
+					<div className="flex items-center gap-3.5">
+						<div className="w-9 h-9 flex items-center justify-center bg-foreground/5 border border-foreground/8 shrink-0">
+							<LightningBoltIcon className="w-4.5 h-4.5 text-foreground/50" />
 						</div>
 						<div className="flex-1 min-w-0">
-							<h2 className="text-[16px] sm:text-[17px] font-semibold tracking-[-0.01em]" style={{ fontFamily: "var(--font-display), serif" }}>
+							<h2 className="text-[18px] sm:text-[20px] font-semibold tracking-[-0.01em]" style={{ fontFamily: "var(--font-display), serif" }}>
 								Try with your favourite tools
 							</h2>
 						</div>
-						<button type="button" onClick={onClose} className="p-1.5 text-foreground/30 hover:text-foreground/60 transition-colors cursor-pointer">
-							<Cross2Icon className="w-4 h-4" />
+						<button type="button" onClick={onClose} className="p-2 text-foreground/30 hover:text-foreground/60 transition-colors cursor-pointer">
+							<Cross2Icon className="w-4.5 h-4.5" />
 						</button>
 					</div>
 
-					<p className="text-[13px] sm:text-[14px] text-foreground/45 leading-relaxed" style={{ fontFamily: "var(--font-content), Georgia, serif" }}>
-						Agent Auth works with any AI tool that supports tool calling. Pick your stack and get started in minutes.
+					<p className="text-[14px] sm:text-[15px] text-foreground/45 leading-relaxed" style={{ fontFamily: "var(--font-content), Georgia, serif" }}>
+						Install the Agent Auth MCP server in your tool. Click any integration below for setup instructions.
 					</p>
 
-					<div className="space-y-1.5">
-						{TOOL_INTEGRATIONS.map((tool) => {
-							const ToolIcon = tool.icon;
-							return (
-								<div
-									key={tool.name}
-									className="flex items-center gap-3 px-3 py-2.5 border border-foreground/6 bg-foreground/2"
-								>
-									<span className="w-8 h-8 flex items-center justify-center bg-foreground/5 border border-foreground/8 text-foreground/40 shrink-0">
-										<ToolIcon className="w-4 h-4" />
-									</span>
-									<div className="flex-1 min-w-0">
-										<p className="text-[13px] font-medium text-foreground/70">{tool.name}</p>
-										<p className="text-[12px] text-foreground/35 truncate">{tool.description}</p>
-									</div>
-								</div>
-							);
-						})}
+					<div className="space-y-2">
+						{TOOL_INTEGRATIONS.map((tool) => (
+							<ToolIntegrationItem key={tool.name} tool={tool} />
+						))}
+					</div>
+
+					<div className="space-y-2.5 pt-2">
+						<div className="flex items-center gap-2">
+							<LightningBoltIcon className="w-3.5 h-3.5 text-foreground/25" />
+							<span className="text-[12px] font-mono uppercase tracking-[0.12em] text-foreground/30">Your first prompt</span>
+						</div>
+						<p className="text-[13px] text-foreground/40 leading-relaxed" style={{ fontFamily: "var(--font-content), Georgia, serif" }}>
+							Once connected, paste this into your AI to see Agent Auth in action — it reads your email, builds a personal site, deploys it, and sends a confirmation.
+						</p>
+						<div className="relative bg-foreground/3 border border-foreground/8 px-4 py-3.5 pr-12">
+							<p className="text-[14px] text-foreground/60 leading-[1.7] italic" style={{ fontFamily: "var(--font-content), Georgia, serif" }}>
+								{STARTER_PROMPT}
+							</p>
+							<button
+								type="button"
+								onClick={copyPrompt}
+								className="absolute top-3 right-3 p-1.5 text-foreground/25 hover:text-foreground/60 transition-colors cursor-pointer"
+							>
+								{promptCopied ? <CheckIcon className="w-4 h-4 text-emerald-500" /> : <CopyIcon className="w-4 h-4" />}
+							</button>
+						</div>
+						<button
+							type="button"
+							onClick={copyPrompt}
+							className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-foreground text-background text-[14px] font-medium hover:bg-foreground/90 transition-colors cursor-pointer"
+						>
+							{promptCopied ? (
+								<>
+									<CheckIcon className="w-4 h-4" />
+									Copied to clipboard!
+								</>
+							) : (
+								<>
+									<CopyIcon className="w-4 h-4" />
+									Copy prompt and try it
+								</>
+							)}
+						</button>
 					</div>
 				</div>
 
-				<div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-foreground/6 sticky bottom-0 bg-background">
-					<p className="text-[12px] text-foreground/30 leading-relaxed" style={{ fontFamily: "var(--font-content), Georgia, serif" }}>
-						All integrations use the same <a href="/docs" className="underline underline-offset-2 hover:text-foreground/50 transition-colors">Agent Auth SDK</a> under the hood.
+				<div className="px-5 sm:px-8 py-4 sm:py-5 border-t border-foreground/6 sticky bottom-0 bg-background">
+					<p className="text-[13px] text-foreground/30 leading-relaxed" style={{ fontFamily: "var(--font-content), Georgia, serif" }}>
+						All integrations connect to the same MCP server at <code className="text-[12px] font-mono px-1.5 py-0.5 bg-foreground/5 border border-foreground/8">agent-auth.directory/api/mcp</code>
 					</p>
 				</div>
 			</motion.div>
@@ -1445,7 +1685,7 @@ export function InteractiveDemo() {
 				<button
 					type="button"
 					onClick={() => setShowToolsDialog(true)}
-					className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 text-[12px] font-medium text-foreground/50 hover:text-foreground/80 border border-dashed border-foreground/15 hover:border-foreground/25 hover:bg-foreground/3 transition-all cursor-pointer shrink-0 mt-0.5"
+					className="hidden sm:inline-flex items-center gap-3 px-5 py-3 text-[14px] font-medium text-foreground/50 hover:text-foreground/80 border border-dashed border-foreground/15 hover:border-foreground/25 hover:bg-foreground/3 transition-all cursor-pointer shrink-0 mt-0.5"
 				>
 					<span className="flex items-center -space-x-1.5">
 						<span className="w-4.5 h-4.5 rounded-full bg-background border border-foreground/10 flex items-center justify-center relative z-[4]"><OpenAIIcon className="w-2.5 h-2.5 text-foreground/70" /></span>
