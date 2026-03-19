@@ -3,6 +3,7 @@
 import {
 	type ComponentProps,
 	createContext,
+	useCallback,
 	type ReactNode,
 	type SyntheticEvent,
 	use,
@@ -93,28 +94,105 @@ export function AISearchTrigger({
 	);
 }
 
+const AI_PANEL_DEFAULT = 400;
+const AI_PANEL_MIN = 340;
+const AI_PANEL_MAX = 600;
+
 export function AISearchPanel() {
 	const { open, setOpen } = useAISearchContext();
+	const [width, setWidth] = useState(AI_PANEL_DEFAULT);
+	const panelRef = useRef<HTMLDivElement>(null);
 	useHotKey();
 
-	if (!open) return null;
+	// Toggle data attribute + CSS variable on <html> so the page can react
+	useEffect(() => {
+		const root = document.documentElement;
+		if (open) {
+			root.setAttribute("data-ai-panel", "");
+			root.style.setProperty("--ai-panel-w", `${width}px`);
+		} else {
+			root.removeAttribute("data-ai-panel");
+			root.style.removeProperty("--ai-panel-w");
+		}
+		return () => {
+			root.removeAttribute("data-ai-panel");
+			root.style.removeProperty("--ai-panel-w");
+		};
+	}, [open, width]);
+
+	// Drag-to-resize — DOM-only during drag, rAF-throttled, sync state on pointerup
+	const onPointerDown = useCallback((e: React.PointerEvent) => {
+		e.preventDefault();
+		const root = document.documentElement;
+		const panel = panelRef.current;
+		let raf = 0;
+		let latestX = 0;
+
+		root.style.cursor = "col-resize";
+		root.style.userSelect = "none";
+		document.body.style.transition = "none";
+
+		const apply = () => {
+			const w = Math.min(
+				AI_PANEL_MAX,
+				Math.max(AI_PANEL_MIN, window.innerWidth - latestX),
+			);
+			if (panel) panel.style.width = `${w}px`;
+			root.style.setProperty("--ai-panel-w", `${w}px`);
+			raf = 0;
+		};
+
+		const onMove = (ev: PointerEvent) => {
+			latestX = ev.clientX;
+			if (!raf) raf = requestAnimationFrame(apply);
+		};
+		const onUp = () => {
+			if (raf) cancelAnimationFrame(raf);
+			root.style.cursor = "";
+			root.style.userSelect = "";
+			document.body.style.transition = "";
+			if (panel) {
+				setWidth(panel.getBoundingClientRect().width);
+			}
+			window.removeEventListener("pointermove", onMove);
+			window.removeEventListener("pointerup", onUp);
+		};
+		window.addEventListener("pointermove", onMove);
+		window.addEventListener("pointerup", onUp);
+	}, []);
 
 	return (
 		<>
 			{/* Mobile overlay */}
-			<div
-				className="fixed inset-0 z-50 bg-fd-background/60 backdrop-blur-sm lg:hidden"
-				onClick={() => setOpen(false)}
-			/>
+			{open && (
+				<div
+					className="fixed inset-0 z-50 bg-fd-background/60 backdrop-blur-sm lg:hidden"
+					onClick={() => setOpen(false)}
+				/>
+			)}
 
 			{/* Panel */}
 			<div
+				ref={panelRef}
 				className={cn(
 					"z-50 bg-fd-card text-fd-card-foreground border border-fd-border",
-					"fixed inset-x-3 top-4 bottom-4 rounded-xl shadow-2xl",
-					"lg:fixed lg:inset-y-0 lg:left-auto lg:right-0 lg:w-[400px] lg:rounded-none lg:border-y-0 lg:border-r-0 lg:border-l",
+					// Mobile: centered modal
+					"max-lg:fixed max-lg:inset-x-3 max-lg:top-4 max-lg:bottom-4 max-lg:rounded-xl max-lg:shadow-2xl",
+					!open && "max-lg:pointer-events-none max-lg:invisible",
+					// Desktop: fixed right panel with slide transition
+					"lg:fixed lg:inset-y-0 lg:right-0 lg:border-y-0 lg:border-r-0 lg:border-l ai-panel",
+					"lg:transition-transform lg:duration-300 lg:ease-in-out",
+					open ? "lg:translate-x-0" : "lg:translate-x-full",
 				)}
 			>
+				{/* Resize handle (desktop only) */}
+				<div
+					className="hidden lg:block absolute inset-y-0 -left-1 w-2 cursor-col-resize z-10 group"
+					onPointerDown={onPointerDown}
+				>
+					<div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-fd-border group-hover:bg-fd-foreground/30 group-active:bg-fd-foreground/50 transition-colors" />
+				</div>
+
 				<div className="flex flex-col size-full p-3">
 					<PanelHeader />
 					<PanelMessages className="flex-1" />
