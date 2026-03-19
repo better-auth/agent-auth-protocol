@@ -19,7 +19,7 @@ A client exposes these standard tools to agents:
 | Tool | Purpose |
 |------|---------|
 | `list_providers` | List available providers the client knows about |
-| `search_providers` | Search a registry for providers matching an intent |
+| `search_providers` | Search a directory for providers matching an intent |
 | `discover_provider` | Discover a provider from a direct URL |
 | `list_capabilities` | List capabilities available from a provider |
 | `describe_capability` | Get full detail for a single capability (input/output schemas) |
@@ -38,7 +38,7 @@ Single-provider clients (built for one specific service) may omit discovery tool
 Before connecting, an agent may need to find which provider to use. The client supports three discovery methods:
 
 - **`list_providers`** — returns providers the client already knows about (pre-configured or previously discovered)
-- **`search_providers`** — queries a registry with a natural language intent (e.g. "banking", "send emails")
+- **`search_providers`** — queries a directory with a natural language intent (e.g. "banking", "send emails")
 - **`discover_provider`** — fetches a provider's configuration from a direct URL via `/.well-known/agent-configuration`
 
 ```jsonc

@@ -52,7 +52,7 @@ Discovery of arbitrary URLs is a prompt injection vector. A malicious prompt can
 
 Mitigations:
 
-- **Registry-first discovery** — clients should resolve new services through a trusted registry rather than arbitrary URLs
+- **Directory-first discovery** — clients should resolve new services through a trusted directory rather than arbitrary URLs
 - **User confirmation** — if `discover_provider` is called with a direct URL, require user confirmation before fetching
 - **Allowlists** — clients may maintain an allowlist of trusted service URLs
 - **TLS verification** — clients must verify TLS certificates when fetching discovery endpoints

@@ -18,7 +18,7 @@ npm install @auth/agent
 import { AgentAuthClient } from "@auth/agent";
 
 const client = new AgentAuthClient({
-  registryUrl: "https://registry.example.com",
+  directoryUrl: "https://directory.example.com",
 });
 
 const config = await client.discoverProvider("https://api.example.com");
@@ -46,8 +46,8 @@ The `AgentAuthClient` constructor accepts these options:
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `storage` | `Storage` | `MemoryStorage` | Pluggable storage for keys and connections |
-| `registryUrl` | `string` | — | Registry URL for `searchProviders` |
-| `allowDirectDiscovery` | `boolean` | `true` if no registry | Allow direct `.well-known` discovery |
+| `directoryUrl` | `string` | — | Directory URL for `searchProviders` |
+| `allowDirectDiscovery` | `boolean` | `true` if no directory | Allow direct `.well-known` discovery |
 | `providers` | `ProviderConfig[]` | — | Pre-configured providers |
 | `fetch` | `typeof fetch` | `globalThis.fetch` | Custom fetch implementation |
 | `jwtExpirySeconds` | `number` | `60` | JWT token lifetime |
@@ -64,7 +64,7 @@ The `AgentAuthClient` constructor accepts these options:
 // Discover a provider from its service URL
 const config = await client.discoverProvider("https://api.example.com");
 
-// Search the registry by intent
+// Search the directory by intent
 const providers = await client.searchProviders("banking");
 
 // List all known/configured providers
@@ -276,7 +276,7 @@ When you call `getAgentAuthTools(client)`, the following tools are returned:
 | Tool | Description |
 |---|---|
 | `list_providers` | List discovered/configured providers |
-| `search_providers` | Search registry by intent |
+| `search_providers` | Search directory by intent |
 | `discover_provider` | Look up a provider by URL |
 | `list_capabilities` | List capabilities offered by a provider |
 | `describe_capability` | Get full capability definition and input schema |

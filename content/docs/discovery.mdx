@@ -1,10 +1,10 @@
 ---
 title: Discovery
-description: Discovery is how agents find and connect to services — through well-known endpoints, registries, and direct URL fetching.
+description: Discovery is how agents find and connect to services — through well-known endpoints, directories, and direct URL fetching.
 section: "Concepts"
 ---
 
-Discovery is how agents find and connect to services. Every Agent Auth server publishes a well-known endpoint that describes its configuration. Clients can also search a registry to find services by intent.
+Discovery is how agents find and connect to services. Every Agent Auth server publishes a well-known endpoint that describes its configuration. Clients can also search a directory to find services by intent.
 
 ## Well-known endpoint
 
@@ -57,9 +57,9 @@ Purpose-built clients (e.g. an MCP server for one specific service) may skip dis
 | `endpoints` | object | Server API endpoint paths, relative to `issuer` |
 | `jwks_uri` | string | URL to server's JWKS (optional) |
 
-## Registry search
+## Directory search
 
-For intent-based discovery, clients query a **registry** — a searchable index of Agent Auth servers. The agent describes what it needs in natural language, and the registry returns matching providers.
+For intent-based discovery, clients query a **directory** — a searchable index of Agent Auth servers. The agent describes what it needs in natural language, and the directory returns matching providers.
 
 ```jsonc
 // search_providers tool
@@ -73,7 +73,7 @@ For intent-based discovery, clients query a **registry** — a searchable index 
 }]
 ```
 
-Clients should prefer registry lookups over fetching arbitrary URLs provided by agents, as this provides a trust boundary for discovery. See the [Registry](/registry) page for available registries and the search API.
+Clients should prefer directory lookups over fetching arbitrary URLs provided by agents, as this provides a trust boundary for discovery. See the [Directory](/registry) page for available directories and the search API.
 
 ## Direct discovery
 

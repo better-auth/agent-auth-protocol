@@ -31,10 +31,10 @@ Agent Auth gives each autonomous agent its own identity. No user session, no imp
 
 There's no standard way for a service to advertise that it supports agents. Every new integration requires hardcoded configuration or a human pointing the agent to the right endpoint.
 
-Agent Auth defines a well-known endpoint and a registry protocol so agents can find and connect to services automatically:
+Agent Auth defines a well-known endpoint and a directory protocol so agents can find and connect to services automatically:
 
 - **By URL** — the agent fetches `/.well-known/agent-configuration` from a domain and gets the full configuration.
-- **By intent** — the agent describes what it wants to do in natural language, and a registry returns matching services.
+- **By intent** — the agent describes what it wants to do in natural language, and a directory returns matching services.
 
 ## What the specification covers
 
@@ -45,5 +45,5 @@ The full [specification](/specification) defines the complete protocol across th
 3. **Authentication** — how agents authenticate requests with short-lived signed JWTs
 4. **Capabilities** — how servers define, grant, constrain, and revoke capabilities per agent
 5. **Approval** — how user consent works for registration, linking, and capability escalation
-6. **Discovery** — how agents find services via well-known endpoints and registry search
+6. **Discovery** — how agents find services via well-known endpoints and directory search
 7. **Lifecycle** — how agents transition between active, suspended, expired, and revoked states

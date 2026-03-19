@@ -31,7 +31,7 @@ These apply to all commands:
 | Option | Env var | Description |
 |---|---|---|
 | `--storage-dir <path>` | `AGENT_AUTH_STORAGE_DIR` | Storage directory (default: `~/.agent-auth`) |
-| `--registry-url <url>` | `AGENT_AUTH_REGISTRY_URL` | Registry URL for provider search |
+| `--directory-url <url>` | `AGENT_AUTH_DIRECTORY_URL` | Directory URL for provider search |
 | `--host-name <name>` | `AGENT_AUTH_HOST_NAME` | Host name for identification |
 | `--no-browser` | `AGENT_AUTH_NO_BROWSER=1` | Don't auto-open browser for approval URLs |
 | `--url <urls...>` | `AGENT_AUTH_URLS` | Provider URLs to auto-discover at startup |
@@ -44,7 +44,7 @@ These apply to all commands:
 # Discover a provider from its service URL
 auth-agent discover https://api.example.com
 
-# Search the registry by intent
+# Search the directory by intent
 auth-agent search "banking"
 
 # List all known providers
@@ -152,7 +152,7 @@ See [MCP Server](/docs/mcp) for full MCP documentation.
 | Command | Arguments | Description |
 |---|---|---|
 | `discover` | `<url>` | Discover a provider from a service URL |
-| `search` | `<intent>` | Search the registry for providers |
+| `search` | `<intent>` | Search the directory for providers |
 | `providers` | — | List known providers |
 | `capabilities` | — | List capabilities (`--provider` required) |
 | `describe` | `<capability-name>` | Get full capability definition (`--provider` required) |
@@ -190,7 +190,7 @@ See [MCP Server](/docs/mcp) for full MCP documentation.
 | Variable | Description |
 |---|---|
 | `AGENT_AUTH_STORAGE_DIR` | Storage directory (default: `~/.agent-auth`) |
-| `AGENT_AUTH_REGISTRY_URL` | Registry URL for provider search |
+| `AGENT_AUTH_DIRECTORY_URL` | Directory URL for provider search |
 | `AGENT_AUTH_HOST_NAME` | Host name for identification |
 | `AGENT_AUTH_NO_BROWSER` | Set to `1` to disable auto-opening browser |
 | `AGENT_AUTH_URLS` | Comma-separated provider URLs to auto-discover |

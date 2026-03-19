@@ -80,7 +80,7 @@ Pass multiple `--url` flags to pre-discover several providers at startup:
         "mcp",
         "--url", "https://api.bank.com",
         "--url", "https://api.github.com",
-        "--registry-url", "https://registry.example.com"
+        "--directory-url", "https://directory.example.com"
       ]
     }
   }
@@ -94,7 +94,7 @@ These flags are passed after `mcp` and control server behavior:
 | Flag | Env var | Description |
 |---|---|---|
 | `--url <urls...>` | `AGENT_AUTH_URLS` | Provider URLs to auto-discover at startup |
-| `--registry-url <url>` | `AGENT_AUTH_REGISTRY_URL` | Registry URL for provider search |
+| `--directory-url <url>` | `AGENT_AUTH_DIRECTORY_URL` | Directory URL for provider search |
 | `--storage-dir <path>` | `AGENT_AUTH_STORAGE_DIR` | Storage directory (default: `~/.agent-auth`) |
 | `--host-name <name>` | `AGENT_AUTH_HOST_NAME` | Host name for identification |
 | `--no-browser` | `AGENT_AUTH_NO_BROWSER=1` | Don't auto-open browser for approval URLs |
@@ -108,7 +108,7 @@ The MCP server exposes 15 tools that map to the Agent Auth protocol operations. 
 | Tool | Parameters | Description |
 |---|---|---|
 | `list_providers` | — | List already discovered/connected providers |
-| `search_providers` | `intent` (required) | Search the registry by name or intent |
+| `search_providers` | `intent` (required) | Search the directory by name or intent |
 | `discover_provider` | `url` (required) | Look up a provider from its service URL |
 
 ### Capabilities
@@ -158,7 +158,7 @@ All configuration can also be set via environment variables:
 | Variable | Description |
 |---|---|
 | `AGENT_AUTH_STORAGE_DIR` | Storage directory (default: `~/.agent-auth`) |
-| `AGENT_AUTH_REGISTRY_URL` | Registry URL for provider search |
+| `AGENT_AUTH_DIRECTORY_URL` | Directory URL for provider search |
 | `AGENT_AUTH_HOST_NAME` | Host name for identification |
 | `AGENT_AUTH_NO_BROWSER` | Set to `1` to disable auto-opening browser for approval |
 | `AGENT_AUTH_URLS` | Comma-separated provider URLs to auto-discover |

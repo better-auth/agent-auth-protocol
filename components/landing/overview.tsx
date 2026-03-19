@@ -183,7 +183,7 @@ export function ProtocolOverview() {
 					<strong>Autonomous agents</strong> — when there{"'"}s no user in the loop, lets an agent register and operate directly with its own identity — without being forced to pretend to be human by opening a browser, solving a CAPTCHA, or clicking through forms built for people. A user can link to the agent later, claiming its activity history and taking over governance.
 				</p>
 				<p>
-					<strong>Discovery</strong> — standardizes a well-known endpoint and a <a href="https://agent-auth.directory" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground/80 transition-colors">registry</a> so agents can find and connect to services automatically — by URL or by describing what they need in natural language. This avoids the need for pre-configuring services.
+					<strong>Discovery</strong> — standardizes a well-known endpoint and a <a href="https://agent-auth.directory" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground/80 transition-colors">directory</a> so agents can find and connect to services automatically — by URL or by describing what they need in natural language. This avoids the need for pre-configuring services.
 				</p>
 			</div>
 
@@ -281,9 +281,9 @@ export function ProtocolOverview() {
 							icon: Code,
 						},
 						{
-							label: "Registry",
-							title: "Submit your server",
-							href: "https://agent-auth.directory",
+						label: "Directory",
+						title: "Submit your server",
+						href: "https://agent-auth.directory",
 							icon: Globe,
 						},
 					].map((item) => (
