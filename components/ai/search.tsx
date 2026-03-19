@@ -182,7 +182,7 @@ export function AISearchPanel() {
 					// Desktop: fixed right panel with slide transition
 					"lg:fixed lg:inset-y-0 lg:right-0 lg:border-y-0 lg:border-r-0 lg:border-l ai-panel",
 					"lg:transition-transform lg:duration-300 lg:ease-in-out",
-					open ? "lg:translate-x-0" : "lg:translate-x-full",
+					open ? "translate-x-0" : "translate-x-full",
 				)}
 			>
 				{/* Resize handle (desktop only) */}
