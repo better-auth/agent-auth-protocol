@@ -37,6 +37,7 @@ interface WalkthroughPrompt {
 
 const WALKTHROUGH_PROMPTS: WalkthroughPrompt[] = [
 	{ prompt: 'Create a simple HTML site called "lovely-pie" — with your own expression' },
+	{ prompt: "Claim the site you just deployed so it's linked to my account" },
 	{ promptTemplate: 'Send an email to agent@better-auth.com with the subject "I just tried Agent Auth!" and include the deployed URL' },
 	{ prompt: "Summarize my most recent email in one sentence" },
 ];
@@ -1233,7 +1234,7 @@ export function InteractiveDemo() {
 
 	const { active: activePhases, completed: completedPhases, discoveredProviders, toolsByPhase } = derivePhases(messages);
 
-	const stepComplete = wtPromptIdx === 0 || (wtPromptIdx === 1 && (capturedUrl !== null || completedPhases.has("execution"))) || wtPromptIdx >= 2;
+	const stepComplete = wtPromptIdx === 0 || (wtPromptIdx === 1 && (capturedUrl !== null || completedPhases.has("execution"))) || (wtPromptIdx === 2 && completedPhases.has("claim")) || wtPromptIdx >= 3;
 	const currentPrompt = isGuided && !isStreaming && !awaitingApproval && stepComplete
 		? (WALKTHROUGH_PROMPTS[wtPromptIdx].prompt ?? (WALKTHROUGH_PROMPTS[wtPromptIdx].promptTemplate ?? ""))
 		: null;

@@ -1,6 +1,7 @@
 "use client";
+
 import { motion } from "motion/react";
-import { BookIcon, DocumentIcon } from "@/components/icons";
+import { DocumentIcon } from "@/components/icons";
 import { GlobeIcon, PlayIcon, ReaderIcon } from "@radix-ui/react-icons";
 
 export function LandingHero() {
@@ -30,12 +31,10 @@ export function LandingHero() {
 					discovery.
 				</motion.p>
 
-			
-
 				<motion.div
 					initial={{ opacity: 0, y: 8 }}
 					animate={{ opacity: 1, y: 0 }}
-					transition={{ duration: 0.3, delay: 0.18, ease: "easeOut" }}
+					transition={{ duration: 0.3, delay: 0.12, ease: "easeOut" }}
 					data-hero-fade
 					className="pt-1 flex flex-wrap items-center justify-center gap-4 sm:gap-5 pointer-events-auto"
 				>
@@ -70,7 +69,7 @@ export function LandingHero() {
 				<motion.div
 					initial={{ opacity: 0, y: 8 }}
 					animate={{ opacity: 1, y: 0 }}
-					transition={{ duration: 0.3, delay: 0.12, ease: "easeOut" }}
+					transition={{ duration: 0.3, delay: 0.24, ease: "easeOut" }}
 					data-hero-fade
 					className="pt-3 sm:pt-4 flex items-center justify-center pointer-events-auto"
 				>
