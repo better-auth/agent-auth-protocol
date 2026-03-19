@@ -315,6 +315,25 @@
   background-size: 16px 16px;
 }
 
+/* AI panel – push content when open on desktop */
+@media (max-width: 1023px) {
+  .ai-panel {
+    width: auto !important;
+  }
+}
+@media (min-width: 1024px) {
+  .ai-panel {
+    width: var(--ai-panel-w, 400px);
+  }
+  html[data-ai-panel] body {
+    padding-right: var(--ai-panel-w, 400px);
+    transition: padding-right 0.3s ease-in-out;
+  }
+  html:not([data-ai-panel]) body {
+    transition: padding-right 0.3s ease-in-out;
+  }
+}
+
 /* Chat thinking dots */
 .chat-dot {
   display: inline-block;

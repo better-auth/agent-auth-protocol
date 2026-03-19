@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@ai-sdk/react": "^3.0.118",
-    "@auth/agent": "^0.2.0",
+    "@auth/agent": "latest",
     "@openrouter/ai-sdk-provider": "^2.3.3",
     "@radix-ui/react-avatar": "^1.1.10",
     "@radix-ui/react-dialog": "^1.1.14",
