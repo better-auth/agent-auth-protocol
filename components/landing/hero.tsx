@@ -26,7 +26,7 @@ export function LandingHero() {
 					className="text-[15px] sm:text-base text-foreground/80 max-w-lg mx-auto leading-[1.8] tracking-normal"
 					style={{ fontFamily: "var(--font-content), Georgia, serif" }}
 				>
-					The open-source protocol and implementation for AI agent
+					The open-source standard and implementation for AI agent
 					authentication, capability-based authorization, and service
 					discovery.
 				</motion.p>
