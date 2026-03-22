@@ -192,11 +192,11 @@ export function ProtocolOverview() {
             </div>
             <div className="mt-auto border border-emerald-700/18 dark:border-emerald-300/16 bg-background/80 dark:bg-black/30 p-4 md:p-5">
               <div className="flex items-center gap-3 md:gap-4">
-                <div className="flex-1 flex flex-col divide-y divide-emerald-700/15 dark:divide-emerald-300/12 border border-emerald-700/20 dark:border-emerald-300/18 bg-emerald-500/[0.07] dark:bg-emerald-400/[0.08]">
+                <div className="flex-1 flex flex-col gap-1">
                   {scopedAgentRows.map((row) => (
                     <div
                       key={row.id}
-                      className="flex items-center gap-1.5 px-2 py-1.5"
+                      className="flex items-center gap-1.5 px-2 py-1.5 border border-emerald-700/20 dark:border-emerald-300/18 bg-emerald-500/[0.07] dark:bg-emerald-400/[0.08]"
                     >
                       <AgentIcon variant="green" />
                       <span className="text-[11px] font-mono text-emerald-800 dark:text-emerald-200/80 mr-2">
