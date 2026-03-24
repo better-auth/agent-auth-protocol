@@ -139,7 +139,7 @@ export function ProtocolOverview() {
       <div className="mb-12">
         <div className="overflow-hidden border border-foreground/15 dark:border-foreground/12 bg-foreground/[0.015] shadow-[0_20px_70px_-45px_rgba(15,23,42,0.35)] grid grid-cols-1 md:grid-cols-[1fr_auto_1fr]">
           {/* Today */}
-          <div className="flex h-full flex-col gap-6 bg-linear-to-br from-red-500/[0.12] via-red-500/[0.05] to-background p-5 md:p-7">
+          <div className="flex h-full flex-col gap-6 bg-red-500/[0.04] dark:bg-red-400/[0.05] p-5 md:p-7">
             <div className="flex-1 space-y-3">
               <div className="text-[11px] font-mono uppercase tracking-wider text-red-600 dark:text-red-300/85">
                 Today
@@ -180,7 +180,7 @@ export function ProtocolOverview() {
           <div className="md:hidden h-px bg-foreground/12 dark:bg-foreground/10" />
 
           {/* With Agent Auth */}
-          <div className="flex h-full flex-col gap-6 bg-linear-to-br from-emerald-500/[0.12] via-emerald-500/[0.05] to-background p-5 md:p-7">
+          <div className="flex h-full flex-col gap-6 bg-emerald-500/[0.04] dark:bg-emerald-400/[0.05] p-5 md:p-7">
             <div className="flex-1 space-y-3">
               <div className="text-[11px] font-mono uppercase tracking-wider text-emerald-700 dark:text-emerald-300/80">
                 With Agent Auth
