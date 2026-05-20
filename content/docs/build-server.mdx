@@ -26,6 +26,13 @@ export const auth = betterAuth({
     agentAuth({
       providerName: "my-service",
       providerDescription: "My service description",
+      // Allow first-time client agents (e.g. an AI assistant connecting from a
+      // user's browser) to register their host on the fly. Without this,
+      // `connectAgent()` fails with HTTP 403 `dynamic_host_registration_disabled`
+      // (the error message points back here). Leave it `false` (the default)
+      // if your service only accepts pre-enrolled hosts via enrollment tokens
+      // (machine-to-machine flows).
+      allowDynamicHostRegistration: true,
     }),
   ],
 });
@@ -34,11 +41,12 @@ export const auth = betterAuth({
 The plugin automatically:
 
 - Creates the necessary database tables (`agentHost`, `agent`, `agentCapabilityGrant`, `approvalRequest`)
-- Exposes the `/.well-known/agent-configuration` [discovery](/docs/discovery) endpoint
+- Exposes the [discovery](/docs/discovery) document under your Better Auth basePath — e.g. `/api/auth/agent-configuration` with the default basePath. The bundled `@auth/agent` SDK automatically probes both `/.well-known/agent-configuration` (spec-canonical) and your basePath, so first-party clients find your server without extra setup. For third-party clients that only check the spec-canonical path, mount a thin rewrite from `/.well-known/agent-configuration` at the origin to the plugin endpoint
 - Handles agent registration with Host JWT verification
-- Manages the device authorization approval flow
+- Implements the device authorization protocol endpoints (your app still supplies the user-facing approval page — see [Approval flow](#approval-flow) below)
 - Verifies Agent JWTs on capability execution
 - Enforces capability grants and constraints
+- Exposes user-initiated grant management endpoints: `POST /agent/grant-capability` and `POST /agent/revoke-capability` (mirror body shapes; both take `{ agent_id, capabilities }` and require an active user session)
 
 Run your database migrations after adding the plugin so the new tables are created.
 
@@ -105,6 +113,22 @@ The `onExecute` handler is called when an agent executes a capability. The plugi
 agentAuth({
   capabilities: [/* ... */],
   onExecute: async ({ capability, arguments: args, agentSession }) => {
+    // The convenience accessors `agentId` and `userId` cover the common
+    // audit-log case; reach into `agentSession.agent` / `.host` / `.user`
+    // for the full record. `agentSession.userId` is null for autonomous
+    // agents — use `agentSession.user.id` if you need an actor id that's
+    // always present (it's the synthetic user from `resolveAutonomousUser`).
+    await auditLog.write({
+      capability,
+      args,
+      agentId: agentSession.agentId,
+      agentName: agentSession.agent.name,
+      hostId: agentSession.agent.hostId,
+      linkedUserId: agentSession.userId,           // null for autonomous
+      actorUserId: agentSession.user.id,           // always present
+      at: new Date(),
+    });
+
     switch (capability) {
       case "check_balance": {
         const balance = await db.getBalance(args.account_id);
@@ -121,7 +145,41 @@ agentAuth({
 });
 ```
 
-The return value determines the response type:
+### What's on `agentSession`
+
+The handler's `agentSession` is the verified session for the invoking agent. The shape is:
+
+```ts
+interface AgentSession {
+  type: "delegated" | "autonomous";
+  agentId: string;          // convenience — same as agent.id
+  userId: string | null;    // convenience — mirrors host.userId (null for autonomous)
+  agent: {
+    id: string;
+    name: string;
+    mode: "delegated" | "autonomous";
+    hostId: string;
+    capabilityGrants: Array<{ capability, status, grantedBy, constraints }>;
+    createdAt: Date;
+    activatedAt: Date | null;
+    metadata: AgentMetadata | null;
+  };
+  host: {                   // null for autonomous agents with no host record
+    id: string;
+    userId: string | null;
+    status: string;
+  } | null;
+  user: {                   // always present — synthetic for autonomous via resolveAutonomousUser
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+```
+
+> **`userId` vs `user.id`.** They look interchangeable but aren't. `agentSession.userId` mirrors `agentSession.host?.userId` — it's the Better Auth user the host is linked to, and is `null` for autonomous agents. `agentSession.user.id` is the canonical actor identity and is always present (synthetic user for autonomous agents). For audit logs that need an actor id on every row, prefer `agentSession.user.id`. For "which real user owns this agent?" questions, use `agentSession.userId` and handle `null` explicitly.
+
+The return value of `onExecute` determines the response type:
 
 - **Plain value** — sync response, returned as `{ data: result }`
 - **`asyncResult(url)`** — returns `202 Accepted` with a polling URL
@@ -377,9 +435,9 @@ agentAuth({
 });
 ```
 
-Event types include: `agent.created`, `agent.revoked`, `agent.reactivated`, `agent.key_rotated`, `host.created`, `host.revoked`, `capability.requested`, `capability.approved`, `capability.denied`, `capability.granted`, `capability.executed`, and more.
+Event types include: `agent.created`, `agent.revoked`, `agent.reactivated`, `agent.key_rotated`, `host.created`, `host.revoked`, `capability.requested`, `capability.approved`, `capability.denied`, `capability.granted`, `capability.revoked`, `capability.executed`, and more.
 
-The `capability.executed` event includes timing (`durationMs`), the capability name, arguments, output, and success/error status.
+The `capability.executed` event includes timing (`durationMs`), the capability name, arguments, output, and success/error status. The `capability.revoked` event fires when a user revokes one or more capabilities via `POST /agent/revoke-capability` without revoking the underlying agent.
 
 ## Configuration reference
 

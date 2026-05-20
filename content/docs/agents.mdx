@@ -73,6 +73,14 @@ An agent can be revoked by:
 
 Revocation is permanent. A revoked agent cannot be reactivated; a new agent must be created. Revoking a [host](/docs/host) cascades to all agents under it.
 
+Revoking the agent is the largest-blast-radius option — every grant it holds becomes inoperative at once. When you want to take back just a specific permission without killing the agent, revoke at the **grant** layer instead via `POST /agent/revoke-capability` (see [Revoking grants](/docs/capabilities#revoking-grants)). The agent stays `active`; the specific grant flips to `revoked`; subsequent execute calls for that capability fail with `grant_revoked` instead of `capability_not_granted`.
+
+## Key rotation
+
+The agent's public key can be rotated via `POST /agent/rotate-key`, but **only the host that registered the agent is authorized to do so** — the agent itself cannot sign a rotation request, since its own key is exactly what's being replaced. This is deliberate: it lets the host respond to suspected key compromise even when the previous agent key is no longer trustworthy. The `agent_id` stays stable across rotations; only the stored public key changes. See [§5.8](/specification#5-8-key-rotation) for the wire details.
+
+> **A note for readers tracking future spec revisions.** Future versions of the protocol may collapse the agent's identifier into the key itself (using the JWK thumbprint as the agent id) and shift rotation to JWKS-based mechanisms instead of a dedicated endpoint. Under that model, rotating an agent's key would mean creating a new agent. The behavior described above applies to v1.
+
 ## Authentication
 
 Active agents authenticate by signing short-lived JWTs with their Ed25519 private key. Each JWT:

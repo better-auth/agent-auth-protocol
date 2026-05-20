@@ -39,3 +39,6 @@ next-env.d.ts
 # misc
 .DS_Store
 *.pem
+
+# local SDK dry-runs / scratch
+.aap-dryrun/

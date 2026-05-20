@@ -45,6 +45,7 @@ These apply to all endpoints:
 | 400 | `unsupported_mode` | Requested mode is not supported by this server |
 | 400 | `unsupported_algorithm` | Agent's key algorithm is not in the server's supported set |
 | 400 | `invalid_capabilities` | One or more requested capability names don't exist or are blocked |
+| 403 | `dynamic_host_registration_disabled` | First-time host registration is not enabled on this server. The host must be pre-enrolled, or the operator must enable `allowDynamicHostRegistration` |
 | 409 | `agent_exists` | A non-pending agent with this public key already exists under this host |
 
 ### Capability request (`POST /agent/request-capability`)
@@ -59,7 +60,8 @@ These apply to all endpoints:
 | Status | Error Code | Meaning |
 |--------|------------|---------|
 | 400 | `invalid_request` | Missing or malformed `capability` |
-| 403 | `capability_not_granted` | Agent does not have an active grant |
+| 403 | `capability_not_granted` | Agent never had an active grant for this capability |
+| 403 | `grant_revoked` | A previously-active grant for this capability was revoked. Distinct from `capability_not_granted` so clients can surface a "your access was revoked" message rather than "request access" |
 | 403 | `constraint_violated` | Arguments violate the grant's constraints |
 | 403 | `agent_revoked` | Agent has been revoked |
 | 403 | `agent_expired` | Agent session has expired |
@@ -97,6 +99,15 @@ The `violations` array helps agents self-correct by showing exactly which argume
 |--------|------------|---------|
 | 404 | `agent_not_found` | Agent ID doesn't exist |
 | 404 | `host_not_found` | Host ID doesn't exist |
+
+### Capability revocation (`POST /agent/revoke-capability`)
+
+Per-grant revocation — accepts `{ agent_id, capabilities: string[] }` and flips every matching active grant to `revoked` (handling the multiple-constrained-grants-for-the-same-capability case in one call). Idempotent: revoking an already-revoked capability is a no-op success, not an error.
+
+| Status | Error Code | Meaning |
+|--------|------------|---------|
+| 401 | `unauthorized` | Caller is not the agent itself, the owning host, or the linked user |
+| 404 | `agent_not_found` | Agent ID doesn't exist |
 
 ### Key rotation
 

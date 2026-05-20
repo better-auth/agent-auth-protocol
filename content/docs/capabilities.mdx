@@ -66,6 +66,28 @@ When an agent is granted a capability, the server creates an **agent capability 
 
 Grants are separate from agent identity — they can be added, escalated, or revoked independently without affecting the agent's registration.
 
+### Grant lifecycle
+
+A grant moves through a small number of states:
+
+| State | Meaning | How to reach |
+|-------|---------|--------------|
+| `pending` | The agent requested the capability; the user hasn't acted yet | `POST /agent/request-capability`, or `POST /agent/register` with non-default capabilities |
+| `active` | Authorized and usable | User approves a pending grant, the server grants a default capability at registration, or the user proactively calls `POST /agent/grant-capability` |
+| `denied` | User explicitly denied the request | User denies a pending grant |
+| `revoked` | A previously-active grant was withdrawn | User calls `POST /agent/revoke-capability`, or the agent itself / its host revokes the grant |
+
+`revoked` and `denied` are distinct: a denied grant was never live, while a revoked grant was active and then withdrawn. Execute responses preserve this distinction — see [Revoking grants](#revoking-grants).
+
+### Revoking grants
+
+There are two granularities of revocation. They are independent — you don't have to revoke the whole agent to take a capability away.
+
+- **`POST /agent/revoke`** — revokes the whole agent. All grants become inoperative implicitly because the agent itself can no longer authenticate.
+- **`POST /agent/revoke-capability`** — body `{ agent_id, capabilities: string[] }`. Flips every matching active grant for each `(agent_id, capability)` pair to `revoked`. If the agent has multiple constrained grants for the same capability (for example, `transfer_funds` scoped to two different recipients), they are all revoked together. Calling it twice for the same `(agent_id, capability)` is a no-op success — the endpoint is idempotent.
+
+When a revoked grant is later used at `/capability/execute`, the server returns `403 grant_revoked` — distinct from `403 capability_not_granted`, which is returned when the agent never had an active grant for that capability. Clients SHOULD surface the difference to users ("your access was revoked" vs "you don't have access yet") and SHOULD NOT auto-retry through `request-capability` on `grant_revoked` without explicit user intent.
+
 ## Default capabilities
 
 Servers define a set of **default capabilities** — actions that are auto-granted to agents from trusted hosts without requiring user approval each time. When a linked host registers a new agent requesting only default capabilities, the server can approve immediately.
@@ -159,4 +181,4 @@ When a capability has a `location`, the client sends the execute request to that
 
 Capability names are opaque strings at the protocol layer. They should only include lowercase ASCII alphanumeric characters and underscores (`[a-z0-9_]+`) and use consistent `snake_case` within a provider.
 
-Servers may remove or rename capabilities at any time. Existing grants for a removed capability become inoperative. When an agent attempts to execute a removed capability, the server returns `403 capability_not_granted`.
+Servers may remove or rename capabilities at any time. Existing grants for a removed capability become inoperative. When an agent attempts to execute a removed capability, the server returns `404 capability_not_found` (the capability itself no longer exists) — this is distinct from `403 capability_not_granted` (the capability exists but the agent has no active grant) and `403 grant_revoked` (the agent had an active grant that was withdrawn).
