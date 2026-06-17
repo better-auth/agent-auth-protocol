@@ -1,4 +1,3 @@
-import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import {
   convertToModelMessages,
   jsonSchema,
@@ -17,10 +16,7 @@ import {
   chatRateLimit,
   getClientIp,
 } from "@/lib/demo/rate-limit";
-
-const openrouter = createOpenRouter({
-  apiKey: process.env.OPENROUTER_API_KEY,
-});
+import { openrouter } from "@/lib/ai/openrouter";
 
 const SYSTEM_PROMPT = `You are an AI assistant demonstrating the Agent Auth Protocol — a standard for authorizing AI agents to act on behalf of users.
 

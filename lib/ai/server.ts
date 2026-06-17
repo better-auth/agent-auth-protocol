@@ -1,4 +1,3 @@
-import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import {
 	convertToModelMessages,
 	stepCountIs,
@@ -16,10 +15,7 @@ import {
 	getSpecContent,
 	getSpecVersions,
 } from "@/lib/spec";
-
-const openrouter = createOpenRouter({
-	apiKey: process.env.OPENROUTER_API_KEY,
-});
+import { openrouter } from "@/lib/ai/openrouter";
 
 // Build unified Orama search index: docs + spec sections
 const searchServer = initAdvancedSearch({
