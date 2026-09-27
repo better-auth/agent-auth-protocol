@@ -1,5 +1,6 @@
 import {
 	convertToModelMessages,
+	gateway,
 	stepCountIs,
 	streamText,
 	wrapLanguageModel,
@@ -15,7 +16,6 @@ import {
 	getSpecContent,
 	getSpecVersions,
 } from "@/lib/spec";
-import { openrouter } from "@/lib/ai/openrouter";
 
 // Build unified Orama search index: docs + spec sections
 const searchServer = initAdvancedSearch({
@@ -157,9 +157,7 @@ export async function POST(req: Request) {
 	}
 
 	const model = wrapLanguageModel({
-		model: openrouter.chat(
-			process.env.OPENROUTER_MODEL ?? "moonshotai/kimi-k2.5",
-		),
+		model: gateway(process.env.AI_GATEWAY_MODEL ?? "moonshotai/kimi-k2.5"),
 		middleware: middlewares,
 	});
 

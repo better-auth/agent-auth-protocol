@@ -1,5 +1,6 @@
 import {
   convertToModelMessages,
+  gateway,
   jsonSchema,
   stepCountIs,
   streamText,
@@ -16,7 +17,6 @@ import {
   chatRateLimit,
   getClientIp,
 } from "@/lib/demo/rate-limit";
-import { openrouter } from "@/lib/ai/openrouter";
 
 const SYSTEM_PROMPT = `You are an AI assistant demonstrating the Agent Auth Protocol — a standard for authorizing AI agents to act on behalf of users.
 
@@ -375,9 +375,7 @@ export async function POST(req: Request) {
   }
 
   const result = streamText({
-    model: openrouter.chat(
-      process.env.OPENROUTER_MODEL ?? "anthropic/claude-opus-4.6",
-    ),
+    model: gateway(process.env.AI_GATEWAY_MODEL ?? "anthropic/claude-opus-4.6"),
     system: systemPrompt,
     messages: await convertToModelMessages(messages),
     tools: buildTools(session),
